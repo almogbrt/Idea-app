@@ -1,0 +1,151 @@
+"""Composition root.
+
+This is the one place in the codebase allowed to know about every concrete
+adapter. It wires ports to infrastructure implementations once at startup
+(`Container.bootstrap`), and builds per-request object graphs (which need a
+request-scoped `AsyncSession`) via `Container.build_orchestrator` /
+`Container.build_authenticate_user_use_case`.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+from app.application.ports.secret_manager import SecretManagerPort
+from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.memory_use_cases import RetrieveMemoryUseCase, StoreMemoryUseCase
+from app.core.config import SecretManagerBackend, Settings
+from app.core.logging import get_logger
+from app.core.security import SessionTokenService, TokenCipher
+from app.infrastructure.cache.redis_client import RedisCache, create_redis_client
+from app.infrastructure.db.repositories.agent_execution_repository import (
+    SqlAlchemyAgentExecutionRepository,
+)
+from app.infrastructure.db.repositories.conversation_repository import (
+    SqlAlchemyConversationRepository,
+)
+from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemoryRepository
+from app.infrastructure.db.repositories.oauth_token_repository import (
+    SqlAlchemyOAuthTokenRepository,
+)
+from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
+from app.infrastructure.db.session import create_engine, create_session_factory
+from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
+from app.infrastructure.google.oauth import GoogleOAuthClient
+from app.infrastructure.llm.anthropic_gateway import AnthropicLLMGateway
+from app.infrastructure.llm.openai_embeddings import OpenAIEmbeddingGateway
+from app.infrastructure.secrets.env_secret_manager import EnvSecretManager
+from app.infrastructure.secrets.gcp_secret_manager import GcpSecretManager
+from app.orchestrator.agent_registry import AgentRegistry
+from app.orchestrator.intent_router import IntentRouter
+from app.orchestrator.orchestrator import Orchestrator
+
+logger = get_logger(__name__)
+
+
+@dataclass(slots=True)
+class RequestScopedServices:
+    orchestrator: Orchestrator
+    manage_conversation: ManageConversationUseCase
+    authenticate_user: AuthenticateUserUseCase
+
+
+class Container:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+        self.secret_manager: SecretManagerPort = (
+            GcpSecretManager(settings.gcp_project_id)
+            if settings.secret_manager_backend == SecretManagerBackend.GCP
+            else EnvSecretManager()
+        )
+
+        self.token_cipher = TokenCipher(settings.token_encryption_key)
+        self.session_tokens = SessionTokenService(
+            signing_key=settings.jwt_signing_key,
+            access_ttl_minutes=settings.jwt_access_token_ttl_minutes,
+            refresh_ttl_days=settings.jwt_refresh_token_ttl_days,
+        )
+
+        self.engine: AsyncEngine = create_engine(settings.database_url)
+        self.session_factory: async_sessionmaker[AsyncSession] = create_session_factory(self.engine)
+
+        self.redis_client: Redis = create_redis_client(settings.redis_url)
+        self.cache = RedisCache(self.redis_client)
+
+        self.google_oauth_client = GoogleOAuthClient(
+            client_id=settings.google_oauth_client_id,
+            client_secret=settings.google_oauth_client_secret,
+            redirect_uri=settings.google_oauth_redirect_uri,
+            scopes=settings.google_oauth_scopes_list,
+        )
+
+        self.llm_gateway = AnthropicLLMGateway(
+            api_key=settings.anthropic_api_key,
+            model=settings.anthropic_model,
+            max_tokens=settings.anthropic_max_tokens,
+        )
+        self.embedding_gateway = OpenAIEmbeddingGateway(
+            api_key=settings.openai_api_key, model=settings.embedding_model
+        )
+
+        self.google_api_client_factory = GoogleApiClientFactory(
+            session_factory=self.session_factory,
+            token_cipher=self.token_cipher,
+            client_id=settings.google_oauth_client_id,
+            client_secret=settings.google_oauth_client_secret,
+        )
+
+        self.agent_registry = AgentRegistry()
+
+    def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
+        conversations = SqlAlchemyConversationRepository(session)
+        memory_repo = SqlAlchemyMemoryRepository(session)
+        executions = SqlAlchemyAgentExecutionRepository(session)
+        users = SqlAlchemyUserRepository(session)
+        oauth_tokens = SqlAlchemyOAuthTokenRepository(session, self.token_cipher)
+
+        retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
+        store_memory = StoreMemoryUseCase(self.embedding_gateway, memory_repo)
+
+        intent_router = IntentRouter(
+            llm_gateway=self.llm_gateway,
+            agent_registry=self.agent_registry,
+            agent_execution_repository=executions,
+        )
+        orchestrator = Orchestrator(
+            conversation_repository=conversations,
+            intent_router=intent_router,
+            retrieve_memory=retrieve_memory,
+            store_memory=store_memory,
+        )
+
+        authenticate_user = AuthenticateUserUseCase(
+            user_repository=users,
+            oauth_token_repository=oauth_tokens,
+            allowed_owner_email=self.settings.owner_email or None,
+        )
+
+        return RequestScopedServices(
+            orchestrator=orchestrator,
+            manage_conversation=ManageConversationUseCase(conversations),
+            authenticate_user=authenticate_user,
+        )
+
+    def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:
+        return SqlAlchemyUserRepository(session)
+
+    def bootstrap_agents(self) -> None:
+        """Registers every agent's tools into this container's registry. Call once at startup."""
+        from app.agents import register_all_agents
+
+        register_all_agents(self.google_api_client_factory, self.agent_registry)
+        logger.info("agents_bootstrapped", agents=self.agent_registry.list_agents())
+
+    async def shutdown(self) -> None:
+        await self.redis_client.aclose()
+        await self.engine.dispose()
