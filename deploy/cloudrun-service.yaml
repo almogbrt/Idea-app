@@ -1,6 +1,11 @@
 # Cloud Run service manifest (declarative deploy via `gcloud run services replace`).
 # Placeholders (PROJECT_ID, REGION, IMAGE_TAG, connection names) are filled in
 # by deploy.sh — this file is the source of truth for runtime configuration.
+#
+# IMPORTANT — the `idea-os-database-url` secret must use the Cloud SQL Unix
+# socket form (the `cloudsql-instances` annotation below mounts the socket,
+# it does not give you a TCP host/port to connect to):
+#   postgresql+asyncpg://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT_ID:REGION:idea-os-postgres
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -18,7 +23,9 @@ spec:
         run.googleapis.com/vpc-access-egress: "private-ranges-only"
     spec:
       containerConcurrency: 40
-      timeoutSeconds: 60
+      # A multi-tool-call Edith command can chain several LLM + Google API round
+      # trips (bounded by MAX_TOOL_ITERATIONS); 60s was too tight for that.
+      timeoutSeconds: 300
       containers:
         - image: IMAGE_TAG
           ports:

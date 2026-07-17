@@ -121,6 +121,18 @@ pytest --cov=app --cov-report=term-missing
    This builds and pushes the image, runs Alembic migrations as a one-off Cloud
    Run Job, then deploys the service from `deploy/cloudrun-service.yaml`.
 
+**Bootstrapping note**: the service's own URL isn't known until after the first
+deploy, so `GOOGLE_OAUTH_REDIRECT_URI` can't be set correctly up front. Run
+`deploy.sh` once to get a URL, then:
+1. Add `https://<service-url>/api/v1/auth/google/callback` as an authorized
+   redirect URI on the OAuth client in Google Cloud Console.
+2. Re-run `deploy.sh` (it now resolves the real service URL automatically) so
+   the running service's `GOOGLE_OAUTH_REDIRECT_URI` matches.
+
+Also, while the OAuth consent screen is in "Testing" mode, only the email
+addresses listed under **Test users** can complete login — add your own
+`OWNER_EMAIL` there or login will be rejected before it ever reaches Edith.
+
 ## CI
 
 `.github/workflows/ci.yml` runs lint (`ruff`), strict type-checking (`mypy`),
