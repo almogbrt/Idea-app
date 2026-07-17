@@ -133,6 +133,38 @@ Also, while the OAuth consent screen is in "Testing" mode, only the email
 addresses listed under **Test users** can complete login — add your own
 `OWNER_EMAIL` there or login will be rejected before it ever reaches Edith.
 
+### Deploying via GitHub Actions (recommended)
+
+`.github/workflows/deploy.yml` runs the exact same `deploy/deploy.sh` script
+above, triggered manually from the Actions tab (`workflow_dispatch`) instead of
+from your own machine — no local `gcloud` install needed. One-time setup,
+easiest done from **Cloud Shell** in the Cloud Console (it has `gcloud`
+pre-installed and already authenticated as you):
+
+```bash
+PROJECT_ID=idet-502218
+gcloud iam service-accounts create idea-os-deployer --project "$PROJECT_ID"
+
+for ROLE in run.admin iam.serviceAccountUser artifactregistry.writer \
+            cloudsql.client secretmanager.secretAccessor vpcaccess.user \
+            storage.admin; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:idea-os-deployer@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/${ROLE}"
+done
+
+gcloud iam service-accounts keys create idea-os-deployer-key.json \
+  --iam-account="idea-os-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+```
+
+Then in the GitHub repo: **Settings → Secrets and variables → Actions → New
+repository secret**, name it `GCP_SA_KEY`, and paste the full contents of
+`idea-os-deployer-key.json` as the value. Delete the local key file afterwards
+(`rm idea-os-deployer-key.json`) — it's only needed once, to seed the secret.
+
+`PROJECT_ID` is already set to `idet-502218` at the top of `deploy.yml`;
+change it there if the project ever changes.
+
 ## CI
 
 `.github/workflows/ci.yml` runs lint (`ruff`), strict type-checking (`mypy`),
