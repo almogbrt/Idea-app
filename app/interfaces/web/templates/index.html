@@ -8,6 +8,7 @@
 </head>
 <body>
   <div id="shell">
+    <div id="sidebar-backdrop"></div>
     <aside id="sidebar">
       <div class="logo-block">
         <img src="/static/logo.png" alt="IDEA OS" class="logo-img" />
@@ -78,7 +79,12 @@
 
     <main id="main">
       <header id="topbar">
-        <div id="auth-status"></div>
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-btn hamburger-btn" title="תפריט">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          </button>
+          <div id="auth-status"></div>
+        </div>
         <div class="topbar-icons">
           <button class="icon-btn" title="חיפוש">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>

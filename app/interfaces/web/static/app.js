@@ -25,6 +25,9 @@ const els = {
   newProjectName: document.getElementById("new-project-name"),
   newProjectSave: document.getElementById("new-project-save"),
   newProjectCancel: document.getElementById("new-project-cancel"),
+  shell: document.getElementById("shell"),
+  sidebarToggle: document.getElementById("sidebar-toggle"),
+  sidebarBackdrop: document.getElementById("sidebar-backdrop"),
 };
 
 let isAuthenticated = false;
@@ -93,6 +96,15 @@ function setNavActive(name) {
     el.classList.toggle("active", el.dataset.nav === name);
   });
 }
+
+function closeSidebar() {
+  els.shell.classList.remove("sidebar-open");
+}
+
+els.sidebarToggle.addEventListener("click", () => {
+  els.shell.classList.toggle("sidebar-open");
+});
+els.sidebarBackdrop.addEventListener("click", closeSidebar);
 
 async function checkAuth() {
   try {
@@ -167,6 +179,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {
     const target = item.dataset.nav;
     setNavActive(target);
+    closeSidebar();
     const sectionMap = {
       chat: "chat-form",
       overview: "overview-section",
