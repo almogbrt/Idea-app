@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any
 
@@ -107,6 +108,9 @@ async def test_handle_command_stores_the_command_as_long_term_memory(
     await orchestrator.handle_command(
         user_id=user_id, conversation_id=conversation.id, text="remember this fact"
     )
+    # storing to memory is fired in the background, not awaited inline —
+    # give the event loop a turn to run it before asserting.
+    await asyncio.sleep(0)
 
     assert len(fake_memory_repository.records) == 1
     assert fake_memory_repository.records[0].content == "remember this fact"

@@ -8,6 +8,7 @@ Intent Router together, and persists the result.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -47,6 +48,12 @@ class Orchestrator:
         self._retrieve_memory = retrieve_memory
         self._store_memory = store_memory
         self._history_limit = history_limit
+        # asyncio only holds a weak reference to a task's coroutine — without
+        # keeping this around, a fire-and-forget task can get garbage
+        # collected mid-execution. `store_memory` must be backed by a
+        # session-per-call repository (not the request-scoped session) for
+        # backgrounding it to be safe at all.
+        self._background_tasks: set[asyncio.Task[None]] = set()
 
     async def handle_command(
         self, *, user_id: uuid.UUID, conversation_id: uuid.UUID, text: str
@@ -120,7 +127,12 @@ class Orchestrator:
             )
         )
 
-        await self._store_memory_safely(user_id, text)
+        # Doesn't need to be on the critical path — the reply is already
+        # final by this point, and store_memory (session-per-call) is safe
+        # to keep running after the response is sent.
+        task = asyncio.create_task(self._store_memory_safely(user_id, text))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
 
         logger.info("command_handled", tool_calls=len(routing_result.tool_calls_made))
         return OrchestrationResult(

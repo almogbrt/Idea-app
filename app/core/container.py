@@ -37,6 +37,9 @@ from app.infrastructure.cache.redis_client import RedisCache, create_redis_clien
 from app.infrastructure.db.repositories.agent_execution_repository import (
     SqlAlchemyAgentExecutionRepository,
 )
+from app.infrastructure.db.repositories.background_memory_repository import (
+    BackgroundMemoryRepository,
+)
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
@@ -123,6 +126,15 @@ class Container:
         self.agent_registry = AgentRegistry()
         self.workspace_service = WorkspaceService(session_factory=self.session_factory)
 
+        # Storing a just-handled command as long-term memory doesn't need to
+        # block the response — session-per-call (like WorkspaceService above)
+        # so the Orchestrator can fire it in the background safely, without
+        # racing the request-scoped session's teardown.
+        self.background_memory_repo = BackgroundMemoryRepository(self.session_factory)
+        self.background_store_memory = StoreMemoryUseCase(
+            self.embedding_gateway, self.background_memory_repo
+        )
+
         gmail_client = GmailClient(self.google_api_client_factory)
         calendar_client = CalendarClient(self.google_api_client_factory)
         self.inbox_port = GmailInboxAdapter(gmail_client)
@@ -139,7 +151,6 @@ class Container:
         tasks_repo = SqlAlchemyTaskRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
-        store_memory = StoreMemoryUseCase(self.embedding_gateway, memory_repo)
 
         intent_router = IntentRouter(
             llm_gateway=self.llm_gateway,
@@ -150,7 +161,7 @@ class Container:
             conversation_repository=conversations,
             intent_router=intent_router,
             retrieve_memory=retrieve_memory,
-            store_memory=store_memory,
+            store_memory=self.background_store_memory,
         )
 
         authenticate_user = AuthenticateUserUseCase(
