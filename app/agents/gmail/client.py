@@ -59,6 +59,19 @@ class GmailClient:
             )
         return summaries
 
+    async def count_unread(self, user_id: uuid.UUID) -> int:
+        """Cheap unread count via `resultSizeEstimate` — unlike `list_messages`,
+        this makes exactly one API call regardless of how many messages match."""
+        service = await self._google_clients.gmail(user_id)
+        response = await call_google_api(
+            lambda: service.users()
+            .messages()
+            .list(userId="me", q="is:unread", maxResults=1)
+            .execute(),
+            action="gmail.messages.list",
+        )
+        return int(response.get("resultSizeEstimate", 0))
+
     async def get_message(self, user_id: uuid.UUID, message_id: str) -> dict[str, Any]:
         service = await self._google_clients.gmail(user_id)
         message = await call_google_api(

@@ -1,0 +1,71 @@
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+from app.domain.entities import ProjectStatus, TaskStatus
+
+
+class ClientView(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime
+
+
+class CreateClientRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+
+class ProjectView(BaseModel):
+    id: uuid.UUID
+    name: str
+    status: ProjectStatus
+    client_id: uuid.UUID | None
+    client_name: str | None
+    last_task_title: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateProjectRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    client_id: uuid.UUID | None = None
+
+
+class UpdateProjectStatusRequest(BaseModel):
+    status: ProjectStatus
+
+
+class TaskView(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: TaskStatus
+    project_id: uuid.UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateTaskRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    project_id: uuid.UUID | None = None
+
+
+class UpdateTaskStatusRequest(BaseModel):
+    status: TaskStatus
+
+
+class DashboardSummaryView(BaseModel):
+    open_tasks: int
+    active_projects: int
+    unread_emails: int | None
+    meetings_today: int | None
+
+
+class ActivityItemView(BaseModel):
+    id: uuid.UUID
+    agent_name: str
+    tool_name: str
+    status: str
+    created_at: datetime

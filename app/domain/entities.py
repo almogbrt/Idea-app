@@ -26,6 +26,18 @@ class ExecutionStatus(StrEnum):
     ERROR = "error"
 
 
+class ProjectStatus(StrEnum):
+    IN_PROGRESS = "in_progress"
+    ON_HOLD = "on_hold"
+    DONE = "done"
+
+
+class TaskStatus(StrEnum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+
 @dataclass(slots=True)
 class User:
     id: uuid.UUID
@@ -104,6 +116,46 @@ class AgentExecution:
     status: ExecutionStatus
     latency_ms: int
     created_at: datetime
+
+
+@dataclass(slots=True)
+class Client:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class Project:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    client_id: uuid.UUID | None
+    name: str
+    status: ProjectStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(slots=True)
+class Task:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    project_id: uuid.UUID | None
+    title: str
+    status: TaskStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(slots=True)
+class ProjectSummary:
+    """A `Project` enriched with denormalized fields for the dashboard table,
+    so the UI doesn't need a second round trip to resolve names."""
+
+    project: Project
+    client_name: str | None
+    last_task_title: str | None
 
 
 @dataclass(slots=True)

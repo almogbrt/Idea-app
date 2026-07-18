@@ -14,9 +14,21 @@ from dataclasses import dataclass
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.agents.gmail.client import GmailClient
+from app.agents.gmail.inbox_adapter import GmailInboxAdapter
+from app.agents.google_calendar.client import CalendarClient
+from app.agents.google_calendar.schedule_adapter import CalendarScheduleAdapter
+from app.agents.project_management.service import WorkspaceService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.manage_workspace import (
+    DashboardSummaryUseCase,
+    ListActivityUseCase,
+    ManageClientsUseCase,
+    ManageProjectsUseCase,
+    ManageTasksUseCase,
+)
 from app.application.use_cases.memory_use_cases import RetrieveMemoryUseCase, StoreMemoryUseCase
 from app.core.config import SecretManagerBackend, Settings
 from app.core.logging import get_logger
@@ -25,6 +37,7 @@ from app.infrastructure.cache.redis_client import RedisCache, create_redis_clien
 from app.infrastructure.db.repositories.agent_execution_repository import (
     SqlAlchemyAgentExecutionRepository,
 )
+from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
 )
@@ -32,6 +45,8 @@ from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemor
 from app.infrastructure.db.repositories.oauth_token_repository import (
     SqlAlchemyOAuthTokenRepository,
 )
+from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
+from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import create_engine, create_session_factory
 from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
@@ -52,6 +67,11 @@ class RequestScopedServices:
     orchestrator: Orchestrator
     manage_conversation: ManageConversationUseCase
     authenticate_user: AuthenticateUserUseCase
+    manage_clients: ManageClientsUseCase
+    manage_projects: ManageProjectsUseCase
+    manage_tasks: ManageTasksUseCase
+    dashboard_summary: DashboardSummaryUseCase
+    list_activity: ListActivityUseCase
 
 
 class Container:
@@ -101,6 +121,12 @@ class Container:
         )
 
         self.agent_registry = AgentRegistry()
+        self.workspace_service = WorkspaceService(session_factory=self.session_factory)
+
+        gmail_client = GmailClient(self.google_api_client_factory)
+        calendar_client = CalendarClient(self.google_api_client_factory)
+        self.inbox_port = GmailInboxAdapter(gmail_client)
+        self.schedule_port = CalendarScheduleAdapter(calendar_client)
 
     def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
         conversations = SqlAlchemyConversationRepository(session)
@@ -108,6 +134,9 @@ class Container:
         executions = SqlAlchemyAgentExecutionRepository(session)
         users = SqlAlchemyUserRepository(session)
         oauth_tokens = SqlAlchemyOAuthTokenRepository(session, self.token_cipher)
+        clients_repo = SqlAlchemyClientRepository(session)
+        projects_repo = SqlAlchemyProjectRepository(session)
+        tasks_repo = SqlAlchemyTaskRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
         store_memory = StoreMemoryUseCase(self.embedding_gateway, memory_repo)
@@ -134,6 +163,13 @@ class Container:
             orchestrator=orchestrator,
             manage_conversation=ManageConversationUseCase(conversations),
             authenticate_user=authenticate_user,
+            manage_clients=ManageClientsUseCase(clients_repo),
+            manage_projects=ManageProjectsUseCase(projects_repo),
+            manage_tasks=ManageTasksUseCase(tasks_repo),
+            dashboard_summary=DashboardSummaryUseCase(
+                projects_repo, tasks_repo, self.inbox_port, self.schedule_port
+            ),
+            list_activity=ListActivityUseCase(executions),
         )
 
     def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:
@@ -143,7 +179,9 @@ class Container:
         """Registers every agent's tools into this container's registry. Call once at startup."""
         from app.agents import register_all_agents
 
-        register_all_agents(self.google_api_client_factory, self.agent_registry)
+        register_all_agents(
+            self.google_api_client_factory, self.workspace_service, self.agent_registry
+        )
         logger.info("agents_bootstrapped", agents=self.agent_registry.list_agents())
 
     async def shutdown(self) -> None:

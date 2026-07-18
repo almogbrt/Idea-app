@@ -15,17 +15,27 @@ from typing import Any
 import pytest
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.conversation_repository import ConversationRepositoryPort
 from app.application.ports.embedding import EmbeddingPort
 from app.application.ports.llm_gateway import LLMGatewayPort, LLMMessage, LLMResponse, LLMStopReason
 from app.application.ports.memory_repository import MemoryRepositoryPort
 from app.application.ports.oauth_token_repository import OAuthTokenRepositoryPort
+from app.application.ports.project_repository import ProjectRepositoryPort
+from app.application.ports.task_repository import TaskRepositoryPort
 from app.application.ports.user_repository import UserRepositoryPort
+from app.core.exceptions import NotFoundError
 from app.domain.entities import (
     AgentExecution,
+    Client,
     Conversation,
     MemoryRecord,
     Message,
+    Project,
+    ProjectStatus,
+    ProjectSummary,
+    Task,
+    TaskStatus,
     ToolDefinition,
     User,
 )
@@ -92,6 +102,129 @@ class FakeAgentExecutionRepository(AgentExecutionRepositoryPort):
 
     async def record(self, execution: AgentExecution) -> None:
         self.executions.append(execution)
+
+    async def list_recent(self, user_id: uuid.UUID, limit: int = 10) -> list[AgentExecution]:
+        matching = [e for e in self.executions if e.user_id == user_id]
+        return list(reversed(matching))[:limit]
+
+
+class FakeClientRepository(ClientRepositoryPort):
+    def __init__(self) -> None:
+        self.clients: dict[uuid.UUID, Client] = {}
+
+    async def create(self, user_id: uuid.UUID, name: str) -> Client:
+        client = Client(id=uuid.uuid4(), user_id=user_id, name=name, created_at=datetime.now(UTC))
+        self.clients[client.id] = client
+        return client
+
+    async def list_by_user(self, user_id: uuid.UUID) -> list[Client]:
+        return [c for c in self.clients.values() if c.user_id == user_id]
+
+
+class FakeProjectRepository(ProjectRepositoryPort):
+    def __init__(self) -> None:
+        self.projects: dict[uuid.UUID, Project] = {}
+        self.client_names: dict[uuid.UUID, str] = {}
+        self.last_task_titles: dict[uuid.UUID, str] = {}
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        client_id: uuid.UUID | None = None,
+        status: ProjectStatus = ProjectStatus.IN_PROGRESS,
+    ) -> Project:
+        now = datetime.now(UTC)
+        project = Project(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            client_id=client_id,
+            name=name,
+            status=status,
+            created_at=now,
+            updated_at=now,
+        )
+        self.projects[project.id] = project
+        return project
+
+    async def list_by_user(self, user_id: uuid.UUID) -> list[ProjectSummary]:
+        return [
+            ProjectSummary(
+                project=p,
+                client_name=self.client_names.get(p.id),
+                last_task_title=self.last_task_titles.get(p.id),
+            )
+            for p in self.projects.values()
+            if p.user_id == user_id
+        ]
+
+    async def get(self, project_id: uuid.UUID) -> Project | None:
+        return self.projects.get(project_id)
+
+    async def get_summary(self, project_id: uuid.UUID) -> ProjectSummary | None:
+        project = self.projects.get(project_id)
+        if project is None:
+            return None
+        return ProjectSummary(
+            project=project,
+            client_name=self.client_names.get(project_id),
+            last_task_title=self.last_task_titles.get(project_id),
+        )
+
+    async def update_status(self, project_id: uuid.UUID, status: ProjectStatus) -> Project:
+        project = self.projects.get(project_id)
+        if project is None:
+            raise NotFoundError("Project not found", details={"project_id": str(project_id)})
+        project.status = status
+        return project
+
+    async def count_active(self, user_id: uuid.UUID) -> int:
+        return sum(
+            1
+            for p in self.projects.values()
+            if p.user_id == user_id and p.status == ProjectStatus.IN_PROGRESS
+        )
+
+
+class FakeTaskRepository(TaskRepositoryPort):
+    def __init__(self) -> None:
+        self.tasks: dict[uuid.UUID, Task] = {}
+
+    async def create(
+        self, user_id: uuid.UUID, title: str, project_id: uuid.UUID | None = None
+    ) -> Task:
+        now = datetime.now(UTC)
+        task = Task(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            project_id=project_id,
+            title=title,
+            status=TaskStatus.OPEN,
+            created_at=now,
+            updated_at=now,
+        )
+        self.tasks[task.id] = task
+        return task
+
+    async def list_by_user(self, user_id: uuid.UUID) -> list[Task]:
+        return [t for t in self.tasks.values() if t.user_id == user_id]
+
+    async def get(self, task_id: uuid.UUID) -> Task | None:
+        return self.tasks.get(task_id)
+
+    async def update_status(self, task_id: uuid.UUID, status: TaskStatus) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.status = status
+        return task
+
+    async def count_open(self, user_id: uuid.UUID) -> int:
+        return sum(
+            1
+            for t in self.tasks.values()
+            if t.user_id == user_id and t.status != TaskStatus.DONE
+        )
 
 
 class FakeOAuthTokenRepository(OAuthTokenRepositoryPort):
@@ -183,3 +316,18 @@ def fake_user_repository() -> FakeUserRepository:
 @pytest.fixture
 def fake_embedding_gateway() -> FakeEmbeddingGateway:
     return FakeEmbeddingGateway()
+
+
+@pytest.fixture
+def fake_client_repository() -> FakeClientRepository:
+    return FakeClientRepository()
+
+
+@pytest.fixture
+def fake_project_repository() -> FakeProjectRepository:
+    return FakeProjectRepository()
+
+
+@pytest.fixture
+def fake_task_repository() -> FakeTaskRepository:
+    return FakeTaskRepository()

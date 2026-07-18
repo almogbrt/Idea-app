@@ -113,3 +113,50 @@ class AgentExecutionModel(Base):
     status: Mapped[str] = mapped_column(String(20))
     latency_ms: Mapped[int] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
+class ClientModel(Base):
+    __tablename__ = "clients"
+    __table_args__ = (Index("ix_clients_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
+class ProjectModel(Base):
+    __tablename__ = "projects"
+    __table_args__ = (Index("ix_projects_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TaskModel(Base):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        Index("ix_tasks_user_id", "user_id"),
+        Index("ix_tasks_project_id", "project_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
+    title: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()
+    )

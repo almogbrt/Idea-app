@@ -15,6 +15,7 @@ from app.application.ports.agent_tool import ToolExecutionContext
 from app.application.ports.conversation_repository import ConversationRepositoryPort
 from app.application.ports.llm_gateway import LLMMessage
 from app.application.use_cases.memory_use_cases import RetrieveMemoryUseCase, StoreMemoryUseCase
+from app.core.exceptions import ExternalServiceError
 from app.core.logging import bind_request_context, get_logger
 from app.domain.entities import Message, MessageRole, OrchestrationResult
 from app.orchestrator.intent_router import IntentRouter
@@ -68,10 +69,7 @@ class Orchestrator:
             )
         )
 
-        memories = await self._retrieve_memory.execute(user_id, text, top_k=5)
-        memory_context = (
-            "\n".join(f"- {m.content}" for m in memories) if memories else "(no relevant memory)"
-        )
+        memory_context = await self._retrieve_memory_safely(user_id, text)
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(memory_context=memory_context)
 
         history = await self._conversations.get_recent_messages(
@@ -100,7 +98,7 @@ class Orchestrator:
             )
         )
 
-        await self._store_memory.execute(user_id, text, metadata={"source": "user_command"})
+        await self._store_memory_safely(user_id, text)
 
         logger.info("command_handled", tool_calls=len(routing_result.tool_calls_made))
         return OrchestrationResult(
@@ -108,3 +106,20 @@ class Orchestrator:
             conversation_id=conversation_id,
             tool_calls_made=routing_result.tool_calls_made,
         )
+
+    async def _retrieve_memory_safely(self, user_id: uuid.UUID, text: str) -> str:
+        """Long-term memory is an enhancement, not a hard dependency — a down or
+        misconfigured embeddings provider must not block Edith from responding
+        at all."""
+        try:
+            memories = await self._retrieve_memory.execute(user_id, text, top_k=5)
+        except ExternalServiceError as exc:
+            logger.warning("memory_retrieval_unavailable", error=str(exc))
+            return "(unavailable)"
+        return "\n".join(f"- {m.content}" for m in memories) if memories else "(no relevant memory)"
+
+    async def _store_memory_safely(self, user_id: uuid.UUID, text: str) -> None:
+        try:
+            await self._store_memory.execute(user_id, text, metadata={"source": "user_command"})
+        except ExternalServiceError as exc:
+            logger.warning("memory_storage_unavailable", error=str(exc))

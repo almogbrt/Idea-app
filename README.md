@@ -2,9 +2,11 @@
 
 **Edith** is a business operating system, not a chatbot. It is a single-owner AI
 orchestrator that takes natural-language commands and gets real work done across
-Google Drive, Gmail, Calendar, and Sheets — via LLM function calling, not regex or
-keyword matching. Built as a production FastAPI service designed to run on Google
-Cloud Run.
+Google Drive, Gmail, Calendar, Sheets, and a built-in Projects/Clients/Tasks
+workspace — via LLM function calling, not regex or keyword matching. The
+dashboard UI (a real, data-backed IDEA OS-branded interface, not a demo) reads
+and writes the same data Edith manages through chat. Built as a production
+FastAPI service designed to run on Google Cloud Run.
 
 ## Architecture
 
@@ -40,6 +42,17 @@ loop continues until a final natural-language reply is produced (bounded by
 set, only that Google account may ever authenticate — this is a personal system,
 not a multi-tenant product.
 
+**Workspace (Clients/Projects/Tasks)**: the one first-party domain concept beyond
+the Google agents. It's a real `project_management` Agent (same pattern as the
+Google agents — tools resolve a project/task by partial name match, since a chat
+command doesn't carry a UUID), so Edith can create/update it through natural
+language. The dashboard's REST endpoints (`/api/v1/{clients,projects,tasks,
+dashboard/summary,dashboard/activity}`) read and write the exact same tables
+directly, bypassing the LLM loop — a checkbox click shouldn't cost an LLM call.
+Long-term memory retrieval/storage is best-effort: a down or misconfigured
+embeddings provider degrades gracefully instead of blocking Edith from
+responding at all.
+
 ## Project layout
 
 ```
@@ -48,12 +61,13 @@ app/
   domain/          framework-free entities and value objects
   application/     ports (interfaces) + use cases
   orchestrator/    Orchestrator, IntentRouter, AgentRegistry, BaseAgent
-  agents/          google_drive/ gmail/ google_calendar/ google_sheets/ — one Agent each
+  agents/          google_drive/ gmail/ google_calendar/ google_sheets/ project_management/
   infrastructure/  Postgres (SQLAlchemy+pgvector), Redis, Anthropic, OpenAI embeddings,
                     Google OAuth + API client factory, Secret Manager (GCP + env)
   interfaces/
-    api/           REST API (v1) — chat, auth, health
-    web/           the simple chat UI (static HTML/JS)
+    api/           REST API (v1) — chat, auth, health, workspace (dashboard/clients/
+                    projects/tasks)
+    web/           the IDEA OS dashboard UI (static HTML/JS, real data)
 alembic/           database migrations
 tests/
   unit/            fast, no external services — fakes for every port

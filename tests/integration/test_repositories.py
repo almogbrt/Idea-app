@@ -20,11 +20,14 @@ from app.domain.entities import (
     ExecutionStatus,
     Message,
     MessageRole,
+    ProjectStatus,
+    TaskStatus,
 )
 from app.domain.value_objects import OAuthTokenSet
 from app.infrastructure.db.repositories.agent_execution_repository import (
     SqlAlchemyAgentExecutionRepository,
 )
+from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
 )
@@ -32,6 +35,8 @@ from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemor
 from app.infrastructure.db.repositories.oauth_token_repository import (
     SqlAlchemyOAuthTokenRepository,
 )
+from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
+from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from tests.integration.conftest import requires_postgres
 
@@ -205,3 +210,91 @@ async def test_agent_execution_repository_records_audit_trail(db_session: AsyncS
     ).one()
     assert row[0] == "drive_list_files"
     assert row[1] == "success"
+
+
+async def test_agent_execution_repository_list_recent_orders_newest_first(
+    db_session: AsyncSession,
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-9", "owner9@example.com", "Owner Nine")
+
+    repo = SqlAlchemyAgentExecutionRepository(db_session)
+    for tool_name in ["tool_a", "tool_b", "tool_c"]:
+        await repo.record(
+            AgentExecution(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                agent_name="gmail",
+                tool_name=tool_name,
+                input={},
+                output={},
+                status=ExecutionStatus.SUCCESS,
+                latency_ms=1,
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    recent = await repo.list_recent(user.id, limit=2)
+
+    assert len(recent) == 2
+    assert recent[0].tool_name == "tool_c"
+    assert recent[1].tool_name == "tool_b"
+
+
+async def test_client_repository_create_and_list(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-10", "owner10@example.com", "Owner Ten")
+
+    repo = SqlAlchemyClientRepository(db_session)
+    await repo.create(user.id, "Baron's")
+
+    clients = await repo.list_by_user(user.id)
+    assert [c.name for c in clients] == ["Baron's"]
+
+
+async def test_project_repository_round_trip_with_client_and_task(
+    db_session: AsyncSession,
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-11", "owner11@example.com", "Owner Eleven")
+
+    clients_repo = SqlAlchemyClientRepository(db_session)
+    client = await clients_repo.create(user.id, "Baron's")
+
+    projects_repo = SqlAlchemyProjectRepository(db_session)
+    project = await projects_repo.create(user.id, "Summer menu", client_id=client.id)
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    await tasks_repo.create(user.id, "Prep summer menu", project_id=project.id)
+
+    summaries = await projects_repo.list_by_user(user.id)
+    assert len(summaries) == 1
+    assert summaries[0].client_name == "Baron's"
+    assert summaries[0].last_task_title == "Prep summer menu"
+
+    single_summary = await projects_repo.get_summary(project.id)
+    assert single_summary is not None
+    assert single_summary.client_name == "Baron's"
+
+    updated = await projects_repo.update_status(project.id, ProjectStatus.ON_HOLD)
+    assert updated.status == ProjectStatus.ON_HOLD
+
+    active_count = await projects_repo.count_active(user.id)
+    assert active_count == 0
+
+
+async def test_task_repository_round_trip_and_count_open(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-12", "owner12@example.com", "Owner Twelve")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    task_a = await tasks_repo.create(user.id, "Task A")
+    await tasks_repo.create(user.id, "Task B")
+
+    assert await tasks_repo.count_open(user.id) == 2
+
+    await tasks_repo.update_status(task_a.id, TaskStatus.DONE)
+
+    assert await tasks_repo.count_open(user.id) == 1
+    tasks = await tasks_repo.list_by_user(user.id)
+    assert {t.title for t in tasks} == {"Task A", "Task B"}

@@ -6,9 +6,48 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
+from app.application.ports.inbox import InboxPort
+from app.application.ports.schedule import SchedulePort
+from app.application.use_cases.manage_workspace import (
+    DashboardSummaryUseCase,
+    ListActivityUseCase,
+    ManageClientsUseCase,
+    ManageProjectsUseCase,
+    ManageTasksUseCase,
+)
 from app.core.container import RequestScopedServices
 from app.domain.entities import Conversation, OrchestrationResult, ToolCall, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
+from tests.conftest import (
+    FakeAgentExecutionRepository,
+    FakeClientRepository,
+    FakeProjectRepository,
+    FakeTaskRepository,
+)
+
+
+class _NullInbox(InboxPort):
+    async def count_unread(self, user_id: uuid.UUID) -> int:
+        return 0
+
+
+class _NullSchedule(SchedulePort):
+    async def count_meetings_today(self, user_id: uuid.UUID) -> int:
+        return 0
+
+
+def _workspace_kwargs() -> dict[str, object]:
+    projects_repo = FakeProjectRepository()
+    tasks_repo = FakeTaskRepository()
+    return {
+        "manage_clients": ManageClientsUseCase(FakeClientRepository()),
+        "manage_projects": ManageProjectsUseCase(projects_repo),
+        "manage_tasks": ManageTasksUseCase(tasks_repo),
+        "dashboard_summary": DashboardSummaryUseCase(
+            projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
+        ),
+        "list_activity": ListActivityUseCase(FakeAgentExecutionRepository()),
+    }
 
 _USER = User(
     id=uuid.uuid4(),
@@ -59,6 +98,7 @@ def _override_scope(
         orchestrator=_FakeOrchestrator(reply=reply, tool_calls=tool_calls or []),  # type: ignore[arg-type]
         manage_conversation=manage_conversation,  # type: ignore[arg-type]
         authenticate_user=None,  # type: ignore[arg-type]
+        **_workspace_kwargs(),  # type: ignore[arg-type]
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
     client.app.dependency_overrides[get_request_scope] = lambda: scope
@@ -99,6 +139,7 @@ def test_get_conversation_history_rejects_other_users_conversation(client: TestC
         orchestrator=_FakeOrchestrator(reply="ok", tool_calls=[]),  # type: ignore[arg-type]
         manage_conversation=_OtherOwnerConversation(_USER.id),  # type: ignore[arg-type]
         authenticate_user=None,  # type: ignore[arg-type]
+        **_workspace_kwargs(),  # type: ignore[arg-type]
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
     client.app.dependency_overrides[get_request_scope] = lambda: scope
