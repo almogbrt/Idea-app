@@ -112,6 +112,14 @@ async def test_executes_tool_then_returns_final_reply(
     second_call_messages = llm.calls[1]["messages"]
     assert any(m.role == MessageRole.TOOL and "sunny" in m.content for m in second_call_messages)
 
+    # trace_messages must carry the granular assistant/tool_use + tool/tool_result
+    # pair the caller needs to persist individually — collapsing this into one
+    # summary message breaks conversation history on the next turn (each
+    # tool_use must be immediately followed by its tool_result).
+    assert [m.role for m in result.trace_messages] == [MessageRole.ASSISTANT, MessageRole.TOOL]
+    assert result.trace_messages[0].tool_calls == (call,)
+    assert result.trace_messages[1].tool_call_id == "call-1"
+
 
 async def test_tool_execution_failure_is_recorded_and_fed_back_to_llm(
     registry: AgentRegistry,

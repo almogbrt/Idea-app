@@ -83,6 +83,7 @@ class MessageModel(Base):
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column()
     tool_calls: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    tool_call_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
 
     conversation: Mapped[ConversationModel] = relationship(back_populates="messages")

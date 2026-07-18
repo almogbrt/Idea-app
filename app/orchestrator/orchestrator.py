@@ -75,8 +75,18 @@ class Orchestrator:
         history = await self._conversations.get_recent_messages(
             conversation_id, limit=self._history_limit
         )
+        # A history-limit truncation can land inside an old turn's tool_use/
+        # tool_result sequence, leaving a leading orphaned tool_result with no
+        # tool_use in view — Anthropic's API rejects that shape too.
+        while history and history[0].role == MessageRole.TOOL:
+            history = history[1:]
         conversation_messages = [
-            LLMMessage(role=m.role, content=m.content, tool_calls=tuple(m.tool_calls))
+            LLMMessage(
+                role=m.role,
+                content=m.content,
+                tool_calls=tuple(m.tool_calls),
+                tool_call_id=m.tool_call_id,
+            )
             for m in history
         ]
 
@@ -87,6 +97,19 @@ class Orchestrator:
             system_prompt=system_prompt, conversation=conversation_messages, context=context
         )
 
+        for trace_message in routing_result.trace_messages:
+            await self._conversations.append_message(
+                Message(
+                    id=uuid.uuid4(),
+                    conversation_id=conversation_id,
+                    role=trace_message.role,
+                    content=trace_message.content,
+                    created_at=datetime.now(UTC),
+                    tool_calls=list(trace_message.tool_calls),
+                    tool_call_id=trace_message.tool_call_id,
+                )
+            )
+
         await self._conversations.append_message(
             Message(
                 id=uuid.uuid4(),
@@ -94,7 +117,6 @@ class Orchestrator:
                 role=MessageRole.ASSISTANT,
                 content=routing_result.reply,
                 created_at=datetime.now(UTC),
-                tool_calls=routing_result.tool_calls_made,
             )
         )
 

@@ -80,6 +80,8 @@ class Message:
     content: str
     created_at: datetime
     tool_calls: list[ToolCall] = field(default_factory=list)
+    tool_call_id: str | None = None
+    """Set when role == TOOL: which tool call this message is a result for."""
 
 
 @dataclass(slots=True)

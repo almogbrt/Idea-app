@@ -31,6 +31,14 @@ MAX_TOOL_ITERATIONS = 8
 class RoutingResult:
     reply: str
     tool_calls_made: list[ToolCall] = field(default_factory=list)
+    trace_messages: list[LLMMessage] = field(default_factory=list)
+    """The assistant/tool_use + tool/tool_result messages appended during the
+    loop, in order. Anthropic's API requires every tool_use block to be
+    followed immediately by its tool_result — collapsing a multi-tool-call
+    turn into a single summary message (as the caller used to do) breaks
+    that invariant the next time this conversation's history is replayed.
+    The caller must persist these individually, in order, alongside its own
+    final assistant reply message."""
 
 
 class IntentRouter:
@@ -54,6 +62,7 @@ class IntentRouter:
         messages = list(conversation)
         tools = self._registry.all_tool_definitions()
         tool_calls_made: list[ToolCall] = []
+        trace_messages: list[LLMMessage] = []
 
         for iteration in range(MAX_TOOL_ITERATIONS):
             response = await self._llm.generate(
@@ -61,30 +70,38 @@ class IntentRouter:
             )
 
             if response.stop_reason != LLMStopReason.TOOL_USE:
-                return RoutingResult(reply=response.content, tool_calls_made=tool_calls_made)
+                return RoutingResult(
+                    reply=response.content,
+                    tool_calls_made=tool_calls_made,
+                    trace_messages=trace_messages,
+                )
 
             if not response.tool_calls:
                 logger.warning("tool_use_stop_reason_without_tool_calls", iteration=iteration)
-                return RoutingResult(reply=response.content, tool_calls_made=tool_calls_made)
-
-            messages.append(
-                LLMMessage(
-                    role=MessageRole.ASSISTANT,
-                    content=response.content,
-                    tool_calls=response.tool_calls,
+                return RoutingResult(
+                    reply=response.content,
+                    tool_calls_made=tool_calls_made,
+                    trace_messages=trace_messages,
                 )
+
+            assistant_message = LLMMessage(
+                role=MessageRole.ASSISTANT,
+                content=response.content,
+                tool_calls=response.tool_calls,
             )
+            messages.append(assistant_message)
+            trace_messages.append(assistant_message)
 
             for call in response.tool_calls:
                 result = await self._execute_tool(call, context)
                 tool_calls_made.append(call)
-                messages.append(
-                    LLMMessage(
-                        role=MessageRole.TOOL,
-                        content=result.content,
-                        tool_call_id=call.id,
-                    )
+                tool_message = LLMMessage(
+                    role=MessageRole.TOOL,
+                    content=result.content,
+                    tool_call_id=call.id,
                 )
+                messages.append(tool_message)
+                trace_messages.append(tool_message)
 
         logger.error("max_tool_iterations_exceeded", conversation_id=str(context.conversation_id))
         raise ExternalServiceError(

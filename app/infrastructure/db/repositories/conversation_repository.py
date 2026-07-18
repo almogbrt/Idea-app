@@ -35,6 +35,7 @@ class SqlAlchemyConversationRepository(ConversationRepositoryPort):
                 {"id": tc.id, "tool_name": tc.tool_name, "arguments": tc.arguments}
                 for tc in message.tool_calls
             ],
+            tool_call_id=message.tool_call_id,
         )
         self._session.add(row)
         await self._session.flush()
@@ -71,4 +72,5 @@ class SqlAlchemyConversationRepository(ConversationRepositoryPort):
                 ToolCall(id=tc["id"], tool_name=tc["tool_name"], arguments=tc["arguments"])
                 for tc in row.tool_calls
             ],
+            tool_call_id=row.tool_call_id,
         )
