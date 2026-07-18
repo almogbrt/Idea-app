@@ -3,12 +3,8 @@
 locals {
   required_apis = [
     "run.googleapis.com",
-    "sqladmin.googleapis.com",
-    "redis.googleapis.com",
     "secretmanager.googleapis.com",
     "artifactregistry.googleapis.com",
-    "vpcaccess.googleapis.com",
-    "servicenetworking.googleapis.com",
     "iam.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "drive.googleapis.com",

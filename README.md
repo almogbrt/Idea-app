@@ -122,20 +122,32 @@ pytest --cov=app --cov-report=term-missing
 
 ### 1. Provision infrastructure with Terraform
 
-`deploy/terraform/` creates everything durable: the VPC + Serverless VPC
-Access connector, Cloud SQL (Postgres 16), Memorystore (Redis), the
-Artifact Registry repo, every Secret Manager secret `deploy/cloudrun-service.yaml`
-references (DB/Redis URLs are derived automatically — nothing to compute by
-hand), and two service accounts (`idea-os-edith-runtime`, least-privilege,
-attached to the Cloud Run service itself; `idea-os-edith-deployer`, used by CI
-to build/push/deploy).
+Postgres and Redis are **not** provisioned in GCP — Cloud SQL and Memorystore
+have no free tier, and for a single-owner system their always-on cost
+(~$45-55/month) is pure overhead. Instead, the app connects to:
 
-Easiest run from **Cloud Shell** in the Cloud Console (has `terraform` and
-`gcloud` pre-installed and already authenticated as you):
+- **[Neon](https://neon.tech)** — free-tier managed Postgres, pgvector
+  supported. Create a project, copy its connection string.
+- **[Upstash](https://upstash.com)** — free-tier managed Redis. Create a
+  database, copy its TLS connection string (`rediss://...`).
+
+Both are internet-reachable over TLS, so `deploy/terraform/` doesn't need a
+VPC or a Serverless VPC Access connector either. What it does create: the
+Artifact Registry repo, every Secret Manager secret
+`deploy/cloudrun-service.yaml` references, and two service accounts
+(`idea-os-edith-runtime`, least-privilege, attached to the Cloud Run service
+itself; `idea-os-edith-deployer`, used by CI to build/push/deploy).
+
+Easiest run from **Cloud Shell** in the Cloud Console (has `gcloud`
+pre-installed and already authenticated as you — `terraform` may need a
+one-time `sudo apt install terraform`, Cloud Shell will print the exact
+command if it's missing):
 
 ```bash
 cd deploy/terraform
-cp terraform.tfvars.example terraform.tfvars   # fill in your real values
+cp terraform.tfvars.example terraform.tfvars   # fill in your real values,
+                                                 # including neon_database_url
+                                                 # and upstash_redis_url
 terraform init
 terraform apply
 ```
@@ -165,9 +177,9 @@ PROJECT_ID=my-project REGION=us-central1 ./deploy/deploy.sh
 ```
 
 Either path builds and pushes the image, runs Alembic migrations as a
-one-off Cloud Run Job (using the Cloud SQL superuser, since `CREATE EXTENSION
-vector` needs it — the app itself always connects with the least-privilege
-`idea_os` user), then deploys the service from `deploy/cloudrun-service.yaml`.
+one-off Cloud Run Job against Neon (Neon's default role already has the
+privileges to `CREATE EXTENSION vector` — no separate superuser needed, unlike
+Cloud SQL), then deploys the service from `deploy/cloudrun-service.yaml`.
 
 **Bootstrapping note**: the service's own URL isn't known until after the first
 deploy, so `GOOGLE_OAUTH_REDIRECT_URI` can't be set correctly up front. Deploy

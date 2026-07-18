@@ -19,3 +19,9 @@ google_oauth_client_secret = "GOCSPX-..."
 # Generate with:
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 token_encryption_key = "..."
+
+# neon.tech -> your project -> Connection string (paste as-is, postgresql://...)
+neon_database_url = "postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require"
+
+# upstash.com -> your Redis database -> TLS connection string (rediss://...)
+upstash_redis_url = "rediss://default:password@xxxx.upstash.io:6379"

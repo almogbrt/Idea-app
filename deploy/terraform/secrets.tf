@@ -1,7 +1,7 @@
 # Secret names match exactly what deploy/cloudrun-service.yaml references via
-# secretKeyRef. DATABASE_URL, REDIS_URL, and JWT_SIGNING_KEY are fully derived
-# here — nothing to type in for those. The rest come from Terraform variables
-# (terraform.tfvars, gitignored — see terraform.tfvars.example).
+# secretKeyRef. JWT_SIGNING_KEY is generated here — nothing to type in for
+# that. The rest come from Terraform variables (terraform.tfvars, gitignored
+# — see terraform.tfvars.example).
 
 resource "random_password" "jwt_signing_key" {
   length  = 64
@@ -9,12 +9,16 @@ resource "random_password" "jwt_signing_key" {
 }
 
 locals {
-  redis_url = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+  # Neon gives you a plain `postgresql://` URL; SQLAlchemy needs the asyncpg
+  # driver named explicitly. Neon's default role already has the privileges
+  # to `CREATE EXTENSION vector`, so unlike Cloud SQL there's no separate
+  # superuser/migrate URL to manage — one secret covers both the app and the
+  # one-off migration job.
+  database_url = replace(var.neon_database_url, "postgresql://", "postgresql+asyncpg://")
 
   secret_values = {
     "idea-os-database-url"               = local.database_url
-    "idea-os-database-url-migrate"       = local.migrate_database_url
-    "idea-os-redis-url"                  = local.redis_url
+    "idea-os-redis-url"                  = var.upstash_redis_url
     "idea-os-token-encryption-key"       = var.token_encryption_key
     "idea-os-jwt-signing-key"            = random_password.jwt_signing_key.result
     "idea-os-anthropic-api-key"          = var.anthropic_api_key

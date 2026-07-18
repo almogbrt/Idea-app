@@ -1,6 +1,8 @@
 # Two identities, two purposes:
 #   runtime  — attached to the Cloud Run service itself, needs only what the
-#              running app needs (read its own secrets, open a Cloud SQL socket).
+#              running app needs (read its own secrets — Postgres/Redis are
+#              external Neon/Upstash endpoints, no GCP-side DB permission
+#              needed).
 #   deployer — used by CI (deploy/deploy.sh via GitHub Actions) to build/push
 #              images, run the migration job, and update the Cloud Run service.
 #              Terraform creates the identity and grants it roles; the actual
@@ -19,7 +21,6 @@ resource "google_service_account" "deployer" {
 
 locals {
   runtime_roles = [
-    "roles/cloudsql.client",
     "roles/secretmanager.secretAccessor",
   ]
 
@@ -27,9 +28,7 @@ locals {
     "roles/run.admin",
     "roles/iam.serviceAccountUser",
     "roles/artifactregistry.writer",
-    "roles/cloudsql.client",
     "roles/secretmanager.secretAccessor",
-    "roles/vpcaccess.user",
   ]
 }
 

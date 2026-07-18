@@ -53,14 +53,21 @@ variable "token_encryption_key" {
   sensitive   = true
 }
 
-variable "db_tier" {
-  description = "Cloud SQL machine tier. db-f1-micro is enough for a single-owner system."
+variable "neon_database_url" {
+  description = <<-EOT
+    Postgres connection string from neon.tech (free tier, pgvector supported).
+    Paste it exactly as Neon shows it (postgresql://...?sslmode=require) —
+    the +asyncpg driver segment is added automatically in secrets.tf.
+  EOT
   type        = string
-  default     = "db-f1-micro"
+  sensitive   = true
 }
 
-variable "redis_memory_size_gb" {
-  description = "Memorystore Redis instance size in GB (1 is the minimum)."
-  type        = number
-  default     = 1
+variable "upstash_redis_url" {
+  description = <<-EOT
+    Redis connection string from upstash.com (free tier), TLS form
+    (rediss://default:PASSWORD@HOST:PORT) — paste it exactly as shown.
+  EOT
+  type        = string
+  sensitive   = true
 }

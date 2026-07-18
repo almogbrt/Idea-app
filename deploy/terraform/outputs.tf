@@ -1,8 +1,3 @@
-output "cloud_sql_connection_name" {
-  value       = google_sql_database_instance.postgres.connection_name
-  description = "PROJECT:REGION:INSTANCE — used by the cloudsql-instances annotation."
-}
-
 output "artifact_registry_repo" {
   value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.docker.repository_id}"
   description = "Docker repo prefix — matches REPO_NAME in deploy/deploy.sh."
@@ -28,8 +23,4 @@ output "next_step_generate_deployer_key" {
     New repository secret, name GCP_SA_KEY, paste the file contents.
     Delete the local key file afterwards.
   EOT
-}
-
-output "redis_host" {
-  value = google_redis_instance.cache.host
 }

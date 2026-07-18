@@ -2,16 +2,11 @@
 # Placeholders (PROJECT_ID, REGION, IMAGE_TAG) are filled in by deploy.sh —
 # this file is the source of truth for runtime configuration.
 #
-# The Cloud SQL instance name and VPC connector name below (idea-os-edith-postgres,
-# idea-os-edith-conn) match what deploy/terraform creates by default (var.service_name
-# = "idea-os-edith"). If you didn't use Terraform, or changed service_name, update
-# both to match your actual resource names.
-#
-# IMPORTANT — if you're not using deploy/terraform (which derives this for you),
-# the `idea-os-database-url` secret must use the Cloud SQL Unix socket form (the
-# `cloudsql-instances` annotation below mounts the socket, it does not give you
-# a TCP host/port to connect to):
-#   postgresql+asyncpg://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT_ID:REGION:idea-os-edith-postgres
+# Postgres (Neon) and Redis (Upstash) are external, internet-reachable
+# services over TLS — no Cloud SQL socket, no VPC connector needed. The
+# `idea-os-database-url` / `idea-os-redis-url` secrets already hold full
+# connection strings (deploy/terraform derives them from your
+# neon_database_url / upstash_redis_url variables).
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -24,9 +19,6 @@ spec:
       annotations:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "5"
-        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:idea-os-edith-postgres"
-        run.googleapis.com/vpc-access-connector: "idea-os-edith-conn"
-        run.googleapis.com/vpc-access-egress: "private-ranges-only"
     spec:
       # Least-privilege identity created by deploy/terraform (service_accounts.tf)
       # — omitting this would fall back to the default, overly-broad compute SA.
