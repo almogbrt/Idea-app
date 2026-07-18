@@ -8,6 +8,7 @@ tokens is handled separately in `api_client_factory.py`.
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
@@ -21,6 +22,14 @@ from google.auth.transport.requests import Request as GoogleAuthRequest
 
 _AUTHORIZATION_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - public well-known endpoint, not a secret
+
+# Google's token endpoint returns granted scopes in canonical full-URL form
+# (e.g. "profile" -> "https://www.googleapis.com/auth/userinfo.profile") and
+# can widen the set via `include_granted_scopes` picking up scopes granted in
+# earlier consent flows. oauthlib's default is to hard-fail any exact-string
+# mismatch between requested and granted scope — this is the documented
+# escape hatch, not a workaround for a bug on our side.
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
 
 
 class GoogleOAuthClient:
