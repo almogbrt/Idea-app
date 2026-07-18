@@ -9,12 +9,20 @@ resource "random_password" "jwt_signing_key" {
 }
 
 locals {
-  # Neon gives you a plain `postgresql://` URL; SQLAlchemy needs the asyncpg
-  # driver named explicitly. Neon's default role already has the privileges
-  # to `CREATE EXTENSION vector`, so unlike Cloud SQL there's no separate
+  # Neon gives you a plain `postgresql://...?sslmode=require` URL. Two fixups
+  # for SQLAlchemy+asyncpg: (1) the asyncpg driver needs to be named
+  # explicitly in the scheme, (2) asyncpg's connect() only recognizes an
+  # `ssl=` kwarg, not the libpq-style `sslmode=` Neon uses — passing
+  # `sslmode` through raises `TypeError: connect() got an unexpected keyword
+  # argument 'sslmode'`. Neon's default role already has the privileges to
+  # `CREATE EXTENSION vector`, so unlike Cloud SQL there's no separate
   # superuser/migrate URL to manage — one secret covers both the app and the
   # one-off migration job.
-  database_url = replace(var.neon_database_url, "postgresql://", "postgresql+asyncpg://")
+  database_url = replace(
+    replace(var.neon_database_url, "postgresql://", "postgresql+asyncpg://"),
+    "sslmode=",
+    "ssl="
+  )
 
   secret_values = {
     "idea-os-database-url"               = local.database_url
