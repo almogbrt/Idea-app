@@ -28,6 +28,24 @@ const els = {
   shell: document.getElementById("shell"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),
+  clientsTbody: document.getElementById("clients-tbody"),
+  clientsEmpty: document.getElementById("clients-empty"),
+  newClientBtn: document.getElementById("new-client-btn"),
+  newClientModal: document.getElementById("new-client-modal"),
+  newClientName: document.getElementById("new-client-name"),
+  newClientSave: document.getElementById("new-client-save"),
+  newClientCancel: document.getElementById("new-client-cancel"),
+  clientModal: document.getElementById("client-modal"),
+  clientModalName: document.getElementById("client-modal-name"),
+  clientEditName: document.getElementById("client-edit-name"),
+  clientEditEmail: document.getElementById("client-edit-email"),
+  clientEditPhone: document.getElementById("client-edit-phone"),
+  clientEditFollowup: document.getElementById("client-edit-followup"),
+  clientEditNotes: document.getElementById("client-edit-notes"),
+  clientModalProjects: document.getElementById("client-modal-projects"),
+  clientModalTasks: document.getElementById("client-modal-tasks"),
+  clientModalSave: document.getElementById("client-modal-save"),
+  clientModalCancel: document.getElementById("client-modal-cancel"),
 };
 
 let isAuthenticated = false;
@@ -50,6 +68,8 @@ const TOOL_LABELS = {
   sheets_append_row: "הוסיף שורה ב-Sheets",
   sheets_create_spreadsheet: "יצר גיליון חדש",
   workspace_create_client: "יצר לקוח חדש",
+  workspace_update_client: "עדכן פרטי לקוח",
+  workspace_get_client_detail: "הציג היסטוריית לקוח",
   workspace_create_project: "יצר פרויקט חדש",
   workspace_update_project_status: "עדכן סטטוס פרויקט",
   workspace_list_projects: "הציג פרויקטים",
@@ -185,7 +205,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       overview: "overview-section",
       tasks: "tasks-section",
       projects: "projects-section",
-      clients: "projects-section",
+      clients: "clients-section",
     };
     if (sectionMap[target]) {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
@@ -211,6 +231,89 @@ els.newProjectSave.addEventListener("click", async () => {
     await apiFetch("/projects", { method: "POST", body: JSON.stringify({ name }) });
     els.newProjectModal.hidden = true;
     refreshWorkspace();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.newClientBtn.addEventListener("click", () => {
+  els.newClientModal.hidden = false;
+  els.newClientName.value = "";
+  els.newClientName.focus();
+});
+els.newClientCancel.addEventListener("click", () => {
+  els.newClientModal.hidden = true;
+});
+els.newClientSave.addEventListener("click", async () => {
+  const name = els.newClientName.value.trim();
+  if (!name) return;
+  try {
+    await apiFetch("/clients", { method: "POST", body: JSON.stringify({ name }) });
+    els.newClientModal.hidden = true;
+    loadClients();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+let currentClientId = null;
+
+async function openClientModal(clientId) {
+  try {
+    const detail = await apiFetch(`/clients/${clientId}`);
+    currentClientId = clientId;
+    els.clientModalName.textContent = detail.client.name;
+    els.clientEditName.value = detail.client.name;
+    els.clientEditEmail.value = detail.client.email || "";
+    els.clientEditPhone.value = detail.client.phone || "";
+    els.clientEditFollowup.value = detail.client.next_follow_up_at
+      ? detail.client.next_follow_up_at.slice(0, 10)
+      : "";
+    els.clientEditNotes.value = detail.client.notes || "";
+
+    els.clientModalProjects.innerHTML = detail.projects.length
+      ? detail.projects
+          .map(
+            (p) =>
+              `<div class="client-modal-list-item">${escapeHtml(p.name)} <span class="status-badge status-badge--${p.status}">${STATUS_LABELS[p.status]}</span></div>`
+          )
+          .join("")
+      : '<div class="client-modal-list-empty">אין פרויקטים משויכים.</div>';
+
+    els.clientModalTasks.innerHTML = detail.tasks.length
+      ? detail.tasks
+          .map(
+            (t) =>
+              `<div class="client-modal-list-item${t.status === "done" ? " done" : ""}">${escapeHtml(t.title)}</div>`
+          )
+          .join("")
+      : '<div class="client-modal-list-empty">אין משימות משויכות.</div>';
+
+    els.clientModal.hidden = false;
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+els.clientModalCancel.addEventListener("click", () => {
+  els.clientModal.hidden = true;
+});
+els.clientModalSave.addEventListener("click", async () => {
+  if (!currentClientId) return;
+  try {
+    const followupValue = els.clientEditFollowup.value;
+    await apiFetch(`/clients/${currentClientId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: els.clientEditName.value.trim() || null,
+        email: els.clientEditEmail.value.trim() || null,
+        phone: els.clientEditPhone.value.trim() || null,
+        notes: els.clientEditNotes.value.trim() || null,
+        next_follow_up_at: followupValue ? new Date(followupValue).toISOString() : null,
+      }),
+    });
+    els.clientModal.hidden = true;
+    loadClients();
   } catch (err) {
     alert(err.message);
   }
@@ -282,6 +385,31 @@ async function loadTasks() {
   }
 }
 
+async function loadClients() {
+  try {
+    const clientsList = await apiFetch("/clients");
+    els.clientsTbody.innerHTML = "";
+    els.clientsEmpty.hidden = clientsList.length > 0;
+    for (const c of clientsList) {
+      const tr = document.createElement("tr");
+      tr.className = "clickable-row";
+      const followup = c.next_follow_up_at
+        ? new Date(c.next_follow_up_at).toLocaleDateString("he-IL")
+        : "—";
+      tr.innerHTML = `
+        <td>${escapeHtml(c.name)}</td>
+        <td>${c.email ? escapeHtml(c.email) : "—"}</td>
+        <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
+        <td>${followup}</td>
+      `;
+      tr.addEventListener("click", () => openClientModal(c.id));
+      els.clientsTbody.appendChild(tr);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
 async function loadActivity() {
   try {
     const items = await apiFetch("/dashboard/activity");
@@ -314,6 +442,7 @@ function refreshWorkspace() {
   loadDashboardSummary();
   loadProjects();
   loadTasks();
+  loadClients();
   loadActivity();
 }
 

@@ -7,6 +7,7 @@ from app.agents.project_management.service import WorkspaceService
 from app.application.ports.agent_tool import Tool, ToolExecutionContext
 from app.domain.entities import (
     Client,
+    ClientDetail,
     Project,
     ProjectStatus,
     ProjectSummary,
@@ -19,7 +20,16 @@ AGENT_NAME = "project_management"
 
 
 def _client_json(client: Client) -> dict[str, Any]:
-    return {"id": str(client.id), "name": client.name}
+    return {
+        "id": str(client.id),
+        "name": client.name,
+        "email": client.email,
+        "phone": client.phone,
+        "notes": client.notes,
+        "next_follow_up_at": client.next_follow_up_at.isoformat()
+        if client.next_follow_up_at
+        else None,
+    }
 
 
 def _project_json(project: Project) -> dict[str, Any]:
@@ -47,6 +57,14 @@ def _task_json(task: Task) -> dict[str, Any]:
     }
 
 
+def _client_detail_json(detail: ClientDetail) -> dict[str, Any]:
+    return {
+        "client": _client_json(detail.client),
+        "projects": [_project_summary_json(s) for s in detail.projects],
+        "tasks": [_task_json(t) for t in detail.tasks],
+    }
+
+
 class CreateClientTool(Tool):
     name = "workspace_create_client"
     description = (
@@ -67,6 +85,68 @@ class CreateClientTool(Tool):
         client = await self._service.create_client(context.user_id, arguments["name"])
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_client_json(client))
+        )
+
+
+class UpdateClientTool(Tool):
+    name = "workspace_update_client"
+    description = (
+        "Update a client's contact info or notes (email, phone, notes). Match the client by "
+        "(partial) name. Only the fields you pass are changed."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "client_name": {"type": "string", "description": "Client name (or part of it)."},
+            "email": {"type": "string", "description": "Contact email (optional)."},
+            "phone": {"type": "string", "description": "Contact phone number (optional)."},
+            "notes": {
+                "type": "string",
+                "description": "Free-text notes about the client (optional).",
+            },
+        },
+        "required": ["client_name"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        client = await self._service.update_client(
+            context.user_id,
+            arguments["client_name"],
+            email=arguments.get("email"),
+            phone=arguments.get("phone"),
+            notes=arguments.get("notes"),
+        )
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_client_json(client))
+        )
+
+
+class GetClientDetailTool(Tool):
+    name = "workspace_get_client_detail"
+    description = (
+        "Get a client's full history: contact info, notes, and every project and task linked "
+        "to them. Match the client by (partial) name."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "client_name": {"type": "string", "description": "Client name (or part of it)."},
+        },
+        "required": ["client_name"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        detail = await self._service.get_client_detail(context.user_id, arguments["client_name"])
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_client_detail_json(detail))
         )
 
 

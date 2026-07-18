@@ -49,8 +49,14 @@ class _WorkingSchedule(SchedulePort):
         return 2
 
 
-async def test_manage_clients_create_and_list(fake_client_repository: FakeClientRepository) -> None:
-    use_case = ManageClientsUseCase(fake_client_repository)
+async def test_manage_clients_create_and_list(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository
+    )
     user_id = uuid.uuid4()
 
     client = await use_case.create(user_id, "Baron's")
@@ -58,6 +64,64 @@ async def test_manage_clients_create_and_list(fake_client_repository: FakeClient
 
     assert client.name == "Baron's"
     assert [c.name for c in clients] == ["Baron's"]
+
+
+async def test_manage_clients_update_sets_only_provided_fields(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+
+    updated = await use_case.update(client.id, email="baron@example.com", notes="VIP")
+
+    assert updated.name == "Baron's"
+    assert updated.email == "baron@example.com"
+    assert updated.notes == "VIP"
+
+    fetched = await use_case.get_or_raise(client.id)
+    assert fetched.email == "baron@example.com"
+
+
+async def test_manage_clients_get_or_raise_missing_client_raises(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository
+    )
+
+    with pytest.raises(NotFoundError):
+        await use_case.get_or_raise(uuid.uuid4())
+
+
+async def test_manage_clients_get_detail_returns_linked_projects_and_tasks(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+    other_client = await use_case.create(user_id, "Other Co")
+
+    project = await fake_project_repository.create(user_id, "Summer menu", client_id=client.id)
+    await fake_project_repository.create(user_id, "Unrelated", client_id=other_client.id)
+    task = await fake_task_repository.create(user_id, "Design menu", project_id=project.id)
+    await fake_task_repository.create(user_id, "Unrelated task")
+
+    detail = await use_case.get_detail(user_id, client.id)
+
+    assert detail.client.id == client.id
+    assert [s.project.id for s in detail.projects] == [project.id]
+    assert [t.id for t in detail.tasks] == [task.id]
 
 
 async def test_manage_projects_create_list_and_update_status(

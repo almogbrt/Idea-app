@@ -174,7 +174,7 @@ class Container:
             orchestrator=orchestrator,
             manage_conversation=ManageConversationUseCase(conversations),
             authenticate_user=authenticate_user,
-            manage_clients=ManageClientsUseCase(clients_repo),
+            manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),
             dashboard_summary=DashboardSummaryUseCase(

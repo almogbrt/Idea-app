@@ -111,3 +111,50 @@ async def test_update_task_status_resolves_by_partial_title(
     )
 
     assert updated.status == TaskStatus.DONE
+
+
+async def test_update_client_resolves_by_partial_name_and_sets_only_given_fields(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-7", "owner-ws7@example.com", "Owner")
+    await db_session.commit()
+
+    await workspace_service.create_client(user.id, "Baron's Wine House")
+
+    updated = await workspace_service.update_client(
+        user.id, "baron's", email="baron@example.com", notes="VIP client"
+    )
+
+    assert updated.email == "baron@example.com"
+    assert updated.notes == "VIP client"
+    assert updated.name == "Baron's Wine House"
+
+
+async def test_update_client_raises_when_no_match(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-8", "owner-ws8@example.com", "Owner")
+    await db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        await workspace_service.update_client(user.id, "nonexistent", email="x@example.com")
+
+
+async def test_get_client_detail_returns_linked_projects_and_tasks(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-9", "owner-ws9@example.com", "Owner")
+    await db_session.commit()
+
+    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    await workspace_service.create_task(user.id, "Prep dishes", "summer")
+    await workspace_service.create_project(user.id, "Unrelated project")
+
+    detail = await workspace_service.get_client_detail(user.id, "baron's")
+
+    assert detail.client.name == "Baron's"
+    assert [s.project.id for s in detail.projects] == [project.id]
+    assert [t.title for t in detail.tasks] == ["Prep dishes"]

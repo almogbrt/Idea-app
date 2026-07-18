@@ -58,7 +58,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
         manage_conversation=None,  # type: ignore[arg-type]
         authenticate_user=None,  # type: ignore[arg-type]
-        manage_clients=ManageClientsUseCase(clients_repo),
+        manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
         dashboard_summary=DashboardSummaryUseCase(

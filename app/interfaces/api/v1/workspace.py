@@ -15,10 +15,11 @@ from fastapi import APIRouter, Depends
 
 from app.core.container import RequestScopedServices
 from app.core.exceptions import ForbiddenError
-from app.domain.entities import Project, ProjectSummary, Task, User
+from app.domain.entities import Client, ClientDetail, Project, ProjectSummary, Task, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.workspace import (
     ActivityItemView,
+    ClientDetailView,
     ClientView,
     CreateClientRequest,
     CreateProjectRequest,
@@ -26,11 +27,17 @@ from app.interfaces.api.schemas.workspace import (
     DashboardSummaryView,
     ProjectView,
     TaskView,
+    UpdateClientRequest,
     UpdateProjectStatusRequest,
     UpdateTaskStatusRequest,
 )
 
 router = APIRouter(tags=["workspace"])
+
+
+def _ensure_client_owned_by(client: Client, user: User) -> None:
+    if client.user_id != user.id:
+        raise ForbiddenError("This client does not belong to you.")
 
 
 def _ensure_project_owned_by(project: Project, user: User) -> None:
@@ -75,13 +82,25 @@ async def dashboard_activity(
     ]
 
 
+def _client_view(client: Client) -> ClientView:
+    return ClientView(
+        id=client.id,
+        name=client.name,
+        created_at=client.created_at,
+        email=client.email,
+        phone=client.phone,
+        notes=client.notes,
+        next_follow_up_at=client.next_follow_up_at,
+    )
+
+
 @router.get("/clients", response_model=list[ClientView])
 async def list_clients(
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> list[ClientView]:
     clients = await scope.manage_clients.list_all(user.id)
-    return [ClientView(id=c.id, name=c.name, created_at=c.created_at) for c in clients]
+    return [_client_view(c) for c in clients]
 
 
 @router.post("/clients", response_model=ClientView)
@@ -91,7 +110,43 @@ async def create_client(
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> ClientView:
     client = await scope.manage_clients.create(user.id, body.name)
-    return ClientView(id=client.id, name=client.name, created_at=client.created_at)
+    return _client_view(client)
+
+
+@router.get("/clients/{client_id}", response_model=ClientDetailView)
+async def get_client(
+    client_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ClientDetailView:
+    client = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(client, user)
+    detail: ClientDetail = await scope.manage_clients.get_detail(user.id, client_id)
+    return ClientDetailView(
+        client=_client_view(detail.client),
+        projects=[_project_view(s) for s in detail.projects],
+        tasks=[_task_view(t) for t in detail.tasks],
+    )
+
+
+@router.patch("/clients/{client_id}", response_model=ClientView)
+async def update_client(
+    client_id: uuid.UUID,
+    body: UpdateClientRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ClientView:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    updated = await scope.manage_clients.update(
+        client_id,
+        name=body.name,
+        email=body.email,
+        phone=body.phone,
+        notes=body.notes,
+        next_follow_up_at=body.next_follow_up_at,
+    )
+    return _client_view(updated)
 
 
 def _project_view(summary: ProjectSummary) -> ProjectView:

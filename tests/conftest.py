@@ -120,6 +120,34 @@ class FakeClientRepository(ClientRepositoryPort):
     async def list_by_user(self, user_id: uuid.UUID) -> list[Client]:
         return [c for c in self.clients.values() if c.user_id == user_id]
 
+    async def get(self, client_id: uuid.UUID) -> Client | None:
+        return self.clients.get(client_id)
+
+    async def update(
+        self,
+        client_id: uuid.UUID,
+        *,
+        name: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+        notes: str | None = None,
+        next_follow_up_at: datetime | None = None,
+    ) -> Client:
+        client = self.clients.get(client_id)
+        if client is None:
+            raise NotFoundError("Client not found", details={"client_id": str(client_id)})
+        if name is not None:
+            client.name = name
+        if email is not None:
+            client.email = email
+        if phone is not None:
+            client.phone = phone
+        if notes is not None:
+            client.notes = notes
+        if next_follow_up_at is not None:
+            client.next_follow_up_at = next_follow_up_at
+        return client
+
 
 class FakeProjectRepository(ProjectRepositoryPort):
     def __init__(self) -> None:

@@ -40,7 +40,7 @@ def _workspace_kwargs() -> dict[str, object]:
     projects_repo = FakeProjectRepository()
     tasks_repo = FakeTaskRepository()
     return {
-        "manage_clients": ManageClientsUseCase(FakeClientRepository()),
+        "manage_clients": ManageClientsUseCase(FakeClientRepository(), projects_repo, tasks_repo),
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
         "dashboard_summary": DashboardSummaryUseCase(

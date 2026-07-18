@@ -565,6 +565,50 @@ input {
   border-bottom: none;
 }
 
+#clients-section {
+  margin-bottom: 32px;
+}
+
+#clients-table-wrap {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+#clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+#clients-table th {
+  text-align: right;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+#clients-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+#clients-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--panel-bg-hover);
+}
+
 .status-badge {
   display: inline-block;
   padding: 3px 10px;
@@ -818,6 +862,86 @@ input {
   border-color: var(--purple);
 }
 
+.modal-card--wide {
+  width: min(480px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.client-modal-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.client-modal-fields--full {
+  grid-column: 1 / -1;
+}
+
+.client-modal-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.client-modal-fields input,
+.client-modal-fields textarea {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.client-modal-fields input:focus,
+.client-modal-fields textarea:focus {
+  border-color: var(--purple);
+}
+
+.client-modal-history {
+  margin-top: 18px;
+}
+
+.client-modal-history h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin: 14px 0 8px;
+}
+
+.client-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.client-modal-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.client-modal-list-item.done {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+
+.client-modal-list-empty {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -908,6 +1032,14 @@ input {
 
   #projects-table-wrap {
     overflow-x: auto;
+  }
+
+  #clients-table-wrap {
+    overflow-x: auto;
+  }
+
+  .client-modal-fields {
+    grid-template-columns: 1fr;
   }
 
   .bubble {

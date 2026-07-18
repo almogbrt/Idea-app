@@ -18,7 +18,15 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.exceptions import NotFoundError
-from app.domain.entities import Client, Project, ProjectStatus, ProjectSummary, Task, TaskStatus
+from app.domain.entities import (
+    Client,
+    ClientDetail,
+    Project,
+    ProjectStatus,
+    ProjectSummary,
+    Task,
+    TaskStatus,
+)
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
@@ -36,6 +44,41 @@ class WorkspaceService:
             client = await SqlAlchemyClientRepository(session).create(user_id, name)
             await session.commit()
             return client
+
+    async def update_client(
+        self,
+        user_id: uuid.UUID,
+        client_name: str,
+        *,
+        email: str | None = None,
+        phone: str | None = None,
+        notes: str | None = None,
+    ) -> Client:
+        async with self._session_factory() as session:
+            client = await self._find_client(session, user_id, client_name)
+            if client is None:
+                raise NotFoundError(
+                    f"No client matching '{client_name}' found", details={"query": client_name}
+                )
+            updated = await SqlAlchemyClientRepository(session).update(
+                client.id, email=email, phone=phone, notes=notes
+            )
+            await session.commit()
+            return updated
+
+    async def get_client_detail(self, user_id: uuid.UUID, client_name: str) -> ClientDetail:
+        async with self._session_factory() as session:
+            client = await self._find_client(session, user_id, client_name)
+            if client is None:
+                raise NotFoundError(
+                    f"No client matching '{client_name}' found", details={"query": client_name}
+                )
+            all_projects = await SqlAlchemyProjectRepository(session).list_by_user(user_id)
+            client_projects = [s for s in all_projects if s.project.client_id == client.id]
+            project_ids = {s.project.id for s in client_projects}
+            all_tasks = await SqlAlchemyTaskRepository(session).list_by_user(user_id)
+            client_tasks = [t for t in all_tasks if t.project_id in project_ids]
+            return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
 
     async def create_project(
         self, user_id: uuid.UUID, name: str, client_name: str | None = None

@@ -126,6 +126,10 @@ class Client:
     user_id: uuid.UUID
     name: str
     created_at: datetime
+    email: str | None = None
+    phone: str | None = None
+    notes: str | None = None
+    next_follow_up_at: datetime | None = None
 
 
 @dataclass(slots=True)
@@ -158,6 +162,15 @@ class ProjectSummary:
     project: Project
     client_name: str | None
     last_task_title: str | None
+
+
+@dataclass(slots=True)
+class ClientDetail:
+    """A `Client` plus its full history, for the CRM detail view."""
+
+    client: Client
+    projects: list[ProjectSummary]
+    tasks: list[Task]
 
 
 @dataclass(slots=True)

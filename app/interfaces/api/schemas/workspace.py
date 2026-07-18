@@ -12,10 +12,22 @@ class ClientView(BaseModel):
     id: uuid.UUID
     name: str
     created_at: datetime
+    email: str | None = None
+    phone: str | None = None
+    notes: str | None = None
+    next_follow_up_at: datetime | None = None
 
 
 class CreateClientRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+
+
+class UpdateClientRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = None
+    phone: str | None = None
+    notes: str | None = None
+    next_follow_up_at: datetime | None = None
 
 
 class ProjectView(BaseModel):
@@ -54,6 +66,12 @@ class CreateTaskRequest(BaseModel):
 
 class UpdateTaskStatusRequest(BaseModel):
     status: TaskStatus
+
+
+class ClientDetailView(BaseModel):
+    client: ClientView
+    projects: list[ProjectView]
+    tasks: list[TaskView]
 
 
 class DashboardSummaryView(BaseModel):

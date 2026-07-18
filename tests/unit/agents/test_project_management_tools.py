@@ -9,14 +9,17 @@ from app.agents.project_management.tools import (
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    GetClientDetailTool,
     ListProjectsTool,
     ListTasksTool,
+    UpdateClientTool,
     UpdateProjectStatusTool,
     UpdateTaskStatusTool,
 )
 from app.application.ports.agent_tool import ToolExecutionContext
 from app.domain.entities import (
     Client,
+    ClientDetail,
     Project,
     ProjectStatus,
     ProjectSummary,
@@ -32,6 +35,33 @@ class _FakeWorkspaceService:
     async def create_client(self, user_id: uuid.UUID, name: str) -> Client:
         self.calls.append(("create_client", (user_id, name)))
         return Client(id=uuid.uuid4(), user_id=user_id, name=name, created_at=datetime.now(UTC))
+
+    async def update_client(
+        self,
+        user_id: uuid.UUID,
+        client_name: str,
+        *,
+        email: str | None = None,
+        phone: str | None = None,
+        notes: str | None = None,
+    ) -> Client:
+        self.calls.append(("update_client", (user_id, client_name, email, phone, notes)))
+        return Client(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            name=client_name,
+            created_at=datetime.now(UTC),
+            email=email,
+            phone=phone,
+            notes=notes,
+        )
+
+    async def get_client_detail(self, user_id: uuid.UUID, client_name: str) -> ClientDetail:
+        self.calls.append(("get_client_detail", (user_id, client_name)))
+        client = Client(
+            id=uuid.uuid4(), user_id=user_id, name=client_name, created_at=datetime.now(UTC)
+        )
+        return ClientDetail(client=client, projects=[], tasks=[])
 
     async def create_project(
         self, user_id: uuid.UUID, name: str, client_name: str | None = None
@@ -138,6 +168,37 @@ async def test_create_client_tool() -> None:
 
     assert service.calls == [("create_client", (context.user_id, "Baron's"))]
     assert json.loads(result.content)["name"] == "Baron's"
+
+
+async def test_update_client_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = UpdateClientTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"client_name": "Baron's", "email": "baron@example.com", "notes": "VIP"}, context
+    )
+
+    assert service.calls == [
+        ("update_client", (context.user_id, "Baron's", "baron@example.com", None, "VIP"))
+    ]
+    body = json.loads(result.content)
+    assert body["email"] == "baron@example.com"
+    assert body["notes"] == "VIP"
+
+
+async def test_get_client_detail_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = GetClientDetailTool(service)
+    context = _context()
+
+    result = await tool.execute({"client_name": "Baron's"}, context)
+
+    assert service.calls == [("get_client_detail", (context.user_id, "Baron's"))]
+    body = json.loads(result.content)
+    assert body["client"]["name"] == "Baron's"
+    assert body["projects"] == []
+    assert body["tasks"] == []
 
 
 async def test_create_project_tool_passes_client_name() -> None:

@@ -202,6 +202,32 @@
         <div id="tasks-list"></div>
         <div id="tasks-empty" class="empty-state" hidden>עדיין אין משימות.</div>
       </section>
+
+      <section id="clients-section">
+        <div class="section-heading">
+          <h2>לקוחות</h2>
+          <button id="new-client-btn" class="btn btn--ghost">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            לקוח חדש
+          </button>
+        </div>
+        <div id="clients-table-wrap">
+          <table id="clients-table">
+            <thead>
+              <tr>
+                <th>שם</th>
+                <th>אימייל</th>
+                <th>טלפון</th>
+                <th>מעקב הבא</th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+          <div id="clients-empty" class="empty-state" hidden>
+            עדיין אין לקוחות. אפשר ליצור אחד עם הכפתור "לקוח חדש", או פשוט לבקש מ-Edith בצ'אט.
+          </div>
+        </div>
+      </section>
     </main>
 
     <aside id="side-panel">
@@ -235,6 +261,50 @@
       <div class="modal-actions">
         <button id="new-project-cancel" class="btn btn--ghost">ביטול</button>
         <button id="new-project-save" class="btn btn--primary">צור פרויקט</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-client-modal" class="modal" hidden>
+    <div class="modal-card">
+      <h3>לקוח חדש</h3>
+      <input id="new-client-name" type="text" placeholder="שם הלקוח" autocomplete="off" />
+      <div class="modal-actions">
+        <button id="new-client-cancel" class="btn btn--ghost">ביטול</button>
+        <button id="new-client-save" class="btn btn--primary">צור לקוח</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="client-modal" class="modal" hidden>
+    <div class="modal-card modal-card--wide">
+      <h3 id="client-modal-name">לקוח</h3>
+      <div class="client-modal-fields">
+        <label>שם
+          <input id="client-edit-name" type="text" autocomplete="off" />
+        </label>
+        <label>אימייל
+          <input id="client-edit-email" type="email" autocomplete="off" />
+        </label>
+        <label>טלפון
+          <input id="client-edit-phone" type="text" autocomplete="off" />
+        </label>
+        <label>תזכורת מעקב
+          <input id="client-edit-followup" type="date" />
+        </label>
+        <label class="client-modal-fields--full">פתקים
+          <textarea id="client-edit-notes" rows="3"></textarea>
+        </label>
+      </div>
+      <div class="client-modal-history">
+        <h4>פרויקטים</h4>
+        <div id="client-modal-projects" class="client-modal-list"></div>
+        <h4>משימות</h4>
+        <div id="client-modal-tasks" class="client-modal-list"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="client-modal-cancel" class="btn btn--ghost">סגור</button>
+        <button id="client-modal-save" class="btn btn--primary">שמור</button>
       </div>
     </div>
   </div>

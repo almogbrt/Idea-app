@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import datetime
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
 from app.application.ports.client_repository import ClientRepositoryPort
@@ -23,6 +24,7 @@ from app.core.logging import get_logger
 from app.domain.entities import (
     AgentExecution,
     Client,
+    ClientDetail,
     Project,
     ProjectStatus,
     ProjectSummary,
@@ -42,14 +44,63 @@ class ListActivityUseCase:
 
 
 class ManageClientsUseCase:
-    def __init__(self, client_repository: ClientRepositoryPort) -> None:
+    def __init__(
+        self,
+        client_repository: ClientRepositoryPort,
+        project_repository: ProjectRepositoryPort,
+        task_repository: TaskRepositoryPort,
+    ) -> None:
         self._clients = client_repository
+        self._projects = project_repository
+        self._tasks = task_repository
 
     async def create(self, user_id: uuid.UUID, name: str) -> Client:
         return await self._clients.create(user_id, name)
 
     async def list_all(self, user_id: uuid.UUID) -> list[Client]:
         return await self._clients.list_by_user(user_id)
+
+    async def get_or_raise(self, client_id: uuid.UUID) -> Client:
+        client = await self._clients.get(client_id)
+        if client is None:
+            raise NotFoundError("Client not found", details={"client_id": str(client_id)})
+        return client
+
+    async def update(
+        self,
+        client_id: uuid.UUID,
+        *,
+        name: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+        notes: str | None = None,
+        next_follow_up_at: datetime | None = None,
+    ) -> Client:
+        return await self._clients.update(
+            client_id,
+            name=name,
+            email=email,
+            phone=phone,
+            notes=notes,
+            next_follow_up_at=next_follow_up_at,
+        )
+
+    async def get_detail(self, user_id: uuid.UUID, client_id: uuid.UUID) -> ClientDetail:
+        """The "full history" view: the client plus every project and task
+        linked to it, however many hops that takes today (task -> project ->
+        client) since neither repository can filter by client_id directly."""
+        client = await self.get_or_raise(client_id)
+
+        all_projects = await self._projects.list_by_user(user_id)
+        client_projects = [
+            summary for summary in all_projects if summary.project.client_id == client_id
+        ]
+        project_ids = {summary.project.id for summary in client_projects}
+
+        all_tasks = await self._tasks.list_by_user(user_id)
+        client_tasks = [task for task in all_tasks if task.project_id in project_ids]
+
+        return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
 
 
 class ManageProjectsUseCase:

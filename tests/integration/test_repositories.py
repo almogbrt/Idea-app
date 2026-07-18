@@ -10,10 +10,12 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.core.security import TokenCipher
 from app.domain.entities import (
     AgentExecution,
@@ -250,6 +252,33 @@ async def test_client_repository_create_and_list(db_session: AsyncSession) -> No
 
     clients = await repo.list_by_user(user.id)
     assert [c.name for c in clients] == ["Baron's"]
+
+
+async def test_client_repository_get_and_update(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-10b", "owner10b@example.com", "Owner Ten B")
+
+    repo = SqlAlchemyClientRepository(db_session)
+    client = await repo.create(user.id, "Baron's")
+
+    fetched = await repo.get(client.id)
+    assert fetched is not None
+    assert fetched.email is None
+
+    updated = await repo.update(client.id, email="baron@example.com", phone="050-1234567")
+    assert updated.email == "baron@example.com"
+    assert updated.phone == "050-1234567"
+    assert updated.name == "Baron's"
+
+    refetched = await repo.get(client.id)
+    assert refetched is not None
+    assert refetched.email == "baron@example.com"
+
+
+async def test_client_repository_update_missing_client_raises(db_session: AsyncSession) -> None:
+    repo = SqlAlchemyClientRepository(db_session)
+    with pytest.raises(NotFoundError):
+        await repo.update(uuid.uuid4(), email="x@example.com")
 
 
 async def test_project_repository_round_trip_with_client_and_task(
