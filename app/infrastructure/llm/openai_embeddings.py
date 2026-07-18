@@ -30,7 +30,10 @@ class OpenAIEmbeddingGateway(EmbeddingPort):
     async def embed(self, text: str) -> list[float]:
         try:
             response = await self._call_with_retry(text)
-        except openai.APIError as exc:
+        except Exception as exc:  # noqa: BLE001 - memory is best-effort; any failure mode
+            # (bad API key, network, or something as mundane as a malformed
+            # header raising UnicodeEncodeError deep in httpx) must degrade
+            # gracefully rather than take the whole chat command down with it.
             logger.error("openai_embeddings_api_error", error=str(exc))
             raise ExternalServiceError(f"OpenAI embeddings API error: {exc}") from exc
         return list(response.data[0].embedding)
