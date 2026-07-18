@@ -32,16 +32,27 @@ router = APIRouter(prefix="/auth/google", tags=["auth"])
 logger = get_logger(__name__)
 
 _STATE_COOKIE_NAME = "idea_os_oauth_state"
+_VERIFIER_COOKIE_NAME = "idea_os_oauth_verifier"
 
 
 @router.get("/login")
 async def login(container: Container = Depends(get_container)) -> RedirectResponse:
     state = str(uuid.uuid4())
-    authorization_url = container.google_oauth_client.build_authorization_url(state)
+    authorization_url, code_verifier = container.google_oauth_client.build_authorization_url(
+        state
+    )
     response = RedirectResponse(url=authorization_url)
     response.set_cookie(
         _STATE_COOKIE_NAME,
         state,
+        httponly=True,
+        secure=container.settings.is_production,
+        samesite="lax",
+        max_age=600,
+    )
+    response.set_cookie(
+        _VERIFIER_COOKIE_NAME,
+        code_verifier,
         httponly=True,
         secure=container.settings.is_production,
         samesite="lax",
@@ -58,13 +69,18 @@ async def callback(
     container: Container = Depends(get_container),
     session: AsyncSession = Depends(get_db_session),
     idea_os_oauth_state: str | None = Cookie(default=None),
+    idea_os_oauth_verifier: str | None = Cookie(default=None),
 ) -> RedirectResponse:
     if not idea_os_oauth_state or idea_os_oauth_state != state:
         raise AuthError(
             "OAuth state mismatch — possible CSRF attempt. Please try signing in again."
         )
+    if not idea_os_oauth_verifier:
+        raise AuthError("OAuth session expired — please try signing in again.")
 
-    tokens, profile = container.google_oauth_client.exchange_code(code, state)
+    tokens, profile = container.google_oauth_client.exchange_code(
+        code, state, idea_os_oauth_verifier
+    )
 
     use_case = AuthenticateUserUseCase(
         user_repository=SqlAlchemyUserRepository(session),
@@ -77,6 +93,7 @@ async def callback(
 
     response = RedirectResponse(url="/")
     response.delete_cookie(_STATE_COOKIE_NAME)
+    response.delete_cookie(_VERIFIER_COOKIE_NAME)
     response.set_cookie(
         SESSION_COOKIE_NAME,
         access_token,

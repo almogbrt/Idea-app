@@ -36,7 +36,9 @@ class GoogleOAuthClient:
         self._redirect_uri = redirect_uri
         self._scopes = scopes
 
-    def _build_flow(self, state: str | None = None) -> google_auth_oauthlib.flow.Flow:
+    def _build_flow(
+        self, state: str | None = None, code_verifier: str | None = None
+    ) -> google_auth_oauthlib.flow.Flow:
         client_config = {
             "web": {
                 "client_id": self._client_id,
@@ -47,20 +49,34 @@ class GoogleOAuthClient:
             }
         }
         return google_auth_oauthlib.flow.Flow.from_client_config(
-            client_config, scopes=self._scopes, redirect_uri=self._redirect_uri, state=state
+            client_config,
+            scopes=self._scopes,
+            redirect_uri=self._redirect_uri,
+            state=state,
+            code_verifier=code_verifier,
         )
 
-    def build_authorization_url(self, state: str) -> str:
+    def build_authorization_url(self, state: str) -> tuple[str, str]:
+        """Returns (authorization_url, code_verifier).
+
+        google-auth-oauthlib auto-generates a PKCE code_verifier per Flow
+        instance and never persists it — the caller must store it (e.g. in a
+        cookie, alongside `state`) and pass it back into `exchange_code` on
+        the callback, since that's a separate request handled by a fresh
+        Flow object with no memory of this one.
+        """
         flow = self._build_flow(state=state)
         authorization_url, _ = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
             prompt="consent",
         )
-        return cast(str, authorization_url)
+        return cast(str, authorization_url), cast(str, flow.code_verifier)
 
-    def exchange_code(self, code: str, state: str) -> tuple[OAuthTokenSet, GoogleProfile]:
-        flow = self._build_flow(state=state)
+    def exchange_code(
+        self, code: str, state: str, code_verifier: str
+    ) -> tuple[OAuthTokenSet, GoogleProfile]:
+        flow = self._build_flow(state=state, code_verifier=code_verifier)
         try:
             flow.fetch_token(code=code)
         except Exception as exc:  # noqa: BLE001 - any OAuth exchange failure is an auth failure
