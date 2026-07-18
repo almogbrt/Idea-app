@@ -120,64 +120,69 @@ pytest --cov=app --cov-report=term-missing
 
 ## Deploying to Cloud Run
 
-1. Create the required secrets in Secret Manager (names must match
-   `deploy/cloudrun-service.yaml`): `idea-os-database-url`, `idea-os-redis-url`,
-   `idea-os-token-encryption-key`, `idea-os-jwt-signing-key`,
-   `idea-os-anthropic-api-key`, `idea-os-openai-api-key`,
-   `idea-os-google-oauth-client-id`, `idea-os-google-oauth-client-secret`,
-   `idea-os-owner-email`.
-2. Provision Cloud SQL (Postgres, with `pgvector` installed) and Memorystore
-   (Redis), and a Serverless VPC Access connector so Cloud Run can reach Redis.
-3. Run the deploy script:
-   ```bash
-   PROJECT_ID=my-project REGION=us-central1 ./deploy/deploy.sh
-   ```
-   This builds and pushes the image, runs Alembic migrations as a one-off Cloud
-   Run Job, then deploys the service from `deploy/cloudrun-service.yaml`.
+### 1. Provision infrastructure with Terraform
+
+`deploy/terraform/` creates everything durable: the VPC + Serverless VPC
+Access connector, Cloud SQL (Postgres 16), Memorystore (Redis), the
+Artifact Registry repo, every Secret Manager secret `deploy/cloudrun-service.yaml`
+references (DB/Redis URLs are derived automatically — nothing to compute by
+hand), and two service accounts (`idea-os-edith-runtime`, least-privilege,
+attached to the Cloud Run service itself; `idea-os-edith-deployer`, used by CI
+to build/push/deploy).
+
+Easiest run from **Cloud Shell** in the Cloud Console (has `terraform` and
+`gcloud` pre-installed and already authenticated as you):
+
+```bash
+cd deploy/terraform
+cp terraform.tfvars.example terraform.tfvars   # fill in your real values
+terraform init
+terraform apply
+```
+
+Then generate the one CI credential Terraform deliberately doesn't export
+(a long-lived key shouldn't live in state — `terraform output` prints the
+exact command):
+
+```bash
+gcloud iam service-accounts keys create idea-os-deployer-key.json \
+  --iam-account="$(terraform output -raw deployer_service_account_email)"
+```
+
+In the GitHub repo: **Settings → Secrets and variables → Actions → New
+repository secret**, name it `GCP_SA_KEY`, paste the full contents of
+`idea-os-deployer-key.json`, then delete the local file
+(`rm idea-os-deployer-key.json`) — it's only needed once, to seed the secret.
+
+### 2. Deploy the application
+
+Either push a button in the GitHub Actions **Actions** tab
+(`.github/workflows/deploy.yml`, `workflow_dispatch` — no local `gcloud`
+needed once `GCP_SA_KEY` is set), or run it yourself:
+
+```bash
+PROJECT_ID=my-project REGION=us-central1 ./deploy/deploy.sh
+```
+
+Either path builds and pushes the image, runs Alembic migrations as a
+one-off Cloud Run Job (using the Cloud SQL superuser, since `CREATE EXTENSION
+vector` needs it — the app itself always connects with the least-privilege
+`idea_os` user), then deploys the service from `deploy/cloudrun-service.yaml`.
 
 **Bootstrapping note**: the service's own URL isn't known until after the first
-deploy, so `GOOGLE_OAUTH_REDIRECT_URI` can't be set correctly up front. Run
-`deploy.sh` once to get a URL, then:
+deploy, so `GOOGLE_OAUTH_REDIRECT_URI` can't be set correctly up front. Deploy
+once to get a URL, then:
 1. Add `https://<service-url>/api/v1/auth/google/callback` as an authorized
    redirect URI on the OAuth client in Google Cloud Console.
-2. Re-run `deploy.sh` (it now resolves the real service URL automatically) so
-   the running service's `GOOGLE_OAUTH_REDIRECT_URI` matches.
+2. Re-deploy (it now resolves the real service URL automatically) so the
+   running service's `GOOGLE_OAUTH_REDIRECT_URI` matches.
 
 Also, while the OAuth consent screen is in "Testing" mode, only the email
 addresses listed under **Test users** can complete login — add your own
 `OWNER_EMAIL` there or login will be rejected before it ever reaches Edith.
 
-### Deploying via GitHub Actions (recommended)
-
-`.github/workflows/deploy.yml` runs the exact same `deploy/deploy.sh` script
-above, triggered manually from the Actions tab (`workflow_dispatch`) instead of
-from your own machine — no local `gcloud` install needed. One-time setup,
-easiest done from **Cloud Shell** in the Cloud Console (it has `gcloud`
-pre-installed and already authenticated as you):
-
-```bash
-PROJECT_ID=idet-502218
-gcloud iam service-accounts create idea-os-deployer --project "$PROJECT_ID"
-
-for ROLE in run.admin iam.serviceAccountUser artifactregistry.writer \
-            cloudsql.client secretmanager.secretAccessor vpcaccess.user \
-            storage.admin; do
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:idea-os-deployer@${PROJECT_ID}.iam.gserviceaccount.com" \
-    --role="roles/${ROLE}"
-done
-
-gcloud iam service-accounts keys create idea-os-deployer-key.json \
-  --iam-account="idea-os-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
-```
-
-Then in the GitHub repo: **Settings → Secrets and variables → Actions → New
-repository secret**, name it `GCP_SA_KEY`, and paste the full contents of
-`idea-os-deployer-key.json` as the value. Delete the local key file afterwards
-(`rm idea-os-deployer-key.json`) — it's only needed once, to seed the secret.
-
 `PROJECT_ID` is already set to `idet-502218` at the top of `deploy.yml`;
-change it there if the project ever changes.
+change it there (and in `terraform.tfvars`) if the project ever changes.
 
 ## CI
 

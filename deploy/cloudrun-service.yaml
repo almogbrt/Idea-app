@@ -1,11 +1,17 @@
 # Cloud Run service manifest (declarative deploy via `gcloud run services replace`).
-# Placeholders (PROJECT_ID, REGION, IMAGE_TAG, connection names) are filled in
-# by deploy.sh — this file is the source of truth for runtime configuration.
+# Placeholders (PROJECT_ID, REGION, IMAGE_TAG) are filled in by deploy.sh —
+# this file is the source of truth for runtime configuration.
 #
-# IMPORTANT — the `idea-os-database-url` secret must use the Cloud SQL Unix
-# socket form (the `cloudsql-instances` annotation below mounts the socket,
-# it does not give you a TCP host/port to connect to):
-#   postgresql+asyncpg://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT_ID:REGION:idea-os-postgres
+# The Cloud SQL instance name and VPC connector name below (idea-os-edith-postgres,
+# idea-os-edith-conn) match what deploy/terraform creates by default (var.service_name
+# = "idea-os-edith"). If you didn't use Terraform, or changed service_name, update
+# both to match your actual resource names.
+#
+# IMPORTANT — if you're not using deploy/terraform (which derives this for you),
+# the `idea-os-database-url` secret must use the Cloud SQL Unix socket form (the
+# `cloudsql-instances` annotation below mounts the socket, it does not give you
+# a TCP host/port to connect to):
+#   postgresql+asyncpg://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT_ID:REGION:idea-os-edith-postgres
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -18,10 +24,13 @@ spec:
       annotations:
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "5"
-        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:idea-os-postgres"
-        run.googleapis.com/vpc-access-connector: "idea-os-connector"
+        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:idea-os-edith-postgres"
+        run.googleapis.com/vpc-access-connector: "idea-os-edith-conn"
         run.googleapis.com/vpc-access-egress: "private-ranges-only"
     spec:
+      # Least-privilege identity created by deploy/terraform (service_accounts.tf)
+      # — omitting this would fall back to the default, overly-broad compute SA.
+      serviceAccountName: idea-os-edith-runtime@PROJECT_ID.iam.gserviceaccount.com
       containerConcurrency: 40
       # A multi-tool-call Edith command can chain several LLM + Google API round
       # trips (bounded by MAX_TOOL_ITERATIONS); 60s was too tight for that.

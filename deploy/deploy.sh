@@ -21,13 +21,16 @@ docker build -t "${IMAGE_TAG}" .
 echo "==> Pushing image"
 docker push "${IMAGE_TAG}"
 
+RUNTIME_SA="${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+
 echo "==> Running database migrations against Cloud SQL"
 gcloud run jobs deploy "${SERVICE_NAME}-migrate" \
   --image "${IMAGE_TAG}" \
   --region "${REGION}" \
   --project "${PROJECT_ID}" \
-  --set-cloudsql-instances "${PROJECT_ID}:${REGION}:idea-os-postgres" \
-  --set-secrets "DATABASE_URL=idea-os-database-url:latest" \
+  --service-account "${RUNTIME_SA}" \
+  --set-cloudsql-instances "${PROJECT_ID}:${REGION}:${SERVICE_NAME}-postgres" \
+  --set-secrets "DATABASE_URL=idea-os-database-url-migrate:latest" \
   --command "alembic" \
   --args "upgrade,head" \
   --max-retries 1

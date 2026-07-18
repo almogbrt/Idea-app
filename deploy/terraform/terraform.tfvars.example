@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars (gitignored) and fill in your real values.
+# Never commit terraform.tfvars — it holds live API keys and OAuth secrets.
+
+project_id = "idet-502218"
+region     = "us-central1"
+
+owner_email = "you@example.com"
+
+# console.anthropic.com -> API Keys
+anthropic_api_key = "sk-ant-..."
+
+# platform.openai.com -> API Keys (used only for long-term memory embeddings)
+openai_api_key = "sk-..."
+
+# Google Cloud Console -> APIs & Services -> Credentials -> your OAuth client
+google_oauth_client_id     = "xxxxx.apps.googleusercontent.com"
+google_oauth_client_secret = "GOCSPX-..."
+
+# Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+token_encryption_key = "..."
