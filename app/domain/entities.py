@@ -181,6 +181,32 @@ class ClientDetail:
 
 
 @dataclass(slots=True)
+class CalendarEvent:
+    """A Google Calendar event, for the dashboard calendar view — not
+    persisted locally, Google Calendar is the source of truth."""
+
+    id: str
+    summary: str
+    start: str
+    """ISO 8601 datetime string, as returned by the Calendar API."""
+    end: str
+    description: str | None = None
+    html_link: str | None = None
+
+
+@dataclass(slots=True)
+class DriveFile:
+    """A Google Drive file, for the dashboard files view — not persisted
+    locally, Drive is the source of truth."""
+
+    id: str
+    name: str
+    mime_type: str
+    web_view_link: str | None = None
+    modified_time: str | None = None
+
+
+@dataclass(slots=True)
 class Notification:
     """A reminder surfaced in the dashboard bell (and mirrored by email).
     `related_id` points at the `Task` or `Client` that triggered it, depending

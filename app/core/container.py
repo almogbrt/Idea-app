@@ -17,13 +17,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app.agents.gmail.client import GmailClient
 from app.agents.gmail.email_sender_adapter import GmailEmailSenderAdapter
 from app.agents.gmail.inbox_adapter import GmailInboxAdapter
+from app.agents.google_calendar.calendar_port_adapter import GoogleCalendarPortAdapter
 from app.agents.google_calendar.client import CalendarClient
 from app.agents.google_calendar.schedule_adapter import CalendarScheduleAdapter
+from app.agents.google_drive.client import DriveClient
+from app.agents.google_drive.drive_port_adapter import GoogleDrivePortAdapter
 from app.agents.project_management.service import WorkspaceService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
@@ -83,6 +88,8 @@ class RequestScopedServices:
     list_activity: ListActivityUseCase
     manage_notifications: ManageNotificationsUseCase
     check_reminders: CheckRemindersUseCase
+    manage_calendar: ManageCalendarUseCase
+    manage_files: ManageFilesUseCase
 
 
 class Container:
@@ -145,9 +152,12 @@ class Container:
 
         gmail_client = GmailClient(self.google_api_client_factory)
         calendar_client = CalendarClient(self.google_api_client_factory)
+        drive_client = DriveClient(self.google_api_client_factory)
         self.inbox_port = GmailInboxAdapter(gmail_client)
         self.schedule_port = CalendarScheduleAdapter(calendar_client)
         self.email_sender_port = GmailEmailSenderAdapter(gmail_client)
+        self.calendar_port = GoogleCalendarPortAdapter(calendar_client)
+        self.drive_port = GoogleDrivePortAdapter(drive_client)
 
     def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
         conversations = SqlAlchemyConversationRepository(session)
@@ -199,6 +209,8 @@ class Container:
                 notification_repository=notifications_repo,
                 email_sender=self.email_sender_port,
             ),
+            manage_calendar=ManageCalendarUseCase(self.calendar_port),
+            manage_files=ManageFilesUseCase(self.drive_port),
         )
 
     def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:

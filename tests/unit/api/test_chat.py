@@ -6,10 +6,14 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
+from app.application.ports.calendar_port import CalendarPort
+from app.application.ports.drive_port import DrivePort
 from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
@@ -19,7 +23,14 @@ from app.application.use_cases.manage_workspace import (
     ManageTasksUseCase,
 )
 from app.core.container import RequestScopedServices
-from app.domain.entities import Conversation, OrchestrationResult, ToolCall, User
+from app.domain.entities import (
+    CalendarEvent,
+    Conversation,
+    DriveFile,
+    OrchestrationResult,
+    ToolCall,
+    User,
+)
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
@@ -46,6 +57,42 @@ class _NullEmailSender(EmailSenderPort):
         return None
 
 
+class _NullCalendar(CalendarPort):
+    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
+        return []
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        summary: str,
+        start_time: str,
+        end_time: str,
+        description: str | None = None,
+    ) -> CalendarEvent:
+        raise NotImplementedError
+
+    async def delete(self, user_id: uuid.UUID, event_id: str) -> None:
+        raise NotImplementedError
+
+
+class _NullDrive(DrivePort):
+    async def list_files(
+        self, user_id: uuid.UUID, query: str | None, max_results: int
+    ) -> list[DriveFile]:
+        return []
+
+    async def get_content(self, user_id: uuid.UUID, file_id: str) -> str:
+        raise NotImplementedError
+
+    async def create_file(
+        self, user_id: uuid.UUID, name: str, content: str, mime_type: str
+    ) -> DriveFile:
+        raise NotImplementedError
+
+    async def share_file(self, user_id: uuid.UUID, file_id: str, email: str, role: str) -> None:
+        raise NotImplementedError
+
+
 def _workspace_kwargs() -> dict[str, object]:
     projects_repo = FakeProjectRepository()
     tasks_repo = FakeTaskRepository()
@@ -67,6 +114,8 @@ def _workspace_kwargs() -> dict[str, object]:
             notifications_repo,
             _NullEmailSender(),
         ),
+        "manage_calendar": ManageCalendarUseCase(_NullCalendar()),
+        "manage_files": ManageFilesUseCase(_NullDrive()),
     }
 
 _USER = User(

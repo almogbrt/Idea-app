@@ -59,6 +59,29 @@ const els = {
   notificationsEmpty: document.getElementById("notifications-empty"),
   notificationsMarkAll: document.getElementById("notifications-mark-all"),
   notificationsWrap: document.querySelector(".notifications-wrap"),
+  calendarList: document.getElementById("calendar-list"),
+  calendarEmpty: document.getElementById("calendar-empty"),
+  newEventBtn: document.getElementById("new-event-btn"),
+  newEventModal: document.getElementById("new-event-modal"),
+  newEventSummary: document.getElementById("new-event-summary"),
+  newEventStart: document.getElementById("new-event-start"),
+  newEventEnd: document.getElementById("new-event-end"),
+  newEventDescription: document.getElementById("new-event-description"),
+  newEventSave: document.getElementById("new-event-save"),
+  newEventCancel: document.getElementById("new-event-cancel"),
+  filesTbody: document.getElementById("files-tbody"),
+  filesEmpty: document.getElementById("files-empty"),
+  newFileBtn: document.getElementById("new-file-btn"),
+  newFileModal: document.getElementById("new-file-modal"),
+  newFileName: document.getElementById("new-file-name"),
+  newFileContent: document.getElementById("new-file-content"),
+  newFileSave: document.getElementById("new-file-save"),
+  newFileCancel: document.getElementById("new-file-cancel"),
+  shareFileModal: document.getElementById("share-file-modal"),
+  shareFileEmail: document.getElementById("share-file-email"),
+  shareFileRole: document.getElementById("share-file-role"),
+  shareFileSave: document.getElementById("share-file-save"),
+  shareFileCancel: document.getElementById("share-file-cancel"),
 };
 
 let isAuthenticated = false;
@@ -220,6 +243,8 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       tasks: "tasks-section",
       projects: "projects-section",
       clients: "clients-section",
+      calendar: "calendar-section",
+      files: "files-section",
     };
     if (sectionMap[target]) {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
@@ -273,6 +298,86 @@ els.newTaskSave.addEventListener("click", async () => {
     });
     els.newTaskModal.hidden = true;
     refreshWorkspace();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.newEventBtn.addEventListener("click", () => {
+  els.newEventModal.hidden = false;
+  els.newEventSummary.value = "";
+  els.newEventStart.value = "";
+  els.newEventEnd.value = "";
+  els.newEventDescription.value = "";
+  els.newEventSummary.focus();
+});
+els.newEventCancel.addEventListener("click", () => {
+  els.newEventModal.hidden = true;
+});
+els.newEventSave.addEventListener("click", async () => {
+  const summary = els.newEventSummary.value.trim();
+  const startValue = els.newEventStart.value;
+  const endValue = els.newEventEnd.value;
+  if (!summary || !startValue || !endValue) {
+    alert("צריך נושא, זמן התחלה וזמן סיום.");
+    return;
+  }
+  try {
+    await apiFetch("/calendar/events", {
+      method: "POST",
+      body: JSON.stringify({
+        summary,
+        start_time: new Date(startValue).toISOString(),
+        end_time: new Date(endValue).toISOString(),
+        description: els.newEventDescription.value.trim() || null,
+      }),
+    });
+    els.newEventModal.hidden = true;
+    loadCalendar();
+    loadDashboardSummary();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.newFileBtn.addEventListener("click", () => {
+  els.newFileModal.hidden = false;
+  els.newFileName.value = "";
+  els.newFileContent.value = "";
+  els.newFileName.focus();
+});
+els.newFileCancel.addEventListener("click", () => {
+  els.newFileModal.hidden = true;
+});
+els.newFileSave.addEventListener("click", async () => {
+  const name = els.newFileName.value.trim();
+  if (!name) return;
+  try {
+    await apiFetch("/files", {
+      method: "POST",
+      body: JSON.stringify({ name, content: els.newFileContent.value }),
+    });
+    els.newFileModal.hidden = true;
+    loadFiles();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+let currentShareFileId = null;
+
+els.shareFileCancel.addEventListener("click", () => {
+  els.shareFileModal.hidden = true;
+});
+els.shareFileSave.addEventListener("click", async () => {
+  const email = els.shareFileEmail.value.trim();
+  if (!currentShareFileId || !email) return;
+  try {
+    await apiFetch(`/files/${currentShareFileId}/share`, {
+      method: "POST",
+      body: JSON.stringify({ email, role: els.shareFileRole.value }),
+    });
+    els.shareFileModal.hidden = true;
   } catch (err) {
     alert(err.message);
   }
@@ -473,6 +578,90 @@ async function loadClients() {
   }
 }
 
+async function loadCalendar() {
+  try {
+    const events = await apiFetch("/calendar/events");
+    els.calendarList.innerHTML = "";
+    els.calendarEmpty.hidden = events.length > 0;
+    for (const event of events) {
+      const row = document.createElement("div");
+      row.className = "calendar-item";
+      const time = document.createElement("span");
+      time.className = "calendar-item-time";
+      time.textContent = formatEventTime(event.start, event.end);
+      const summary = document.createElement("span");
+      summary.className = "calendar-item-summary";
+      summary.textContent = event.summary;
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "icon-btn calendar-item-delete";
+      deleteBtn.title = "מחק פגישה";
+      deleteBtn.innerHTML =
+        '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>';
+      deleteBtn.addEventListener("click", async () => {
+        try {
+          await apiFetch(`/calendar/events/${event.id}`, { method: "DELETE" });
+          loadCalendar();
+          loadDashboardSummary();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      row.appendChild(time);
+      row.appendChild(summary);
+      row.appendChild(deleteBtn);
+      els.calendarList.appendChild(row);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
+function formatEventTime(startIso, endIso) {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const dateStr = start.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" });
+  const startStr = start.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const endStr = end.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  return `${dateStr}, ${startStr}–${endStr}`;
+}
+
+async function loadFiles() {
+  try {
+    const files = await apiFetch("/files");
+    els.filesTbody.innerHTML = "";
+    els.filesEmpty.hidden = files.length > 0;
+    for (const file of files) {
+      const tr = document.createElement("tr");
+      const modified = file.modified_time
+        ? new Date(file.modified_time).toLocaleDateString("he-IL")
+        : "—";
+      const nameCell = file.web_view_link
+        ? `<a href="${file.web_view_link}" target="_blank" rel="noopener">${escapeHtml(file.name)}</a>`
+        : escapeHtml(file.name);
+      tr.innerHTML = `
+        <td>${nameCell}</td>
+        <td>${escapeHtml(file.mime_type)}</td>
+        <td>${modified}</td>
+        <td></td>
+      `;
+      const shareBtn = document.createElement("button");
+      shareBtn.className = "btn btn--ghost file-share-btn";
+      shareBtn.textContent = "שתף";
+      shareBtn.addEventListener("click", () => {
+        currentShareFileId = file.id;
+        els.shareFileEmail.value = "";
+        els.shareFileRole.value = "reader";
+        els.shareFileModal.hidden = false;
+        els.shareFileEmail.focus();
+      });
+      tr.lastElementChild.appendChild(shareBtn);
+      els.filesTbody.appendChild(tr);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
 function toggleNotificationsPanel(forceOpen) {
   const shouldOpen = forceOpen ?? els.notificationsPanel.hidden;
   els.notificationsPanel.hidden = !shouldOpen;
@@ -559,6 +748,8 @@ function refreshWorkspace() {
   loadProjects();
   loadTasks();
   loadClients();
+  loadCalendar();
+  loadFiles();
   loadActivity();
   loadNotifications();
 }

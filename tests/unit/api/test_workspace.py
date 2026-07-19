@@ -6,10 +6,14 @@ from datetime import UTC, datetime
 import pytest
 from fastapi.testclient import TestClient
 
+from app.application.ports.calendar_port import CalendarPort
+from app.application.ports.drive_port import DrivePort
 from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
@@ -20,7 +24,7 @@ from app.application.use_cases.manage_workspace import (
 )
 from app.core import config as config_module
 from app.core.container import RequestScopedServices
-from app.domain.entities import NotificationKind, User
+from app.domain.entities import CalendarEvent, DriveFile, NotificationKind, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
@@ -60,6 +64,56 @@ class _NullEmailSender(EmailSenderPort):
         return None
 
 
+class _FakeCalendar(CalendarPort):
+    def __init__(self) -> None:
+        self.events: dict[str, CalendarEvent] = {}
+
+    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
+        return list(self.events.values())[:max_results]
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        summary: str,
+        start_time: str,
+        end_time: str,
+        description: str | None = None,
+    ) -> CalendarEvent:
+        event = CalendarEvent(
+            id=str(uuid.uuid4()), summary=summary, start=start_time, end=end_time,
+            description=description,
+        )
+        self.events[event.id] = event
+        return event
+
+    async def delete(self, user_id: uuid.UUID, event_id: str) -> None:
+        self.events.pop(event_id, None)
+
+
+class _FakeDrive(DrivePort):
+    def __init__(self) -> None:
+        self.files: dict[str, DriveFile] = {}
+        self.shares: list[tuple[str, str, str]] = []
+
+    async def list_files(
+        self, user_id: uuid.UUID, query: str | None, max_results: int
+    ) -> list[DriveFile]:
+        return list(self.files.values())[:max_results]
+
+    async def get_content(self, user_id: uuid.UUID, file_id: str) -> str:
+        return "file content"
+
+    async def create_file(
+        self, user_id: uuid.UUID, name: str, content: str, mime_type: str
+    ) -> DriveFile:
+        file = DriveFile(id=str(uuid.uuid4()), name=name, mime_type=mime_type)
+        self.files[file.id] = file
+        return file
+
+    async def share_file(self, user_id: uuid.UUID, file_id: str, email: str, role: str) -> None:
+        self.shares.append((file_id, email, role))
+
+
 def _install_scope(client: TestClient) -> dict[str, object]:
     clients_repo = FakeClientRepository()
     projects_repo = FakeProjectRepository()
@@ -67,6 +121,8 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     executions_repo = FakeAgentExecutionRepository()
     notifications_repo = FakeNotificationRepository()
     users_repo = FakeUserRepository()
+    calendar_port = _FakeCalendar()
+    drive_port = _FakeDrive()
 
     scope = RequestScopedServices(
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
@@ -78,6 +134,8 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         dashboard_summary=DashboardSummaryUseCase(
             projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
         ),
+        manage_calendar=ManageCalendarUseCase(calendar_port),
+        manage_files=ManageFilesUseCase(drive_port),
         list_activity=ListActivityUseCase(executions_repo),
         manage_notifications=ManageNotificationsUseCase(notifications_repo),
         check_reminders=CheckRemindersUseCase(
@@ -92,6 +150,8 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "tasks_repo": tasks_repo,
         "executions_repo": executions_repo,
         "notifications_repo": notifications_repo,
+        "calendar_port": calendar_port,
+        "drive_port": drive_port,
     }
 
 
@@ -295,3 +355,65 @@ def test_run_reminders_requires_scheduler_secret(
         assert "notifications_raised" in authorized.json()
     finally:
         config_module.get_settings.cache_clear()
+
+
+def test_create_and_list_calendar_events(client: TestClient) -> None:
+    _install_scope(client)
+
+    create_response = client.post(
+        "/api/v1/calendar/events",
+        json={
+            "summary": "Team sync",
+            "start_time": "2026-08-01T09:00:00Z",
+            "end_time": "2026-08-01T09:30:00Z",
+        },
+    )
+    assert create_response.status_code == 200
+    body = create_response.json()
+    assert body["summary"] == "Team sync"
+
+    list_response = client.get("/api/v1/calendar/events")
+    assert [e["summary"] for e in list_response.json()] == ["Team sync"]
+
+
+def test_delete_calendar_event(client: TestClient) -> None:
+    resources = _install_scope(client)
+    created = client.post(
+        "/api/v1/calendar/events",
+        json={
+            "summary": "One-off",
+            "start_time": "2026-08-01T09:00:00Z",
+            "end_time": "2026-08-01T09:30:00Z",
+        },
+    ).json()
+
+    response = client.delete(f"/api/v1/calendar/events/{created['id']}")
+
+    assert response.status_code == 204
+    calendar_port: _FakeCalendar = resources["calendar_port"]  # type: ignore[assignment]
+    assert created["id"] not in calendar_port.events
+
+
+def test_create_list_and_share_file(client: TestClient) -> None:
+    resources = _install_scope(client)
+
+    create_response = client.post(
+        "/api/v1/files", json={"name": "notes.txt", "content": "hello", "mime_type": "text/plain"}
+    )
+    assert create_response.status_code == 200
+    file_id = create_response.json()["id"]
+    assert create_response.json()["name"] == "notes.txt"
+
+    list_response = client.get("/api/v1/files")
+    assert [f["name"] for f in list_response.json()] == ["notes.txt"]
+
+    content_response = client.get(f"/api/v1/files/{file_id}/content")
+    assert content_response.status_code == 200
+    assert content_response.json()["content"] == "file content"
+
+    share_response = client.post(
+        f"/api/v1/files/{file_id}/share", json={"email": "friend@example.com", "role": "writer"}
+    )
+    assert share_response.status_code == 204
+    drive_port: _FakeDrive = resources["drive_port"]  # type: ignore[assignment]
+    assert drive_port.shares == [(file_id, "friend@example.com", "writer")]
