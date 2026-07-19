@@ -8,10 +8,6 @@ const els = {
   chatForm: document.getElementById("chat-form"),
   chatInput: document.getElementById("chat-input"),
   chatWindow: document.getElementById("chat-window"),
-  statOpenTasks: document.getElementById("stat-open-tasks"),
-  statActiveProjects: document.getElementById("stat-active-projects"),
-  statUnreadEmails: document.getElementById("stat-unread-emails"),
-  statMeetingsToday: document.getElementById("stat-meetings-today"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   projectsTbody: document.getElementById("projects-tbody"),
   projectsEmpty: document.getElementById("projects-empty"),
@@ -20,7 +16,7 @@ const els = {
   activityFeed: document.getElementById("activity-feed"),
   activityEmpty: document.getElementById("activity-empty"),
   edithStatus: document.getElementById("edith-status"),
-  newProjectChip: document.getElementById("new-project-chip"),
+  newProjectBtn: document.getElementById("new-project-btn"),
   newProjectModal: document.getElementById("new-project-modal"),
   newProjectName: document.getElementById("new-project-name"),
   newProjectSave: document.getElementById("new-project-save"),
@@ -243,10 +239,6 @@ els.chatForm.addEventListener("submit", (event) => {
   sendCommand(text);
 });
 
-document.querySelectorAll(".chip[data-command]").forEach((chip) => {
-  chip.addEventListener("click", () => sendCommand(chip.dataset.command));
-});
-
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {
     const target = item.dataset.nav;
@@ -254,7 +246,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
     closeSidebar();
     const sectionMap = {
       chat: "chat-form",
-      overview: "overview-section",
+      overview: "greeting",
       tasks: "tasks-section",
       projects: "projects-section",
       clients: "clients-section",
@@ -270,7 +262,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   });
 });
 
-els.newProjectChip.addEventListener("click", () => {
+els.newProjectBtn.addEventListener("click", () => {
   els.newProjectModal.hidden = false;
   els.newProjectName.value = "";
   els.newProjectName.focus();
@@ -484,10 +476,6 @@ els.clientModalSave.addEventListener("click", async () => {
 async function loadDashboardSummary() {
   try {
     const summary = await apiFetch("/dashboard/summary");
-    els.statOpenTasks.textContent = summary.open_tasks;
-    els.statActiveProjects.textContent = summary.active_projects;
-    els.statUnreadEmails.textContent = summary.unread_emails ?? "—";
-    els.statMeetingsToday.textContent = summary.meetings_today ?? "—";
     els.navBadgeTasks.textContent = summary.open_tasks;
   } catch {
     // not authenticated yet — leave placeholders
