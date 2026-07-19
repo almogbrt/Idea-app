@@ -127,6 +127,7 @@ input {
   font-size: 14px;
   color: var(--text-muted);
   text-align: right;
+  text-decoration: none;
   width: 100%;
 }
 

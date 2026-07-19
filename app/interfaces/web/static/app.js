@@ -316,6 +316,7 @@ if (SpeechRecognitionCtor) {
 }
 
 document.querySelectorAll(".nav-item").forEach((item) => {
+  if (item.tagName === "A") return; // real links (e.g. Gmail) navigate on their own
   item.addEventListener("click", () => {
     const target = item.dataset.nav;
     setNavActive(target);
