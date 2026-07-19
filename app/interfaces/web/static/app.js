@@ -626,8 +626,9 @@ let currentTasks = [];
 
 async function loadTasks() {
   try {
-    const tasks = await apiFetch("/tasks");
+    const [tasks, clientsList] = await Promise.all([apiFetch("/tasks"), apiFetch("/clients")]);
     currentTasks = tasks;
+    const clientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
     els.tasksList.innerHTML = "";
     els.tasksEmpty.hidden = tasks.length > 0;
     for (const task of tasks) {
@@ -650,6 +651,12 @@ async function loadTasks() {
       title.addEventListener("click", () => openEditTaskModal(task.id));
       row.appendChild(checkbox);
       row.appendChild(title);
+      if (task.client_id && clientNameById.has(task.client_id)) {
+        const clientBadge = document.createElement("span");
+        clientBadge.className = "task-client-badge";
+        clientBadge.textContent = clientNameById.get(task.client_id);
+        row.appendChild(clientBadge);
+      }
       const badge = dueDateBadge(task);
       if (badge) row.appendChild(badge);
       const deleteBtn = document.createElement("button");
@@ -771,7 +778,13 @@ els.editTaskDelete.addEventListener("click", async () => {
 
 async function loadClients() {
   try {
-    const clientsList = await apiFetch("/clients");
+    const [clientsList, tasks] = await Promise.all([apiFetch("/clients"), apiFetch("/tasks")]);
+    const tasksByClient = new Map();
+    for (const t of tasks) {
+      if (!t.client_id) continue;
+      if (!tasksByClient.has(t.client_id)) tasksByClient.set(t.client_id, []);
+      tasksByClient.get(t.client_id).push(t);
+    }
     els.clientsTbody.innerHTML = "";
     els.clientsEmpty.hidden = clientsList.length > 0;
     for (const c of clientsList) {
@@ -780,8 +793,17 @@ async function loadClients() {
       const followup = c.next_follow_up_at
         ? new Date(c.next_follow_up_at).toLocaleDateString("he-IL")
         : "—";
+      const clientTasks = tasksByClient.get(c.id) || [];
+      const tasksHtml = clientTasks.length
+        ? `<div class="clients-table-tasks">${clientTasks
+            .map(
+              (t) =>
+                `<span class="clients-table-task-chip${t.status === "done" ? " done" : ""}">${escapeHtml(t.title)}</span>`
+            )
+            .join("")}</div>`
+        : "";
       tr.innerHTML = `
-        <td>${escapeHtml(c.name)}</td>
+        <td>${escapeHtml(c.name)}${tasksHtml}</td>
         <td>${c.email ? escapeHtml(c.email) : "—"}</td>
         <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
         <td>${followup}</td>
