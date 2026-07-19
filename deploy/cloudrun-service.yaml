@@ -96,6 +96,11 @@ spec:
                 secretKeyRef:
                   name: idea-os-owner-email
                   key: latest
+            - name: SCHEDULER_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-scheduler-shared-secret
+                  key: latest
   traffic:
     - latestRevision: true
       percent: 100

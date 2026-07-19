@@ -8,6 +8,8 @@ against a real database rather than only the fakes.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,6 +113,24 @@ async def test_update_task_status_resolves_by_partial_title(
     )
 
     assert updated.status == TaskStatus.DONE
+
+
+async def test_create_task_with_due_at_and_set_task_due_at_resolves_by_partial_title(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-10", "owner-ws10@example.com", "Owner")
+    await db_session.commit()
+
+    due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+    task = await workspace_service.create_task(user.id, "Send invoice", due_at=due)
+    assert task.due_at == due
+
+    new_due = datetime(2026, 9, 1, 9, 0, tzinfo=UTC)
+    updated = await workspace_service.set_task_due_at(user.id, "invoice", new_due)
+
+    assert updated.id == task.id
+    assert updated.due_at == new_due
 
 
 async def test_update_client_resolves_by_partial_name_and_sets_only_given_fields(

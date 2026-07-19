@@ -6,8 +6,11 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
+from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
+from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -21,8 +24,10 @@ from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
     FakeClientRepository,
+    FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
+    FakeUserRepository,
 )
 
 
@@ -36,17 +41,32 @@ class _NullSchedule(SchedulePort):
         return 0
 
 
+class _NullEmailSender(EmailSenderPort):
+    async def send(self, user_id: uuid.UUID, to: str, subject: str, body: str) -> None:
+        return None
+
+
 def _workspace_kwargs() -> dict[str, object]:
     projects_repo = FakeProjectRepository()
     tasks_repo = FakeTaskRepository()
+    clients_repo = FakeClientRepository()
+    notifications_repo = FakeNotificationRepository()
     return {
-        "manage_clients": ManageClientsUseCase(FakeClientRepository(), projects_repo, tasks_repo),
+        "manage_clients": ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
         "dashboard_summary": DashboardSummaryUseCase(
             projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
         ),
         "list_activity": ListActivityUseCase(FakeAgentExecutionRepository()),
+        "manage_notifications": ManageNotificationsUseCase(notifications_repo),
+        "check_reminders": CheckRemindersUseCase(
+            FakeUserRepository(),
+            tasks_repo,
+            clients_repo,
+            notifications_repo,
+            _NullEmailSender(),
+        ),
     }
 
 _USER = User(

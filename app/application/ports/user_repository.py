@@ -18,3 +18,7 @@ class UserRepositoryPort(ABC):
     @abstractmethod
     async def create(self, google_sub: str, email: str, name: str) -> User:
         raise NotImplementedError
+
+    @abstractmethod
+    async def list_all(self) -> list[User]:
+        raise NotImplementedError

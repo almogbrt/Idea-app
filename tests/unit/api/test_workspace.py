@@ -3,10 +3,14 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
+from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -14,14 +18,17 @@ from app.application.use_cases.manage_workspace import (
     ManageProjectsUseCase,
     ManageTasksUseCase,
 )
+from app.core import config as config_module
 from app.core.container import RequestScopedServices
-from app.domain.entities import User
+from app.domain.entities import NotificationKind, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
     FakeClientRepository,
+    FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
+    FakeUserRepository,
 )
 
 _USER = User(
@@ -48,11 +55,18 @@ class _NullOrchestrator:
         raise NotImplementedError
 
 
+class _NullEmailSender(EmailSenderPort):
+    async def send(self, user_id: uuid.UUID, to: str, subject: str, body: str) -> None:
+        return None
+
+
 def _install_scope(client: TestClient) -> dict[str, object]:
     clients_repo = FakeClientRepository()
     projects_repo = FakeProjectRepository()
     tasks_repo = FakeTaskRepository()
     executions_repo = FakeAgentExecutionRepository()
+    notifications_repo = FakeNotificationRepository()
+    users_repo = FakeUserRepository()
 
     scope = RequestScopedServices(
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
@@ -65,6 +79,10 @@ def _install_scope(client: TestClient) -> dict[str, object]:
             projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
         ),
         list_activity=ListActivityUseCase(executions_repo),
+        manage_notifications=ManageNotificationsUseCase(notifications_repo),
+        check_reminders=CheckRemindersUseCase(
+            users_repo, tasks_repo, clients_repo, notifications_repo, _NullEmailSender()
+        ),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
     client.app.dependency_overrides[get_request_scope] = lambda: scope
@@ -73,6 +91,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "projects_repo": projects_repo,
         "tasks_repo": tasks_repo,
         "executions_repo": executions_repo,
+        "notifications_repo": notifications_repo,
     }
 
 
@@ -178,3 +197,101 @@ def test_dashboard_activity_reflects_only_current_user(client: TestClient) -> No
     response = client.get("/api/v1/dashboard/activity")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_create_task_with_due_at_and_update_due_date(client: TestClient) -> None:
+    _install_scope(client)
+    task = client.post(
+        "/api/v1/tasks", json={"title": "Send invoice", "due_at": "2026-08-01T09:00:00Z"}
+    ).json()
+    assert task["due_at"] is not None
+
+    response = client.patch(
+        f"/api/v1/tasks/{task['id']}/due-date", json={"due_at": "2026-09-01T09:00:00Z"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["due_at"].startswith("2026-09-01")
+
+
+def test_update_task_due_at_rejects_other_users_task(client: TestClient) -> None:
+    resources = _install_scope(client)
+    task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
+
+    tasks_repo = resources["tasks_repo"]
+    stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.patch(
+        f"/api/v1/tasks/{task['id']}/due-date", json={"due_at": "2026-09-01T09:00:00Z"}
+    )
+
+    assert response.status_code == 403
+
+
+async def test_notifications_list_mark_read_and_mark_all_read(client: TestClient) -> None:
+    resources = _install_scope(client)
+    notifications_repo: FakeNotificationRepository = resources["notifications_repo"]  # type: ignore[assignment]
+
+    n1 = await notifications_repo.create(
+        _USER.id, NotificationKind.TASK_OVERDUE, uuid.uuid4(), "Overdue", "body"
+    )
+    await notifications_repo.create(
+        _USER.id, NotificationKind.TASK_DUE_SOON, uuid.uuid4(), "Soon", "body"
+    )
+
+    listed = client.get("/api/v1/notifications").json()
+    assert len(listed) == 2
+
+    read_response = client.patch(f"/api/v1/notifications/{n1.id}/read")
+    assert read_response.status_code == 200
+    assert read_response.json()["read_at"] is not None
+
+    after_one_read = client.get("/api/v1/notifications").json()
+    assert len(after_one_read) == 1
+
+    mark_all = client.post("/api/v1/notifications/read-all")
+    assert mark_all.status_code == 204
+
+    after_all_read = client.get("/api/v1/notifications").json()
+    assert after_all_read == []
+
+
+async def test_mark_notification_read_rejects_other_users_notification(
+    client: TestClient,
+) -> None:
+    resources = _install_scope(client)
+    notifications_repo: FakeNotificationRepository = resources["notifications_repo"]  # type: ignore[assignment]
+
+    notification = await notifications_repo.create(
+        uuid.uuid4(), NotificationKind.TASK_OVERDUE, uuid.uuid4(), "Not yours", "body"
+    )
+
+    response = client.patch(f"/api/v1/notifications/{notification.id}/read")
+
+    assert response.status_code == 403
+
+
+def test_run_reminders_requires_scheduler_secret(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_scope(client)
+    monkeypatch.setenv("SCHEDULER_SHARED_SECRET", "test-secret")
+    config_module.get_settings.cache_clear()
+
+    try:
+        unauthorized = client.post("/api/v1/internal/reminders/run")
+        assert unauthorized.status_code == 401
+
+        wrong_secret = client.post(
+            "/api/v1/internal/reminders/run", headers={"X-Scheduler-Secret": "wrong"}
+        )
+        assert wrong_secret.status_code == 401
+
+        authorized = client.post(
+            "/api/v1/internal/reminders/run", headers={"X-Scheduler-Secret": "test-secret"}
+        )
+        assert authorized.status_code == 200
+        assert "notifications_raised" in authorized.json()
+    finally:
+        config_module.get_settings.cache_clear()

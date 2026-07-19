@@ -12,6 +12,7 @@ from app.agents.project_management.tools import (
     GetClientDetailTool,
     ListProjectsTool,
     ListTasksTool,
+    SetTaskDueDateTool,
     UpdateClientTool,
     UpdateProjectStatusTool,
     UpdateTaskStatusTool,
@@ -108,9 +109,13 @@ class _FakeWorkspaceService:
         return [ProjectSummary(project=project, client_name="Baron's", last_task_title=None)]
 
     async def create_task(
-        self, user_id: uuid.UUID, title: str, project_name: str | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        project_name: str | None = None,
+        due_at: datetime | None = None,
     ) -> Task:
-        self.calls.append(("create_task", (user_id, title, project_name)))
+        self.calls.append(("create_task", (user_id, title, project_name, due_at)))
         now = datetime.now(UTC)
         return Task(
             id=uuid.uuid4(),
@@ -120,6 +125,7 @@ class _FakeWorkspaceService:
             status=TaskStatus.OPEN,
             created_at=now,
             updated_at=now,
+            due_at=due_at,
         )
 
     async def update_task_status(
@@ -135,6 +141,22 @@ class _FakeWorkspaceService:
             status=status,
             created_at=now,
             updated_at=now,
+        )
+
+    async def set_task_due_at(
+        self, user_id: uuid.UUID, task_title: str, due_at: datetime | None
+    ) -> Task:
+        self.calls.append(("set_task_due_at", (user_id, task_title, due_at)))
+        now = datetime.now(UTC)
+        return Task(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            project_id=None,
+            title=task_title,
+            status=TaskStatus.OPEN,
+            created_at=now,
+            updated_at=now,
+            due_at=due_at,
         )
 
     async def list_tasks(self, user_id: uuid.UUID) -> list[Task]:
@@ -247,8 +269,54 @@ async def test_create_task_tool_passes_project_name() -> None:
     await tool.execute({"title": "Prep summer menu", "project_name": "Summer menu"}, context)
 
     assert service.calls == [
-        ("create_task", (context.user_id, "Prep summer menu", "Summer menu"))
+        ("create_task", (context.user_id, "Prep summer menu", "Summer menu", None))
     ]
+
+
+async def test_create_task_tool_parses_due_at() -> None:
+    service = _FakeWorkspaceService()
+    tool = CreateTaskTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"title": "Send invoice", "due_at": "2026-08-01T09:00:00+00:00"}, context
+    )
+
+    assert service.calls == [
+        (
+            "create_task",
+            (context.user_id, "Send invoice", None, datetime(2026, 8, 1, 9, 0, tzinfo=UTC)),
+        )
+    ]
+    assert json.loads(result.content)["due_at"] == "2026-08-01T09:00:00+00:00"
+
+
+async def test_set_task_due_date_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = SetTaskDueDateTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"task_title": "Send invoice", "due_at": "2026-09-01T09:00:00+00:00"}, context
+    )
+
+    assert service.calls == [
+        (
+            "set_task_due_at",
+            (context.user_id, "Send invoice", datetime(2026, 9, 1, 9, 0, tzinfo=UTC)),
+        )
+    ]
+    assert json.loads(result.content)["due_at"] == "2026-09-01T09:00:00+00:00"
+
+
+async def test_set_task_due_date_tool_clears_due_date_when_omitted() -> None:
+    service = _FakeWorkspaceService()
+    tool = SetTaskDueDateTool(service)
+    context = _context()
+
+    await tool.execute({"task_title": "Send invoice"}, context)
+
+    assert service.calls == [("set_task_due_at", (context.user_id, "Send invoice", None))]
 
 
 async def test_update_task_status_tool_parses_enum() -> None:

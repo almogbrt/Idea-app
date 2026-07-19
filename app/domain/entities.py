@@ -38,6 +38,12 @@ class TaskStatus(StrEnum):
     DONE = "done"
 
 
+class NotificationKind(StrEnum):
+    TASK_DUE_SOON = "task_due_soon"
+    TASK_OVERDUE = "task_overdue"
+    CLIENT_FOLLOW_UP_DUE = "client_follow_up_due"
+
+
 @dataclass(slots=True)
 class User:
     id: uuid.UUID
@@ -152,6 +158,7 @@ class Task:
     status: TaskStatus
     created_at: datetime
     updated_at: datetime
+    due_at: datetime | None = None
 
 
 @dataclass(slots=True)
@@ -171,6 +178,22 @@ class ClientDetail:
     client: Client
     projects: list[ProjectSummary]
     tasks: list[Task]
+
+
+@dataclass(slots=True)
+class Notification:
+    """A reminder surfaced in the dashboard bell (and mirrored by email).
+    `related_id` points at the `Task` or `Client` that triggered it, depending
+    on `kind`."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    kind: NotificationKind
+    related_id: uuid.UUID
+    title: str
+    body: str
+    created_at: datetime
+    read_at: datetime | None = None
 
 
 @dataclass(slots=True)

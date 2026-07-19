@@ -25,3 +25,8 @@ neon_database_url = "postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode
 
 # upstash.com -> your Redis database -> TLS connection string (rediss://...)
 upstash_redis_url = "rediss://default:password@xxxx.upstash.io:6379"
+
+# Leave empty on the first `terraform apply` (the service doesn't exist yet).
+# After the first deploy, set this to the printed service URL and re-apply
+# to create the hourly reminders Cloud Scheduler job.
+cloud_run_service_url = ""

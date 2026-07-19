@@ -71,3 +71,18 @@ variable "upstash_redis_url" {
   type        = string
   sensitive   = true
 }
+
+variable "cloud_run_service_url" {
+  description = <<-EOT
+    The deployed Cloud Run service's HTTPS URL (e.g.
+    https://idea-os-edith-xxxxx.a.run.app), used as the Cloud Scheduler job's
+    target for the hourly reminders check. Leave empty on the very first
+    `terraform apply` — the service doesn't exist yet. After the first
+    `deploy.sh` run, set this (from its printed URL, or
+    `gcloud run services describe idea-os-edith --region REGION --format
+    'value(status.url)'`) and re-run `terraform apply` to create the
+    scheduler job.
+  EOT
+  type        = string
+  default     = ""
+}

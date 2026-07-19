@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain.entities import ProjectStatus, TaskStatus
+from app.domain.entities import NotificationKind, ProjectStatus, TaskStatus
 
 
 class ClientView(BaseModel):
@@ -57,15 +57,21 @@ class TaskView(BaseModel):
     project_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
+    due_at: datetime | None = None
 
 
 class CreateTaskRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     project_id: uuid.UUID | None = None
+    due_at: datetime | None = None
 
 
 class UpdateTaskStatusRequest(BaseModel):
     status: TaskStatus
+
+
+class UpdateTaskDueAtRequest(BaseModel):
+    due_at: datetime | None = None
 
 
 class ClientDetailView(BaseModel):
@@ -87,3 +93,17 @@ class ActivityItemView(BaseModel):
     tool_name: str
     status: str
     created_at: datetime
+
+
+class NotificationView(BaseModel):
+    id: uuid.UUID
+    kind: NotificationKind
+    related_id: uuid.UUID
+    title: str
+    body: str
+    created_at: datetime
+    read_at: datetime | None
+
+
+class RunRemindersResponse(BaseModel):
+    notifications_raised: int

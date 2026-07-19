@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +17,18 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         self._session = session
 
     async def create(
-        self, user_id: uuid.UUID, title: str, project_id: uuid.UUID | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        project_id: uuid.UUID | None = None,
+        due_at: datetime | None = None,
     ) -> Task:
         row = TaskModel(
-            user_id=user_id, title=title, project_id=project_id, status=TaskStatus.OPEN.value
+            user_id=user_id,
+            title=title,
+            project_id=project_id,
+            status=TaskStatus.OPEN.value,
+            due_at=due_at,
         )
         self._session.add(row)
         await self._session.flush()
@@ -48,6 +57,15 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.due_at = due_at
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
     async def count_open(self, user_id: uuid.UUID) -> int:
         stmt = (
             select(func.count())
@@ -66,4 +84,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             status=TaskStatus(row.status),
             created_at=row.created_at,
             updated_at=row.updated_at,
+            due_at=row.due_at,
         )

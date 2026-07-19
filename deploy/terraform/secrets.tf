@@ -8,6 +8,14 @@ resource "random_password" "jwt_signing_key" {
   special = false
 }
 
+# Cloud Scheduler calls the internal reminders endpoint with this in a
+# header — there's no logged-in user in that context, so it substitutes for
+# a session JWT. Generated here, never typed in by hand.
+resource "random_password" "scheduler_shared_secret" {
+  length  = 48
+  special = false
+}
+
 locals {
   # Neon gives you a plain `postgresql://...?sslmode=require` URL. Two fixups
   # for SQLAlchemy+asyncpg: (1) the asyncpg driver needs to be named
@@ -34,6 +42,7 @@ locals {
     "idea-os-google-oauth-client-id"     = var.google_oauth_client_id
     "idea-os-google-oauth-client-secret" = var.google_oauth_client_secret
     "idea-os-owner-email"                = var.owner_email
+    "idea-os-scheduler-shared-secret"    = random_password.scheduler_shared_secret.result
   }
 }
 

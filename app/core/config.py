@@ -61,6 +61,11 @@ class Settings(BaseSettings):
 
     owner_email: str = ""
 
+    # Shared secret Cloud Scheduler sends as a header when calling the internal
+    # reminders endpoint — there's no logged-in user in that context, so this
+    # substitutes for a session JWT.
+    scheduler_shared_secret: str = ""
+
     @field_validator("google_oauth_scopes")
     @classmethod
     def _normalize_scopes(cls, v: str) -> str:

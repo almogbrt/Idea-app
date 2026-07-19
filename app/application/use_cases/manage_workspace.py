@@ -136,15 +136,22 @@ class ManageTasksUseCase:
         self._tasks = task_repository
 
     async def create(
-        self, user_id: uuid.UUID, title: str, project_id: uuid.UUID | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        project_id: uuid.UUID | None = None,
+        due_at: datetime | None = None,
     ) -> Task:
-        return await self._tasks.create(user_id, title, project_id)
+        return await self._tasks.create(user_id, title, project_id, due_at)
 
     async def list_all(self, user_id: uuid.UUID) -> list[Task]:
         return await self._tasks.list_by_user(user_id)
 
     async def update_status(self, task_id: uuid.UUID, status: TaskStatus) -> Task:
         return await self._tasks.update_status(task_id, status)
+
+    async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
+        return await self._tasks.set_due_at(task_id, due_at)
 
     async def get_or_raise(self, task_id: uuid.UUID) -> Task:
         task = await self._tasks.get(task_id)

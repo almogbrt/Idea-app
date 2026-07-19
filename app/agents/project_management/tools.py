@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 from app.agents.project_management.service import WorkspaceService
@@ -17,6 +18,10 @@ from app.domain.entities import (
 )
 
 AGENT_NAME = "project_management"
+
+
+def _parse_due_at(value: str | None) -> datetime | None:
+    return datetime.fromisoformat(value) if value else None
 
 
 def _client_json(client: Client) -> dict[str, Any]:
@@ -54,6 +59,7 @@ def _task_json(task: Task) -> dict[str, Any]:
         "title": task.title,
         "status": task.status.value,
         "project_id": str(task.project_id) if task.project_id else None,
+        "due_at": task.due_at.isoformat() if task.due_at else None,
     }
 
 
@@ -239,6 +245,10 @@ class CreateTaskTool(Tool):
                 "type": "string",
                 "description": "Project this task belongs to (optional).",
             },
+            "due_at": {
+                "type": "string",
+                "description": "Due date/time in ISO 8601 (optional), e.g. 2026-08-01T09:00:00Z.",
+            },
         },
         "required": ["title"],
     }
@@ -249,7 +259,10 @@ class CreateTaskTool(Tool):
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
         task = await self._service.create_task(
-            context.user_id, arguments["title"], arguments.get("project_name")
+            context.user_id,
+            arguments["title"],
+            arguments.get("project_name"),
+            _parse_due_at(arguments.get("due_at")),
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))
@@ -279,6 +292,37 @@ class UpdateTaskStatusTool(Tool):
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
         task = await self._service.update_task_status(
             context.user_id, arguments["task_title"], TaskStatus(arguments["status"])
+        )
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))
+        )
+
+
+class SetTaskDueDateTool(Tool):
+    name = "workspace_set_task_due_date"
+    description = (
+        "Set or clear a task's due date. Match the task by (partial) title. "
+        "Omit due_at (or pass null) to clear the due date."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "task_title": {"type": "string", "description": "Task title (or part of it)."},
+            "due_at": {
+                "type": "string",
+                "description": "Due date/time in ISO 8601, e.g. 2026-08-01T09:00:00Z.",
+            },
+        },
+        "required": ["task_title"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        task = await self._service.set_task_due_at(
+            context.user_id, arguments["task_title"], _parse_due_at(arguments.get("due_at"))
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))

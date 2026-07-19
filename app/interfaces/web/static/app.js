@@ -46,6 +46,19 @@ const els = {
   clientModalTasks: document.getElementById("client-modal-tasks"),
   clientModalSave: document.getElementById("client-modal-save"),
   clientModalCancel: document.getElementById("client-modal-cancel"),
+  newTaskBtn: document.getElementById("new-task-btn"),
+  newTaskModal: document.getElementById("new-task-modal"),
+  newTaskTitle: document.getElementById("new-task-title"),
+  newTaskDueAt: document.getElementById("new-task-due-at"),
+  newTaskSave: document.getElementById("new-task-save"),
+  newTaskCancel: document.getElementById("new-task-cancel"),
+  notificationsBtn: document.getElementById("notifications-btn"),
+  notificationsBadge: document.getElementById("notifications-badge"),
+  notificationsPanel: document.getElementById("notifications-panel"),
+  notificationsList: document.getElementById("notifications-list"),
+  notificationsEmpty: document.getElementById("notifications-empty"),
+  notificationsMarkAll: document.getElementById("notifications-mark-all"),
+  notificationsWrap: document.querySelector(".notifications-wrap"),
 };
 
 let isAuthenticated = false;
@@ -75,6 +88,7 @@ const TOOL_LABELS = {
   workspace_list_projects: "הציג פרויקטים",
   workspace_create_task: "יצר משימה חדשה",
   workspace_update_task_status: "עדכן סטטוס משימה",
+  workspace_set_task_due_date: "עדכן תאריך יעד למשימה",
   workspace_list_tasks: "הציג משימות",
 };
 
@@ -236,6 +250,34 @@ els.newProjectSave.addEventListener("click", async () => {
   }
 });
 
+els.newTaskBtn.addEventListener("click", () => {
+  els.newTaskModal.hidden = false;
+  els.newTaskTitle.value = "";
+  els.newTaskDueAt.value = "";
+  els.newTaskTitle.focus();
+});
+els.newTaskCancel.addEventListener("click", () => {
+  els.newTaskModal.hidden = true;
+});
+els.newTaskSave.addEventListener("click", async () => {
+  const title = els.newTaskTitle.value.trim();
+  if (!title) return;
+  try {
+    const dueValue = els.newTaskDueAt.value;
+    await apiFetch("/tasks", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        due_at: dueValue ? new Date(dueValue).toISOString() : null,
+      }),
+    });
+    els.newTaskModal.hidden = true;
+    refreshWorkspace();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
 els.newClientBtn.addEventListener("click", () => {
   els.newClientModal.hidden = false;
   els.newClientName.value = "";
@@ -354,6 +396,25 @@ async function loadProjects() {
   }
 }
 
+function dueDateBadge(task) {
+  if (!task.due_at) return null;
+  const due = new Date(task.due_at);
+  const badge = document.createElement("span");
+  badge.className = "task-due";
+  badge.textContent = due.toLocaleString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  if (task.status !== "done") {
+    const diffHours = (due.getTime() - Date.now()) / 3600000;
+    if (diffHours < 0) badge.classList.add("task-due--overdue");
+    else if (diffHours <= 24) badge.classList.add("task-due--soon");
+  }
+  return badge;
+}
+
 async function loadTasks() {
   try {
     const tasks = await apiFetch("/tasks");
@@ -378,6 +439,8 @@ async function loadTasks() {
       title.textContent = task.title;
       row.appendChild(checkbox);
       row.appendChild(title);
+      const badge = dueDateBadge(task);
+      if (badge) row.appendChild(badge);
       els.tasksList.appendChild(row);
     }
   } catch {
@@ -404,6 +467,59 @@ async function loadClients() {
       `;
       tr.addEventListener("click", () => openClientModal(c.id));
       els.clientsTbody.appendChild(tr);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
+function toggleNotificationsPanel(forceOpen) {
+  const shouldOpen = forceOpen ?? els.notificationsPanel.hidden;
+  els.notificationsPanel.hidden = !shouldOpen;
+}
+
+els.notificationsBtn.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleNotificationsPanel();
+});
+document.addEventListener("click", (event) => {
+  if (!els.notificationsWrap.contains(event.target)) {
+    toggleNotificationsPanel(false);
+  }
+});
+els.notificationsMarkAll.addEventListener("click", async () => {
+  try {
+    await apiFetch("/notifications/read-all", { method: "POST" });
+    loadNotifications();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+async function loadNotifications() {
+  try {
+    const notifications = await apiFetch("/notifications");
+    els.notificationsBadge.hidden = notifications.length === 0;
+    els.notificationsBadge.textContent = notifications.length;
+    els.notificationsList.innerHTML = "";
+    els.notificationsEmpty.hidden = notifications.length > 0;
+    for (const n of notifications) {
+      const item = document.createElement("div");
+      item.className = "notification-item";
+      item.innerHTML = `
+        <div class="notification-title">${escapeHtml(n.title)}</div>
+        <div class="notification-body">${escapeHtml(n.body)}</div>
+        <div class="notification-time">${relativeTime(n.created_at)}</div>
+      `;
+      item.addEventListener("click", async () => {
+        try {
+          await apiFetch(`/notifications/${n.id}/read`, { method: "PATCH" });
+          loadNotifications();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      els.notificationsList.appendChild(item);
     }
   } catch {
     // not authenticated yet
@@ -444,6 +560,7 @@ function refreshWorkspace() {
   loadTasks();
   loadClients();
   loadActivity();
+  loadNotifications();
 }
 
 (async function init() {

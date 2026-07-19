@@ -15,13 +15,16 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.agents.gmail.client import GmailClient
+from app.agents.gmail.email_sender_adapter import GmailEmailSenderAdapter
 from app.agents.gmail.inbox_adapter import GmailInboxAdapter
 from app.agents.google_calendar.client import CalendarClient
 from app.agents.google_calendar.schedule_adapter import CalendarScheduleAdapter
 from app.agents.project_management.service import WorkspaceService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -45,6 +48,9 @@ from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
 )
 from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemoryRepository
+from app.infrastructure.db.repositories.notification_repository import (
+    SqlAlchemyNotificationRepository,
+)
 from app.infrastructure.db.repositories.oauth_token_repository import (
     SqlAlchemyOAuthTokenRepository,
 )
@@ -75,6 +81,8 @@ class RequestScopedServices:
     manage_tasks: ManageTasksUseCase
     dashboard_summary: DashboardSummaryUseCase
     list_activity: ListActivityUseCase
+    manage_notifications: ManageNotificationsUseCase
+    check_reminders: CheckRemindersUseCase
 
 
 class Container:
@@ -139,6 +147,7 @@ class Container:
         calendar_client = CalendarClient(self.google_api_client_factory)
         self.inbox_port = GmailInboxAdapter(gmail_client)
         self.schedule_port = CalendarScheduleAdapter(calendar_client)
+        self.email_sender_port = GmailEmailSenderAdapter(gmail_client)
 
     def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
         conversations = SqlAlchemyConversationRepository(session)
@@ -149,6 +158,7 @@ class Container:
         clients_repo = SqlAlchemyClientRepository(session)
         projects_repo = SqlAlchemyProjectRepository(session)
         tasks_repo = SqlAlchemyTaskRepository(session)
+        notifications_repo = SqlAlchemyNotificationRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
 
@@ -181,6 +191,14 @@ class Container:
                 projects_repo, tasks_repo, self.inbox_port, self.schedule_port
             ),
             list_activity=ListActivityUseCase(executions),
+            manage_notifications=ManageNotificationsUseCase(notifications_repo),
+            check_reminders=CheckRemindersUseCase(
+                user_repository=users,
+                task_repository=tasks_repo,
+                client_repository=clients_repo,
+                notification_repository=notifications_repo,
+                email_sender=self.email_sender_port,
+            ),
         )
 
     def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:

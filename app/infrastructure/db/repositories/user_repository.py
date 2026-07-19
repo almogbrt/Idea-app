@@ -31,6 +31,10 @@ class SqlAlchemyUserRepository(UserRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def list_all(self) -> list[User]:
+        rows = (await self._session.scalars(select(UserModel))).all()
+        return [self._to_entity(row) for row in rows]
+
     @staticmethod
     def _to_entity(row: UserModel) -> User:
         return User(

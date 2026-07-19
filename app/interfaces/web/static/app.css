@@ -299,6 +299,93 @@ input {
   color: var(--text-faint);
 }
 
+.notifications-wrap {
+  position: relative;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #d64545;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.notifications-panel {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 8px);
+  width: min(340px, 88vw);
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(32, 28, 40, 0.18);
+  padding: 14px;
+  z-index: 60;
+}
+
+.notifications-panel[hidden] {
+  display: none;
+}
+
+.notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.notifications-panel-header h4 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.notification-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.notification-item:hover {
+  background: var(--panel-bg-hover);
+}
+
+.notification-item:last-child {
+  margin-bottom: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.notification-body {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.notification-time {
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
 #greeting {
   margin-bottom: 18px;
 }
@@ -680,6 +767,25 @@ input {
   flex: 1;
 }
 
+.task-due {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-bg-hover);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.task-due--overdue {
+  background: #fdecec;
+  color: #b3261e;
+}
+
+.task-due--soon {
+  background: var(--gold-bg);
+  color: var(--gold);
+}
+
 /* ---------- Side panel ---------- */
 
 #side-panel {
@@ -860,6 +966,15 @@ input {
 
 .modal-card input:focus {
   border-color: var(--purple);
+}
+
+.modal-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 12px;
 }
 
 .modal-card--wide {

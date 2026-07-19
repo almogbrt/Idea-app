@@ -165,3 +165,21 @@ class TaskModel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()
     )
+    due_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+
+
+class NotificationModel(Base):
+    __tablename__ = "notifications"
+    __table_args__ = (
+        Index("ix_notifications_user_id", "user_id"),
+        Index("ix_notifications_kind_related_id", "kind", "related_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(50))
+    related_id: Mapped[uuid.UUID] = mapped_column()
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+    read_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)

@@ -15,7 +15,15 @@ from fastapi import APIRouter, Depends
 
 from app.core.container import RequestScopedServices
 from app.core.exceptions import ForbiddenError
-from app.domain.entities import Client, ClientDetail, Project, ProjectSummary, Task, User
+from app.domain.entities import (
+    Client,
+    ClientDetail,
+    Notification,
+    Project,
+    ProjectSummary,
+    Task,
+    User,
+)
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.workspace import (
     ActivityItemView,
@@ -25,10 +33,12 @@ from app.interfaces.api.schemas.workspace import (
     CreateProjectRequest,
     CreateTaskRequest,
     DashboardSummaryView,
+    NotificationView,
     ProjectView,
     TaskView,
     UpdateClientRequest,
     UpdateProjectStatusRequest,
+    UpdateTaskDueAtRequest,
     UpdateTaskStatusRequest,
 )
 
@@ -213,6 +223,7 @@ def _task_view(task: Task) -> TaskView:
         project_id=task.project_id,
         created_at=task.created_at,
         updated_at=task.updated_at,
+        due_at=task.due_at,
     )
 
 
@@ -222,7 +233,7 @@ async def create_task(
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> TaskView:
-    task = await scope.manage_tasks.create(user.id, body.title, body.project_id)
+    task = await scope.manage_tasks.create(user.id, body.title, body.project_id, body.due_at)
     return _task_view(task)
 
 
@@ -237,3 +248,62 @@ async def update_task_status(
     _ensure_task_owned_by(existing, user)
     updated = await scope.manage_tasks.update_status(task_id, body.status)
     return _task_view(updated)
+
+
+@router.patch("/tasks/{task_id}/due-date", response_model=TaskView)
+async def update_task_due_at(
+    task_id: uuid.UUID,
+    body: UpdateTaskDueAtRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> TaskView:
+    existing = await scope.manage_tasks.get_or_raise(task_id)
+    _ensure_task_owned_by(existing, user)
+    updated = await scope.manage_tasks.set_due_at(task_id, body.due_at)
+    return _task_view(updated)
+
+
+def _notification_view(notification: Notification) -> NotificationView:
+    return NotificationView(
+        id=notification.id,
+        kind=notification.kind,
+        related_id=notification.related_id,
+        title=notification.title,
+        body=notification.body,
+        created_at=notification.created_at,
+        read_at=notification.read_at,
+    )
+
+
+@router.get("/notifications", response_model=list[NotificationView])
+async def list_notifications(
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> list[NotificationView]:
+    notifications = await scope.manage_notifications.list_unread(user.id)
+    return [_notification_view(n) for n in notifications]
+
+
+def _ensure_notification_owned_by(notification: Notification, user: User) -> None:
+    if notification.user_id != user.id:
+        raise ForbiddenError("This notification does not belong to you.")
+
+
+@router.patch("/notifications/{notification_id}/read", response_model=NotificationView)
+async def mark_notification_read(
+    notification_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> NotificationView:
+    existing = await scope.manage_notifications.get_or_raise(notification_id)
+    _ensure_notification_owned_by(existing, user)
+    notification = await scope.manage_notifications.mark_read(notification_id)
+    return _notification_view(notification)
+
+
+@router.post("/notifications/read-all", status_code=204)
+async def mark_all_notifications_read(
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    await scope.manage_notifications.mark_all_read(user.id)

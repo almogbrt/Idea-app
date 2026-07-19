@@ -8,6 +8,7 @@ from app.agents.project_management.tools import (
     GetClientDetailTool,
     ListProjectsTool,
     ListTasksTool,
+    SetTaskDueDateTool,
     UpdateClientTool,
     UpdateProjectStatusTool,
     UpdateTaskStatusTool,
@@ -33,5 +34,6 @@ class ProjectManagementAgent(BaseAgent):
             ListProjectsTool(self._service),
             CreateTaskTool(self._service),
             UpdateTaskStatusTool(self._service),
+            SetTaskDueDateTool(self._service),
             ListTasksTool(self._service),
         ]

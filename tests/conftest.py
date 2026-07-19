@@ -20,6 +20,7 @@ from app.application.ports.conversation_repository import ConversationRepository
 from app.application.ports.embedding import EmbeddingPort
 from app.application.ports.llm_gateway import LLMGatewayPort, LLMMessage, LLMResponse, LLMStopReason
 from app.application.ports.memory_repository import MemoryRepositoryPort
+from app.application.ports.notification_repository import NotificationRepositoryPort
 from app.application.ports.oauth_token_repository import OAuthTokenRepositoryPort
 from app.application.ports.project_repository import ProjectRepositoryPort
 from app.application.ports.task_repository import TaskRepositoryPort
@@ -31,6 +32,8 @@ from app.domain.entities import (
     Conversation,
     MemoryRecord,
     Message,
+    Notification,
+    NotificationKind,
     Project,
     ProjectStatus,
     ProjectSummary,
@@ -219,7 +222,11 @@ class FakeTaskRepository(TaskRepositoryPort):
         self.tasks: dict[uuid.UUID, Task] = {}
 
     async def create(
-        self, user_id: uuid.UUID, title: str, project_id: uuid.UUID | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        project_id: uuid.UUID | None = None,
+        due_at: datetime | None = None,
     ) -> Task:
         now = datetime.now(UTC)
         task = Task(
@@ -230,6 +237,7 @@ class FakeTaskRepository(TaskRepositoryPort):
             status=TaskStatus.OPEN,
             created_at=now,
             updated_at=now,
+            due_at=due_at,
         )
         self.tasks[task.id] = task
         return task
@@ -245,6 +253,13 @@ class FakeTaskRepository(TaskRepositoryPort):
         if task is None:
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         task.status = status
+        return task
+
+    async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.due_at = due_at
         return task
 
     async def count_open(self, user_id: uuid.UUID) -> int:
@@ -286,6 +301,65 @@ class FakeUserRepository(UserRepositoryPort):
         )
         self.users[user.id] = user
         return user
+
+    async def list_all(self) -> list[User]:
+        return list(self.users.values())
+
+
+class FakeNotificationRepository(NotificationRepositoryPort):
+    def __init__(self) -> None:
+        self.notifications: dict[uuid.UUID, Notification] = {}
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        kind: NotificationKind,
+        related_id: uuid.UUID,
+        title: str,
+        body: str,
+    ) -> Notification:
+        notification = Notification(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            kind=kind,
+            related_id=related_id,
+            title=title,
+            body=body,
+            created_at=datetime.now(UTC),
+        )
+        self.notifications[notification.id] = notification
+        return notification
+
+    async def exists(
+        self, user_id: uuid.UUID, kind: NotificationKind, related_id: uuid.UUID
+    ) -> bool:
+        return any(
+            n.user_id == user_id and n.kind == kind and n.related_id == related_id
+            for n in self.notifications.values()
+        )
+
+    async def get(self, notification_id: uuid.UUID) -> Notification | None:
+        return self.notifications.get(notification_id)
+
+    async def list_unread(self, user_id: uuid.UUID) -> list[Notification]:
+        return [
+            n for n in self.notifications.values() if n.user_id == user_id and n.read_at is None
+        ]
+
+    async def mark_read(self, notification_id: uuid.UUID) -> Notification:
+        notification = self.notifications.get(notification_id)
+        if notification is None:
+            raise NotFoundError(
+                "Notification not found", details={"notification_id": str(notification_id)}
+            )
+        notification.read_at = datetime.now(UTC)
+        return notification
+
+    async def mark_all_read(self, user_id: uuid.UUID) -> None:
+        now = datetime.now(UTC)
+        for n in self.notifications.values():
+            if n.user_id == user_id and n.read_at is None:
+                n.read_at = now
 
 
 class FakeEmbeddingGateway(EmbeddingPort):
@@ -359,3 +433,8 @@ def fake_project_repository() -> FakeProjectRepository:
 @pytest.fixture
 def fake_task_repository() -> FakeTaskRepository:
     return FakeTaskRepository()
+
+
+@pytest.fixture
+def fake_notification_repository() -> FakeNotificationRepository:
+    return FakeNotificationRepository()

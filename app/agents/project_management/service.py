@@ -14,6 +14,7 @@ case-insensitive match against the user's own records.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -114,7 +115,11 @@ class WorkspaceService:
             return await SqlAlchemyProjectRepository(session).list_by_user(user_id)
 
     async def create_task(
-        self, user_id: uuid.UUID, title: str, project_name: str | None = None
+        self,
+        user_id: uuid.UUID,
+        title: str,
+        project_name: str | None = None,
+        due_at: datetime | None = None,
     ) -> Task:
         async with self._session_factory() as session:
             project_id = None
@@ -122,7 +127,7 @@ class WorkspaceService:
                 project = await self._find_project(session, user_id, project_name)
                 project_id = project.id
             task = await SqlAlchemyTaskRepository(session).create(
-                user_id, title, project_id=project_id
+                user_id, title, project_id=project_id, due_at=due_at
             )
             await session.commit()
             return task
@@ -133,6 +138,15 @@ class WorkspaceService:
         async with self._session_factory() as session:
             task = await self._find_task(session, user_id, task_title)
             updated = await SqlAlchemyTaskRepository(session).update_status(task.id, status)
+            await session.commit()
+            return updated
+
+    async def set_task_due_at(
+        self, user_id: uuid.UUID, task_title: str, due_at: datetime | None
+    ) -> Task:
+        async with self._session_factory() as session:
+            task = await self._find_task(session, user_id, task_title)
+            updated = await SqlAlchemyTaskRepository(session).set_due_at(task.id, due_at)
             await session.commit()
             return updated
 
