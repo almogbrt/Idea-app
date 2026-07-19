@@ -3,6 +3,7 @@ const API_BASE = "/api/v1";
 const els = {
   authStatus: document.getElementById("auth-status"),
   greetingName: document.getElementById("greeting-name"),
+  greetingPhrase: document.getElementById("greeting-phrase"),
   userName: document.getElementById("user-name"),
   userAvatar: document.getElementById("user-avatar"),
   chatForm: document.getElementById("chat-form"),
@@ -179,16 +180,37 @@ els.sidebarToggle.addEventListener("click", () => {
 });
 els.sidebarBackdrop.addEventListener("click", closeSidebar);
 
+function timeOfDayGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "בוקר טוב";
+  if (hour >= 12 && hour < 17) return "צהריים טובים";
+  if (hour >= 17 && hour < 21) return "ערב טוב";
+  return "לילה טוב";
+}
+
+let hasSpokenGreeting = false;
+
+function speakGreeting(greeting) {
+  if (hasSpokenGreeting || !("speechSynthesis" in window)) return;
+  hasSpokenGreeting = true;
+  const utterance = new SpeechSynthesisUtterance(`${greeting}, בוס. טוב שחזרת.`);
+  utterance.lang = "he-IL";
+  window.speechSynthesis.speak(utterance);
+}
+
 async function checkAuth() {
   try {
     const user = await apiFetch("/auth/google/me");
     isAuthenticated = true;
     els.authStatus.innerHTML = `מחובר כ-${user.name}`;
+    const greeting = timeOfDayGreeting();
+    els.greetingPhrase.textContent = greeting;
     els.greetingName.textContent = user.name;
     els.userName.textContent = user.name;
     els.userAvatar.textContent = user.name.charAt(0).toUpperCase();
     els.edithStatus.innerHTML = '<span class="dot dot--green"></span> מחוברת ומוכנה';
     els.edithStatus.classList.remove("status-pill--offline");
+    speakGreeting(greeting);
   } catch {
     isAuthenticated = false;
     els.authStatus.innerHTML = `<a href="${API_BASE}/auth/google/login">התחבר עם Google</a>`;
