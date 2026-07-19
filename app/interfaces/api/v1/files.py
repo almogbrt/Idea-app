@@ -35,10 +35,11 @@ def _file_view(file: DriveFile) -> DriveFileView:
 async def list_files(
     query: str | None = None,
     max_results: int = 50,
+    order_by: str | None = None,
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> list[DriveFileView]:
-    files = await scope.manage_files.list_files(user.id, query, max_results)
+    files = await scope.manage_files.list_files(user.id, query, max_results, order_by)
     return [_file_view(f) for f in files]
 
 

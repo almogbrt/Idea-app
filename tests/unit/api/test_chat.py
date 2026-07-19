@@ -58,7 +58,9 @@ class _NullEmailSender(EmailSenderPort):
 
 
 class _NullCalendar(CalendarPort):
-    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
         return []
 
     async def create(
@@ -77,7 +79,11 @@ class _NullCalendar(CalendarPort):
 
 class _NullDrive(DrivePort):
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None, max_results: int
+        self,
+        user_id: uuid.UUID,
+        query: str | None,
+        max_results: int,
+        order_by: str | None = None,
     ) -> list[DriveFile]:
         return []
 

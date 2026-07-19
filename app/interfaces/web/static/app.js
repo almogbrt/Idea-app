@@ -82,6 +82,13 @@ const els = {
   shareFileRole: document.getElementById("share-file-role"),
   shareFileSave: document.getElementById("share-file-save"),
   shareFileCancel: document.getElementById("share-file-cancel"),
+  showMonthBtn: document.getElementById("show-month-btn"),
+  calendarMonthModal: document.getElementById("calendar-month-modal"),
+  monthViewTitle: document.getElementById("month-view-title"),
+  monthPrevBtn: document.getElementById("month-prev-btn"),
+  monthNextBtn: document.getElementById("month-next-btn"),
+  monthViewClose: document.getElementById("month-view-close"),
+  monthGrid: document.getElementById("month-grid"),
 };
 
 let isAuthenticated = false;
@@ -578,9 +585,25 @@ async function loadClients() {
   }
 }
 
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 async function loadCalendar() {
   try {
-    const events = await apiFetch("/calendar/events");
+    const start = startOfDay(new Date());
+    const end = addDays(start, 1);
+    const events = await apiFetch(
+      `/calendar/events?time_min=${encodeURIComponent(start.toISOString())}&time_max=${encodeURIComponent(end.toISOString())}`
+    );
     els.calendarList.innerHTML = "";
     els.calendarEmpty.hidden = events.length > 0;
     for (const event of events) {
@@ -625,9 +648,118 @@ function formatEventTime(startIso, endIso) {
   return `${dateStr}, ${startStr}–${endStr}`;
 }
 
+const WEEKDAY_LABELS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+
+let currentMonthDate = new Date();
+
+function toLocalDateInputValue(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T09:00`;
+}
+
+async function renderMonthView() {
+  const year = currentMonthDate.getFullYear();
+  const month = currentMonthDate.getMonth();
+  els.monthViewTitle.textContent = currentMonthDate.toLocaleDateString("he-IL", {
+    year: "numeric",
+    month: "long",
+  });
+
+  const firstOfMonth = new Date(year, month, 1);
+  const gridStart = addDays(firstOfMonth, -firstOfMonth.getDay());
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const gridEnd = addDays(lastOfMonth, 6 - lastOfMonth.getDay() + 1);
+
+  let events = [];
+  try {
+    events = await apiFetch(
+      `/calendar/events?time_min=${encodeURIComponent(gridStart.toISOString())}&time_max=${encodeURIComponent(gridEnd.toISOString())}`
+    );
+  } catch {
+    // not authenticated yet
+  }
+
+  const eventsByDay = {};
+  for (const event of events) {
+    const key = startOfDay(new Date(event.start)).toDateString();
+    (eventsByDay[key] = eventsByDay[key] || []).push(event);
+  }
+
+  els.monthGrid.innerHTML = "";
+  for (const label of WEEKDAY_LABELS) {
+    const header = document.createElement("div");
+    header.className = "month-weekday";
+    header.textContent = label;
+    els.monthGrid.appendChild(header);
+  }
+
+  const today = startOfDay(new Date()).toDateString();
+  let cursor = gridStart;
+  while (cursor <= gridEnd) {
+    const cell = document.createElement("div");
+    const isOutside = cursor.getMonth() !== month;
+    cell.className = "month-day-cell";
+    if (isOutside) cell.classList.add("month-day-cell--outside");
+    if (cursor.toDateString() === today) cell.classList.add("month-day-cell--today");
+
+    const dayNumber = document.createElement("div");
+    dayNumber.className = "month-day-number";
+    dayNumber.textContent = cursor.getDate();
+    cell.appendChild(dayNumber);
+
+    const dayEvents = eventsByDay[cursor.toDateString()] || [];
+    const shown = dayEvents.slice(0, 3);
+    for (const event of shown) {
+      const eventEl = document.createElement("div");
+      eventEl.className = "month-day-event";
+      eventEl.textContent = event.summary;
+      cell.appendChild(eventEl);
+    }
+    if (dayEvents.length > shown.length) {
+      const more = document.createElement("div");
+      more.className = "month-day-more";
+      more.textContent = `+${dayEvents.length - shown.length} נוספות`;
+      cell.appendChild(more);
+    }
+
+    const cellDate = new Date(cursor);
+    cell.addEventListener("click", () => {
+      els.calendarMonthModal.hidden = true;
+      els.newEventModal.hidden = false;
+      els.newEventSummary.value = "";
+      els.newEventStart.value = toLocalDateInputValue(cellDate);
+      els.newEventEnd.value = toLocalDateInputValue(cellDate);
+      els.newEventDescription.value = "";
+      els.newEventSummary.focus();
+    });
+
+    els.monthGrid.appendChild(cell);
+    cursor = addDays(cursor, 1);
+  }
+}
+
+els.showMonthBtn.addEventListener("click", () => {
+  currentMonthDate = new Date();
+  els.calendarMonthModal.hidden = false;
+  renderMonthView();
+});
+els.monthViewClose.addEventListener("click", () => {
+  els.calendarMonthModal.hidden = true;
+});
+els.monthPrevBtn.addEventListener("click", () => {
+  currentMonthDate = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1);
+  renderMonthView();
+});
+els.monthNextBtn.addEventListener("click", () => {
+  currentMonthDate = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1);
+  renderMonthView();
+});
+
 async function loadFiles() {
   try {
-    const files = await apiFetch("/files");
+    const files = await apiFetch("/files?max_results=8&order_by=viewedByMeTime%20desc");
     els.filesTbody.innerHTML = "";
     els.filesEmpty.hidden = files.length > 0;
     for (const file of files) {

@@ -23,9 +23,13 @@ class GoogleDrivePortAdapter(DrivePort):
         self._client = client
 
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None, max_results: int
+        self,
+        user_id: uuid.UUID,
+        query: str | None,
+        max_results: int,
+        order_by: str | None = None,
     ) -> list[DriveFile]:
-        files = await self._client.list_files(user_id, query, max_results)
+        files = await self._client.list_files(user_id, query, max_results, order_by)
         return [_to_entity(f) for f in files]
 
     async def get_content(self, user_id: uuid.UUID, file_id: str) -> str:

@@ -10,8 +10,10 @@ class ManageCalendarUseCase:
     def __init__(self, calendar: CalendarPort) -> None:
         self._calendar = calendar
 
-    async def list_upcoming(self, user_id: uuid.UUID, max_results: int = 20) -> list[CalendarEvent]:
-        return await self._calendar.list_upcoming(user_id, max_results)
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
+        return await self._calendar.list_between(user_id, time_min, time_max)
 
     async def create(
         self,

@@ -36,6 +36,25 @@ class CalendarClient:
         )
         return cast(list[dict[str, Any]], response.get("items", []))
 
+    async def list_events_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[dict[str, Any]]:
+        service = await self._google_clients.calendar(user_id)
+        response = await call_google_api(
+            lambda: service.events()
+            .list(
+                calendarId="primary",
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
+                fields=_EVENT_FIELDS,
+            )
+            .execute(),
+            action="calendar.events.list",
+        )
+        return cast(list[dict[str, Any]], response.get("items", []))
+
     async def count_events_between(
         self, user_id: uuid.UUID, time_min: str, time_max: str
     ) -> int:

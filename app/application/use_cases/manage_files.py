@@ -11,9 +11,13 @@ class ManageFilesUseCase:
         self._drive = drive
 
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None = None, max_results: int = 50
+        self,
+        user_id: uuid.UUID,
+        query: str | None = None,
+        max_results: int = 50,
+        order_by: str | None = None,
     ) -> list[DriveFile]:
-        return await self._drive.list_files(user_id, query, max_results)
+        return await self._drive.list_files(user_id, query, max_results, order_by)
 
     async def get_content(self, user_id: uuid.UUID, file_id: str) -> str:
         return await self._drive.get_content(user_id, file_id)

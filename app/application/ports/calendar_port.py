@@ -12,7 +12,12 @@ class CalendarPort(ABC):
     tool-call loop (same reasoning as `InboxPort`/`SchedulePort`)."""
 
     @abstractmethod
-    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
+        """Events starting within [time_min, time_max) — both ISO 8601. Used
+        both for the dashboard's "today" card and the full month view, just
+        with a different range."""
         raise NotImplementedError
 
     @abstractmethod

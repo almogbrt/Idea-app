@@ -13,7 +13,11 @@ class DrivePort(ABC):
 
     @abstractmethod
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None, max_results: int
+        self,
+        user_id: uuid.UUID,
+        query: str | None,
+        max_results: int,
+        order_by: str | None = None,
     ) -> list[DriveFile]:
         raise NotImplementedError
 

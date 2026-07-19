@@ -1067,6 +1067,89 @@ input {
   overflow-y: auto;
 }
 
+.modal-card--full {
+  width: min(920px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.section-heading-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.month-view-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.month-view-header h3 {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+  font-size: 16px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.month-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+}
+
+.month-day-cell {
+  min-height: 84px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 11.5px;
+  background: var(--panel-bg);
+  cursor: pointer;
+}
+
+.month-day-cell:hover {
+  background: var(--panel-bg-hover);
+}
+
+.month-day-cell--outside {
+  opacity: 0.4;
+}
+
+.month-day-cell--today {
+  border-color: var(--purple);
+  border-width: 2px;
+}
+
+.month-day-number {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.month-day-event {
+  background: var(--purple-bg);
+  color: var(--purple);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month-day-more {
+  color: var(--text-faint);
+  font-size: 10.5px;
+}
+
 .client-modal-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1243,6 +1326,11 @@ input {
 
   .client-modal-fields {
     grid-template-columns: 1fr;
+  }
+
+  .month-grid {
+    overflow-x: auto;
+    grid-template-columns: repeat(7, minmax(80px, 1fr));
   }
 
   .bubble {

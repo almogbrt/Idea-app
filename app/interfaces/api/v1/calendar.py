@@ -6,6 +6,8 @@ calendar through natural language via the `google_calendar` Agent.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends
 
 from app.core.container import RequestScopedServices
@@ -29,11 +31,19 @@ def _event_view(event: CalendarEvent) -> CalendarEventView:
 
 @router.get("/events", response_model=list[CalendarEventView])
 async def list_events(
-    max_results: int = 20,
+    time_min: str | None = None,
+    time_max: str | None = None,
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> list[CalendarEventView]:
-    events = await scope.manage_calendar.list_upcoming(user.id, max_results)
+    """Defaults to "today" (server-side UTC) if no range is given — the
+    dashboard always passes an explicit browser-local range instead, for
+    both the today card and the full month view."""
+    if time_min is None or time_max is None:
+        start_of_day = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        time_min = start_of_day.isoformat()
+        time_max = (start_of_day + timedelta(days=1)).isoformat()
+    events = await scope.manage_calendar.list_between(user.id, time_min, time_max)
     return [_event_view(e) for e in events]
 
 

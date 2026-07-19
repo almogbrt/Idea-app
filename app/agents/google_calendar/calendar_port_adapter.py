@@ -25,8 +25,10 @@ class GoogleCalendarPortAdapter(CalendarPort):
     def __init__(self, client: CalendarClient) -> None:
         self._client = client
 
-    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
-        events = await self._client.list_upcoming_events(user_id, max_results, time_min=None)
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
+        events = await self._client.list_events_between(user_id, time_min, time_max)
         return [_to_entity(e) for e in events]
 
     async def create(

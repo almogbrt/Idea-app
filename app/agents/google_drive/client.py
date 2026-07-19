@@ -18,12 +18,16 @@ class DriveClient:
         self._google_clients = google_clients
 
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None, max_results: int
+        self,
+        user_id: uuid.UUID,
+        query: str | None,
+        max_results: int,
+        order_by: str | None = None,
     ) -> list[dict[str, Any]]:
         service = await self._google_clients.drive(user_id)
         response = await call_google_api(
             lambda: service.files()
-            .list(q=query, pageSize=max_results, fields=_LIST_FIELDS)
+            .list(q=query, pageSize=max_results, fields=_LIST_FIELDS, orderBy=order_by)
             .execute(),
             action="drive.files.list",
         )

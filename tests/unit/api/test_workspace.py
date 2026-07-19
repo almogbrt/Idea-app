@@ -68,8 +68,10 @@ class _FakeCalendar(CalendarPort):
     def __init__(self) -> None:
         self.events: dict[str, CalendarEvent] = {}
 
-    async def list_upcoming(self, user_id: uuid.UUID, max_results: int) -> list[CalendarEvent]:
-        return list(self.events.values())[:max_results]
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
+        return list(self.events.values())
 
     async def create(
         self,
@@ -96,7 +98,11 @@ class _FakeDrive(DrivePort):
         self.shares: list[tuple[str, str, str]] = []
 
     async def list_files(
-        self, user_id: uuid.UUID, query: str | None, max_results: int
+        self,
+        user_id: uuid.UUID,
+        query: str | None,
+        max_results: int,
+        order_by: str | None = None,
     ) -> list[DriveFile]:
         return list(self.files.values())[:max_results]
 
