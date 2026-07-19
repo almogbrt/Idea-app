@@ -4,6 +4,7 @@ const els = {
   authStatus: document.getElementById("auth-status"),
   greetingName: document.getElementById("greeting-name"),
   greetingPhrase: document.getElementById("greeting-phrase"),
+  greetingSub: document.getElementById("greeting-sub"),
   userName: document.getElementById("user-name"),
   userAvatar: document.getElementById("user-avatar"),
   chatForm: document.getElementById("chat-form"),
@@ -194,6 +195,28 @@ function timeOfDayGreeting() {
   return "לילה טוב";
 }
 
+const MOTIVATIONAL_QUOTES = [
+  "אני כאן כדי להוציא דברים מהכוח אל הפועל.",
+  "כל צעד קטן היום הוא ניצחון גדול מחר.",
+  "המשמעת עושה את ההבדל בין חלום למציאות.",
+  "היום הוא ההזדמנות שלך להתקדם עוד קצת.",
+  "עקביות מנצחת מוטיבציה רגעית.",
+  "כל משימה שסגרת היום היא לבנה בבניין שלך.",
+  "לא חייבים להרגיש מוכנים כדי להתחיל, מספיק להתחיל כדי להרגיש מוכנים.",
+  "ההצלחה נבנית מהחלטות קטנות שחוזרות על עצמן כל יום.",
+  "התקדמות, לא שלמות.",
+  "בוס טוב מתמקד במה שבשליטתו — וזה מספיק כדי לנצח את היום.",
+  "כל יום הוא דף חדש לכתוב עליו הישג.",
+  "מי שממשיך לצעוד, מגיע.",
+];
+
+function motivationalQuoteOfTheDay() {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - startOfYear) / 86400000);
+  return MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length];
+}
+
 let hasSpokenGreeting = false;
 
 function speakGreeting(greeting) {
@@ -212,6 +235,7 @@ async function checkAuth() {
     const greeting = timeOfDayGreeting();
     els.greetingPhrase.textContent = greeting;
     els.greetingName.textContent = user.name;
+    els.greetingSub.textContent = motivationalQuoteOfTheDay();
     els.userName.textContent = user.name;
     els.userAvatar.textContent = user.name.charAt(0).toUpperCase();
     els.edithStatus.innerHTML = '<span class="dot dot--green"></span> מחוברת ומוכנה';
