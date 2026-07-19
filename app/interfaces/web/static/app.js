@@ -39,7 +39,6 @@ const els = {
   clientEditFollowup: document.getElementById("client-edit-followup"),
   clientEditNotes: document.getElementById("client-edit-notes"),
   clientModalProjects: document.getElementById("client-modal-projects"),
-  clientModalTasks: document.getElementById("client-modal-tasks"),
   clientModalSave: document.getElementById("client-modal-save"),
   clientModalCancel: document.getElementById("client-modal-cancel"),
   clientModalDelete: document.getElementById("client-modal-delete"),
@@ -430,16 +429,7 @@ async function openClientModal(clientId) {
       : "";
     els.clientEditNotes.value = detail.client.notes || "";
 
-    els.clientModalProjects.innerHTML = detail.projects.length
-      ? detail.projects
-          .map(
-            (p) =>
-              `<div class="client-modal-list-item">${escapeHtml(p.name)} <span class="status-badge status-badge--${p.status}">${STATUS_LABELS[p.status]}</span></div>`
-          )
-          .join("")
-      : '<div class="client-modal-list-empty">אין פרויקטים משויכים.</div>';
-
-    renderClientModalTasks(detail.tasks);
+    renderClientModalProjectGroups(detail.projects, detail.tasks);
 
     els.clientModal.hidden = false;
   } catch (err) {
@@ -447,55 +437,110 @@ async function openClientModal(clientId) {
   }
 }
 
-function renderClientModalTasks(tasks) {
-  els.clientModalTasks.innerHTML = "";
-  if (!tasks.length) {
-    els.clientModalTasks.innerHTML = '<div class="client-modal-list-empty">אין משימות משויכות.</div>';
+function buildClientModalTaskRow(task) {
+  const row = document.createElement("div");
+  row.className = `client-modal-list-item client-modal-task-item${task.status === "done" ? " done" : ""}`;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = task.status === "done";
+  checkbox.addEventListener("change", async (event) => {
+    event.stopPropagation();
+    await apiFetch(`/tasks/${task.id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: checkbox.checked ? "done" : "open" }),
+    });
+    loadTasks();
+    loadDashboardSummary();
+    openClientModal(currentClientId);
+  });
+  const title = document.createElement("span");
+  title.className = "client-modal-task-title";
+  title.textContent = task.title;
+  title.addEventListener("click", () => {
+    editTaskOpenedFromClientBoard = true;
+    els.clientModal.hidden = true;
+    openEditTaskModal(task.id);
+  });
+  row.appendChild(checkbox);
+  row.appendChild(title);
+  const badge = dueDateBadge(task);
+  if (badge) row.appendChild(badge);
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "task-delete-btn";
+  deleteBtn.title = "מחיקת משימה";
+  deleteBtn.textContent = "✕";
+  deleteBtn.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
+    await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
+    loadTasks();
+    loadDashboardSummary();
+    openClientModal(currentClientId);
+  });
+  row.appendChild(deleteBtn);
+  return row;
+}
+
+function buildClientModalProjectGroup(titleText, statusBadgeHtml, tasks) {
+  const group = document.createElement("div");
+  group.className = "client-modal-project-group";
+  const header = document.createElement("div");
+  header.className = statusBadgeHtml
+    ? "client-modal-project-header"
+    : "client-modal-project-header client-modal-project-header--none";
+  header.innerHTML = statusBadgeHtml
+    ? `<span>${escapeHtml(titleText)}</span> ${statusBadgeHtml}`
+    : `<span>${escapeHtml(titleText)}</span>`;
+  group.appendChild(header);
+
+  const tasksContainer = document.createElement("div");
+  tasksContainer.className = "client-modal-list";
+  if (tasks.length) {
+    for (const task of tasks) {
+      tasksContainer.appendChild(buildClientModalTaskRow(task));
+    }
+  } else {
+    tasksContainer.innerHTML = '<div class="client-modal-list-empty">אין משימות בפרויקט הזה.</div>';
+  }
+  group.appendChild(tasksContainer);
+  return group;
+}
+
+function renderClientModalProjectGroups(projects, tasks) {
+  els.clientModalProjects.innerHTML = "";
+
+  const tasksByProject = new Map();
+  const unassignedTasks = [];
+  for (const task of tasks) {
+    if (task.project_id) {
+      if (!tasksByProject.has(task.project_id)) tasksByProject.set(task.project_id, []);
+      tasksByProject.get(task.project_id).push(task);
+    } else {
+      unassignedTasks.push(task);
+    }
+  }
+
+  if (!projects.length && !unassignedTasks.length) {
+    els.clientModalProjects.innerHTML =
+      '<div class="client-modal-list-empty">אין פרויקטים או משימות משויכים.</div>';
     return;
   }
-  for (const task of tasks) {
-    const row = document.createElement("div");
-    row.className = `client-modal-list-item client-modal-task-item${task.status === "done" ? " done" : ""}`;
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = task.status === "done";
-    checkbox.addEventListener("change", async (event) => {
-      event.stopPropagation();
-      await apiFetch(`/tasks/${task.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: checkbox.checked ? "done" : "open" }),
-      });
-      loadTasks();
-      loadDashboardSummary();
-      openClientModal(currentClientId);
-    });
-    const title = document.createElement("span");
-    title.className = "client-modal-task-title";
-    title.textContent = task.title;
-    title.addEventListener("click", () => {
-      editTaskOpenedFromClientBoard = true;
-      els.clientModal.hidden = true;
-      openEditTaskModal(task.id);
-    });
-    row.appendChild(checkbox);
-    row.appendChild(title);
-    const badge = dueDateBadge(task);
-    if (badge) row.appendChild(badge);
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "task-delete-btn";
-    deleteBtn.title = "מחיקת משימה";
-    deleteBtn.textContent = "✕";
-    deleteBtn.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
-      await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
-      loadTasks();
-      loadDashboardSummary();
-      openClientModal(currentClientId);
-    });
-    row.appendChild(deleteBtn);
-    els.clientModalTasks.appendChild(row);
+
+  for (const project of projects) {
+    const statusBadge = `<span class="status-badge status-badge--${project.status}">${STATUS_LABELS[project.status]}</span>`;
+    const group = buildClientModalProjectGroup(
+      project.name,
+      statusBadge,
+      tasksByProject.get(project.id) || []
+    );
+    els.clientModalProjects.appendChild(group);
+  }
+
+  if (unassignedTasks.length) {
+    els.clientModalProjects.appendChild(
+      buildClientModalProjectGroup("ללא פרויקט", "", unassignedTasks)
+    );
   }
 }
 

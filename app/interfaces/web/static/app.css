@@ -1181,6 +1181,37 @@ input {
   color: var(--text-faint);
 }
 
+.client-modal-project-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.client-modal-project-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--panel-bg-hover);
+}
+
+.client-modal-project-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.client-modal-project-header--none {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.client-modal-project-group .client-modal-list-item {
+  background: var(--bg);
+}
+
 .client-modal-section-heading {
   display: flex;
   align-items: center;
