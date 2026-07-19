@@ -80,13 +80,24 @@ input {
 
 #sidebar {
   width: 250px;
-  flex-shrink: 0;
   background: var(--sidebar-bg);
   border-inline-end: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 20px 16px;
   gap: 6px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 80;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  box-shadow: 4px 0 28px rgba(32, 28, 40, 0.18);
+}
+
+#shell.sidebar-open #sidebar {
+  transform: translateX(0);
 }
 
 .logo-block {
@@ -258,7 +269,7 @@ input {
 }
 
 .hamburger-btn {
-  display: none;
+  display: flex;
   flex-shrink: 0;
 }
 
@@ -997,7 +1008,19 @@ input {
 }
 
 #sidebar-backdrop {
-  display: none;
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 26, 0.45);
+  z-index: 70;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+#shell.sidebar-open #sidebar-backdrop {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .modal-card h3 {
@@ -1344,40 +1367,6 @@ input {
 }
 
 @media (max-width: 800px) {
-  .hamburger-btn {
-    display: flex;
-  }
-
-  #sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 80;
-    transform: translateX(-100%);
-    transition: transform 0.22s ease;
-    box-shadow: 4px 0 28px rgba(32, 28, 40, 0.18);
-  }
-
-  #shell.sidebar-open #sidebar {
-    transform: translateX(0);
-  }
-
-  #sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(20, 16, 26, 0.45);
-    z-index: 70;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.22s ease;
-  }
-
-  #shell.sidebar-open #sidebar-backdrop {
-    opacity: 1;
-    pointer-events: auto;
-  }
 
   #main {
     padding: 16px;
