@@ -42,6 +42,9 @@ const els = {
   clientModalTasks: document.getElementById("client-modal-tasks"),
   clientModalSave: document.getElementById("client-modal-save"),
   clientModalCancel: document.getElementById("client-modal-cancel"),
+  clientModalNewMeetingBtn: document.getElementById("client-modal-new-meeting-btn"),
+  clientModalNewTaskTitle: document.getElementById("client-modal-new-task-title"),
+  clientModalNewTaskAdd: document.getElementById("client-modal-new-task-add"),
   newTaskBtn: document.getElementById("new-task-btn"),
   newTaskModal: document.getElementById("new-task-modal"),
   newTaskTitle: document.getElementById("new-task-title"),
@@ -434,20 +437,97 @@ async function openClientModal(clientId) {
           .join("")
       : '<div class="client-modal-list-empty">אין פרויקטים משויכים.</div>';
 
-    els.clientModalTasks.innerHTML = detail.tasks.length
-      ? detail.tasks
-          .map(
-            (t) =>
-              `<div class="client-modal-list-item${t.status === "done" ? " done" : ""}">${escapeHtml(t.title)}</div>`
-          )
-          .join("")
-      : '<div class="client-modal-list-empty">אין משימות משויכות.</div>';
+    renderClientModalTasks(detail.tasks);
 
     els.clientModal.hidden = false;
   } catch (err) {
     alert(err.message);
   }
 }
+
+function renderClientModalTasks(tasks) {
+  els.clientModalTasks.innerHTML = "";
+  if (!tasks.length) {
+    els.clientModalTasks.innerHTML = '<div class="client-modal-list-empty">אין משימות משויכות.</div>';
+    return;
+  }
+  for (const task of tasks) {
+    const row = document.createElement("div");
+    row.className = `client-modal-list-item client-modal-task-item${task.status === "done" ? " done" : ""}`;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = task.status === "done";
+    checkbox.addEventListener("change", async (event) => {
+      event.stopPropagation();
+      await apiFetch(`/tasks/${task.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: checkbox.checked ? "done" : "open" }),
+      });
+      loadTasks();
+      loadDashboardSummary();
+      openClientModal(currentClientId);
+    });
+    const title = document.createElement("span");
+    title.className = "client-modal-task-title";
+    title.textContent = task.title;
+    title.addEventListener("click", () => {
+      editTaskOpenedFromClientBoard = true;
+      els.clientModal.hidden = true;
+      openEditTaskModal(task.id);
+    });
+    row.appendChild(checkbox);
+    row.appendChild(title);
+    const badge = dueDateBadge(task);
+    if (badge) row.appendChild(badge);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "task-delete-btn";
+    deleteBtn.title = "מחיקת משימה";
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
+      await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
+      loadTasks();
+      loadDashboardSummary();
+      openClientModal(currentClientId);
+    });
+    row.appendChild(deleteBtn);
+    els.clientModalTasks.appendChild(row);
+  }
+}
+
+els.clientModalNewTaskAdd.addEventListener("click", async () => {
+  const title = els.clientModalNewTaskTitle.value.trim();
+  if (!title || !currentClientId) return;
+  try {
+    await apiFetch("/tasks", {
+      method: "POST",
+      body: JSON.stringify({ title, client_id: currentClientId }),
+    });
+    els.clientModalNewTaskTitle.value = "";
+    loadTasks();
+    loadDashboardSummary();
+    openClientModal(currentClientId);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+els.clientModalNewTaskTitle.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    els.clientModalNewTaskAdd.click();
+  }
+});
+
+els.clientModalNewMeetingBtn.addEventListener("click", () => {
+  els.newEventModal.hidden = false;
+  els.newEventSummary.value = `פגישה עם ${els.clientModalName.textContent}`;
+  els.newEventStart.value = "";
+  els.newEventEnd.value = "";
+  els.newEventDescription.value = "";
+  els.newEventStart.focus();
+});
 
 els.clientModalCancel.addEventListener("click", () => {
   els.clientModal.hidden = true;
@@ -584,6 +664,7 @@ function toDatetimeLocalValue(isoString) {
 }
 
 let currentEditTaskId = null;
+let editTaskOpenedFromClientBoard = false;
 
 async function openEditTaskModal(taskId) {
   const task = currentTasks.find((t) => t.id === taskId);
@@ -617,8 +698,16 @@ async function openEditTaskModal(taskId) {
   els.editTaskModal.hidden = false;
 }
 
+function returnToClientBoardIfNeeded() {
+  if (editTaskOpenedFromClientBoard && currentClientId) {
+    editTaskOpenedFromClientBoard = false;
+    openClientModal(currentClientId);
+  }
+}
+
 els.editTaskCancel.addEventListener("click", () => {
   els.editTaskModal.hidden = true;
+  returnToClientBoardIfNeeded();
 });
 
 els.editTaskSave.addEventListener("click", async () => {
@@ -640,6 +729,7 @@ els.editTaskSave.addEventListener("click", async () => {
     loadTasks();
     loadProjects();
     loadDashboardSummary();
+    returnToClientBoardIfNeeded();
   } catch (err) {
     alert(err.message);
   }
@@ -654,6 +744,7 @@ els.editTaskDelete.addEventListener("click", async () => {
     els.editTaskModal.hidden = true;
     loadTasks();
     loadDashboardSummary();
+    returnToClientBoardIfNeeded();
   } catch (err) {
     alert(err.message);
   }
