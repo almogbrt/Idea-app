@@ -96,6 +96,7 @@ const els = {
   monthNextBtn: document.getElementById("month-next-btn"),
   monthViewClose: document.getElementById("month-view-close"),
   monthGrid: document.getElementById("month-grid"),
+  installAppBtn: document.getElementById("install-app-btn"),
 };
 
 let isAuthenticated = false;
@@ -1075,6 +1076,35 @@ function refreshWorkspace() {
   loadActivity();
   loadNotifications();
 }
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Non-fatal — the app works fine without it, just without an install prompt.
+    });
+  });
+}
+
+let deferredInstallPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  els.installAppBtn.hidden = false;
+});
+
+els.installAppBtn.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  els.installAppBtn.hidden = true;
+});
+
+window.addEventListener("appinstalled", () => {
+  els.installAppBtn.hidden = true;
+  deferredInstallPrompt = null;
+});
 
 (async function init() {
   await checkAuth();

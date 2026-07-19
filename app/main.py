@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -73,6 +73,12 @@ def create_app() -> FastAPI:
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def chat_ui(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(request, "index.html", {})
+
+    @app.get("/sw.js", include_in_schema=False)
+    async def service_worker() -> FileResponse:
+        # Served from the root path (not /static/sw.js) so its default scope
+        # covers the whole app — required for install/"add to home screen".
+        return FileResponse(_WEB_DIR / "static" / "sw.js", media_type="application/javascript")
 
     return app
 
