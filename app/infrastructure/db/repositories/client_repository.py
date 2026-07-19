@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.client_repository import ClientRepositoryPort
@@ -69,6 +69,10 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
             raise NotFoundError("Client not found", details={"client_id": str(client_id)})
         await self._session.delete(row)
         await self._session.flush()
+
+    async def count(self, user_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(ClientModel).where(ClientModel.user_id == user_id)
+        return (await self._session.scalar(stmt)) or 0
 
     @staticmethod
     def _to_entity(row: ClientModel) -> Client:

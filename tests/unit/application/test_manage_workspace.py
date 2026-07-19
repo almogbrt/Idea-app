@@ -181,7 +181,9 @@ async def test_manage_tasks_create_list_and_update_status(
 
 
 async def test_dashboard_summary_aggregates_counts(
-    fake_project_repository: FakeProjectRepository, fake_task_repository: FakeTaskRepository
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_repository: FakeClientRepository,
 ) -> None:
     user_id = uuid.uuid4()
     await fake_project_repository.create(user_id, "Active project")
@@ -191,30 +193,43 @@ async def test_dashboard_summary_aggregates_counts(
     await fake_task_repository.create(user_id, "Open task")
     done_task = await fake_task_repository.create(user_id, "Done task")
     await fake_task_repository.update_status(done_task.id, TaskStatus.DONE)
+    await fake_client_repository.create(user_id, "Client A")
 
     use_case = DashboardSummaryUseCase(
-        fake_project_repository, fake_task_repository, _WorkingInbox(), _WorkingSchedule()
+        fake_project_repository,
+        fake_task_repository,
+        fake_client_repository,
+        _WorkingInbox(),
+        _WorkingSchedule(),
     )
     summary = await use_case.execute(user_id)
 
     assert summary.active_projects == 1
     assert summary.open_tasks == 1
+    assert summary.total_clients == 1
     assert summary.unread_emails == 7
     assert summary.meetings_today == 2
 
 
 async def test_dashboard_summary_degrades_gracefully_when_google_unavailable(
-    fake_project_repository: FakeProjectRepository, fake_task_repository: FakeTaskRepository
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_repository: FakeClientRepository,
 ) -> None:
     user_id = uuid.uuid4()
     use_case = DashboardSummaryUseCase(
-        fake_project_repository, fake_task_repository, _FailingInbox(), _FailingSchedule()
+        fake_project_repository,
+        fake_task_repository,
+        fake_client_repository,
+        _FailingInbox(),
+        _FailingSchedule(),
     )
 
     summary = await use_case.execute(user_id)
 
     assert summary.open_tasks == 0
     assert summary.active_projects == 0
+    assert summary.total_clients == 0
     assert summary.unread_emails is None
     assert summary.meetings_today is None
 

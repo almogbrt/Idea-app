@@ -38,3 +38,7 @@ class ClientRepositoryPort(ABC):
     @abstractmethod
     async def delete(self, client_id: uuid.UUID) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    async def count(self, user_id: uuid.UUID) -> int:
+        raise NotImplementedError

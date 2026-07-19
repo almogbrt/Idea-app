@@ -69,6 +69,7 @@ async def dashboard_summary(
     return DashboardSummaryView(
         open_tasks=summary.open_tasks,
         active_projects=summary.active_projects,
+        total_clients=summary.total_clients,
         unread_emails=summary.unread_emails,
         meetings_today=summary.meetings_today,
     )

@@ -109,7 +109,7 @@ def _workspace_kwargs() -> dict[str, object]:
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
         "dashboard_summary": DashboardSummaryUseCase(
-            projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
+            projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),
         "list_activity": ListActivityUseCase(FakeAgentExecutionRepository()),
         "manage_notifications": ManageNotificationsUseCase(notifications_repo),

@@ -11,6 +11,8 @@ const els = {
   voiceInputBtn: document.getElementById("voice-input-btn"),
   chatWindow: document.getElementById("chat-window"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
+  navBadgeProjects: document.getElementById("nav-badge-projects"),
+  navBadgeClients: document.getElementById("nav-badge-clients"),
   projectsTbody: document.getElementById("projects-tbody"),
   projectsEmpty: document.getElementById("projects-empty"),
   tasksList: document.getElementById("tasks-list"),
@@ -518,6 +520,7 @@ els.newClientSave.addEventListener("click", async () => {
     await apiFetch("/clients", { method: "POST", body: JSON.stringify({ name }) });
     els.newClientModal.hidden = true;
     loadClients();
+    loadDashboardSummary();
   } catch (err) {
     alert(err.message);
   }
@@ -743,6 +746,8 @@ async function loadDashboardSummary() {
   try {
     const summary = await apiFetch("/dashboard/summary");
     els.navBadgeTasks.textContent = summary.open_tasks;
+    els.navBadgeProjects.textContent = summary.active_projects;
+    els.navBadgeClients.textContent = summary.total_clients;
   } catch {
     // not authenticated yet — leave placeholders
   }

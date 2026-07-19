@@ -198,7 +198,7 @@ class Container:
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),
             dashboard_summary=DashboardSummaryUseCase(
-                projects_repo, tasks_repo, self.inbox_port, self.schedule_port
+                projects_repo, tasks_repo, clients_repo, self.inbox_port, self.schedule_port
             ),
             list_activity=ListActivityUseCase(executions),
             manage_notifications=ManageNotificationsUseCase(notifications_repo),

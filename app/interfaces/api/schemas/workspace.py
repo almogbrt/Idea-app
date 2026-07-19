@@ -99,6 +99,7 @@ class ClientDetailView(BaseModel):
 class DashboardSummaryView(BaseModel):
     open_tasks: int
     active_projects: int
+    total_clients: int
     unread_emails: int | None
     meetings_today: int | None
 

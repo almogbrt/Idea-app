@@ -199,6 +199,7 @@ class ManageTasksUseCase:
 class DashboardSummary:
     open_tasks: int
     active_projects: int
+    total_clients: int
     unread_emails: int | None
     """None means "unavailable" (Google not linked yet, or the call failed) —
     the UI should render this as a dash, not a zero."""
@@ -210,23 +211,27 @@ class DashboardSummaryUseCase:
         self,
         project_repository: ProjectRepositoryPort,
         task_repository: TaskRepositoryPort,
+        client_repository: ClientRepositoryPort,
         inbox: InboxPort,
         schedule: SchedulePort,
     ) -> None:
         self._projects = project_repository
         self._tasks = task_repository
+        self._clients = client_repository
         self._inbox = inbox
         self._schedule = schedule
 
     async def execute(self, user_id: uuid.UUID) -> DashboardSummary:
         open_tasks = await self._tasks.count_open(user_id)
         active_projects = await self._projects.count_active(user_id)
+        total_clients = await self._clients.count(user_id)
         unread_emails = await self._safe_call(self._inbox.count_unread, user_id)
         meetings_today = await self._safe_call(self._schedule.count_meetings_today, user_id)
 
         return DashboardSummary(
             open_tasks=open_tasks,
             active_projects=active_projects,
+            total_clients=total_clients,
             unread_emails=unread_emails,
             meetings_today=meetings_today,
         )

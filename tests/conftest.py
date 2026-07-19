@@ -156,6 +156,9 @@ class FakeClientRepository(ClientRepositoryPort):
             raise NotFoundError("Client not found", details={"client_id": str(client_id)})
         del self.clients[client_id]
 
+    async def count(self, user_id: uuid.UUID) -> int:
+        return len([c for c in self.clients.values() if c.user_id == user_id])
+
 
 class FakeProjectRepository(ProjectRepositoryPort):
     def __init__(self) -> None:

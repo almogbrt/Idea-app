@@ -152,7 +152,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
         dashboard_summary=DashboardSummaryUseCase(
-            projects_repo, tasks_repo, _NullInbox(), _NullSchedule()
+            projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),
         manage_calendar=ManageCalendarUseCase(calendar_port),
         manage_files=ManageFilesUseCase(drive_port),
@@ -185,6 +185,7 @@ def test_dashboard_summary_returns_counts_and_live_stats(client: TestClient) -> 
     assert body == {
         "open_tasks": 0,
         "active_projects": 0,
+        "total_clients": 0,
         "unread_emails": 3,
         "meetings_today": 1,
     }
