@@ -7,6 +7,7 @@ const els = {
   userAvatar: document.getElementById("user-avatar"),
   chatForm: document.getElementById("chat-form"),
   chatInput: document.getElementById("chat-input"),
+  voiceInputBtn: document.getElementById("voice-input-btn"),
   chatWindow: document.getElementById("chat-window"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   projectsTbody: document.getElementById("projects-tbody"),
@@ -242,6 +243,51 @@ els.chatForm.addEventListener("submit", (event) => {
   els.chatInput.value = "";
   sendCommand(text);
 });
+
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceRecognition = null;
+let isRecording = false;
+
+if (SpeechRecognitionCtor) {
+  els.voiceInputBtn.hidden = false;
+
+  voiceRecognition = new SpeechRecognitionCtor();
+  voiceRecognition.lang = "he-IL";
+  voiceRecognition.continuous = true;
+  voiceRecognition.interimResults = true;
+
+  voiceRecognition.addEventListener("result", (event) => {
+    let transcript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    els.chatInput.value = transcript;
+  });
+
+  voiceRecognition.addEventListener("error", (event) => {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      alert("אין הרשאה למיקרופון. אפשר הרשאת מיקרופון לאתר בהגדרות הדפדפן ונסה שוב.");
+    } else if (event.error !== "no-speech" && event.error !== "aborted") {
+      alert("לא הצלחתי להקליט. נסה שוב.");
+    }
+  });
+
+  voiceRecognition.addEventListener("end", () => {
+    isRecording = false;
+    els.voiceInputBtn.classList.remove("recording");
+  });
+
+  els.voiceInputBtn.addEventListener("click", () => {
+    if (isRecording) {
+      voiceRecognition.stop();
+      return;
+    }
+    els.chatInput.value = "";
+    isRecording = true;
+    els.voiceInputBtn.classList.add("recording");
+    voiceRecognition.start();
+  });
+}
 
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => {

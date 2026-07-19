@@ -299,6 +299,21 @@ input {
   color: var(--text-faint);
 }
 
+#voice-input-btn.recording {
+  color: #d64545;
+  background: #fdecec;
+  animation: voice-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(214, 69, 69, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(214, 69, 69, 0);
+  }
+}
+
 .notifications-wrap {
   position: relative;
 }
