@@ -262,7 +262,10 @@ class ListProjectsTool(Tool):
 
 class CreateTaskTool(Tool):
     name = "workspace_create_task"
-    description = "Create a new task, optionally under a project (matched by partial name)."
+    description = (
+        "Create a new task, optionally under a project and/or directly for a client "
+        "(both matched by partial name)."
+    )
     parameters_schema: dict[str, Any] = {
         "type": "object",
         "properties": {
@@ -270,6 +273,13 @@ class CreateTaskTool(Tool):
             "project_name": {
                 "type": "string",
                 "description": "Project this task belongs to (optional).",
+            },
+            "client_name": {
+                "type": "string",
+                "description": (
+                    "Client this task is for (optional). Use this whenever the user names a "
+                    "client for the task, even if they didn't mention a project."
+                ),
             },
             "due_at": {
                 "type": "string",
@@ -289,6 +299,7 @@ class CreateTaskTool(Tool):
             arguments["title"],
             arguments.get("project_name"),
             _parse_due_at(arguments.get("due_at")),
+            arguments.get("client_name"),
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))

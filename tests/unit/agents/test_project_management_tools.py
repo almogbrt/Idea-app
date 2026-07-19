@@ -120,13 +120,15 @@ class _FakeWorkspaceService:
         title: str,
         project_name: str | None = None,
         due_at: datetime | None = None,
+        client_name: str | None = None,
     ) -> Task:
-        self.calls.append(("create_task", (user_id, title, project_name, due_at)))
+        self.calls.append(("create_task", (user_id, title, project_name, due_at, client_name)))
         now = datetime.now(UTC)
         return Task(
             id=uuid.uuid4(),
             user_id=user_id,
             project_id=None,
+            client_id=uuid.uuid4() if client_name else None,
             title=title,
             status=TaskStatus.OPEN,
             created_at=now,
@@ -305,7 +307,7 @@ async def test_create_task_tool_passes_project_name() -> None:
     await tool.execute({"title": "Prep summer menu", "project_name": "Summer menu"}, context)
 
     assert service.calls == [
-        ("create_task", (context.user_id, "Prep summer menu", "Summer menu", None))
+        ("create_task", (context.user_id, "Prep summer menu", "Summer menu", None, None))
     ]
 
 
@@ -321,10 +323,31 @@ async def test_create_task_tool_parses_due_at() -> None:
     assert service.calls == [
         (
             "create_task",
-            (context.user_id, "Send invoice", None, datetime(2026, 8, 1, 9, 0, tzinfo=UTC)),
+            (
+                context.user_id,
+                "Send invoice",
+                None,
+                datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+                None,
+            ),
         )
     ]
     assert json.loads(result.content)["due_at"] == "2026-08-01T09:00:00+00:00"
+
+
+async def test_create_task_tool_passes_client_name() -> None:
+    service = _FakeWorkspaceService()
+    tool = CreateTaskTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"title": "Kickoff call", "client_name": "Baron's"}, context
+    )
+
+    assert service.calls == [
+        ("create_task", (context.user_id, "Kickoff call", None, None, "Baron's"))
+    ]
+    assert json.loads(result.content)["client_id"] is not None
 
 
 async def test_set_task_due_date_tool() -> None:

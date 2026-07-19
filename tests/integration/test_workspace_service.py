@@ -99,6 +99,30 @@ async def test_create_task_resolves_project_by_partial_name(
     assert task.project_id == project.id
 
 
+async def test_create_task_resolves_client_by_partial_name(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-15", "owner-ws15@example.com", "Owner")
+    await db_session.commit()
+
+    client = await workspace_service.create_client(user.id, "Baron's Wine House")
+    task = await workspace_service.create_task(user.id, "Kickoff call", client_name="baron's")
+
+    assert task.client_id == client.id
+
+
+async def test_create_task_raises_when_client_name_has_no_match(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-16", "owner-ws16@example.com", "Owner")
+    await db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        await workspace_service.create_task(user.id, "Kickoff call", client_name="nonexistent")
+
+
 async def test_update_task_status_resolves_by_partial_title(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:

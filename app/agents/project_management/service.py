@@ -130,14 +130,23 @@ class WorkspaceService:
         title: str,
         project_name: str | None = None,
         due_at: datetime | None = None,
+        client_name: str | None = None,
     ) -> Task:
         async with self._session_factory() as session:
             project_id = None
             if project_name:
                 project = await self._find_project(session, user_id, project_name)
                 project_id = project.id
+            client_id = None
+            if client_name:
+                client = await self._find_client(session, user_id, client_name)
+                if client is None:
+                    raise NotFoundError(
+                        f"No client matching '{client_name}' found", details={"query": client_name}
+                    )
+                client_id = client.id
             task = await SqlAlchemyTaskRepository(session).create(
-                user_id, title, project_id=project_id, due_at=due_at
+                user_id, title, project_id=project_id, due_at=due_at, client_id=client_id
             )
             await session.commit()
             return task
