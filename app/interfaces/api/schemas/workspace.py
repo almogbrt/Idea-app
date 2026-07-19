@@ -58,20 +58,28 @@ class TaskView(BaseModel):
     created_at: datetime
     updated_at: datetime
     due_at: datetime | None = None
+    client_id: uuid.UUID | None = None
 
 
 class CreateTaskRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     project_id: uuid.UUID | None = None
     due_at: datetime | None = None
+    client_id: uuid.UUID | None = None
 
 
 class UpdateTaskStatusRequest(BaseModel):
     status: TaskStatus
 
 
-class UpdateTaskDueAtRequest(BaseModel):
+class UpdateTaskRequest(BaseModel):
+    """A full-form save (edit modal) — every field is set exactly to what's
+    given, not a partial patch."""
+
+    title: str = Field(..., min_length=1, max_length=500)
     due_at: datetime | None = None
+    project_id: uuid.UUID | None = None
+    client_id: uuid.UUID | None = None
 
 
 class ClientDetailView(BaseModel):

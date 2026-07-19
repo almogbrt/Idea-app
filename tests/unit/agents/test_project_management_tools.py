@@ -6,9 +6,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.agents.project_management.tools import (
+    AssignTaskToClientTool,
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    DeleteTaskTool,
     GetClientDetailTool,
     ListProjectsTool,
     ListTasksTool,
@@ -157,6 +159,25 @@ class _FakeWorkspaceService:
             created_at=now,
             updated_at=now,
             due_at=due_at,
+        )
+
+    async def delete_task(self, user_id: uuid.UUID, task_title: str) -> None:
+        self.calls.append(("delete_task", (user_id, task_title)))
+
+    async def assign_task_client(
+        self, user_id: uuid.UUID, task_title: str, client_name: str | None
+    ) -> Task:
+        self.calls.append(("assign_task_client", (user_id, task_title, client_name)))
+        now = datetime.now(UTC)
+        return Task(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            project_id=None,
+            client_id=uuid.uuid4() if client_name else None,
+            title=task_title,
+            status=TaskStatus.OPEN,
+            created_at=now,
+            updated_at=now,
         )
 
     async def list_tasks(self, user_id: uuid.UUID) -> list[Task]:
@@ -332,6 +353,45 @@ async def test_update_task_status_tool_parses_enum() -> None:
         ("update_task_status", (context.user_id, "Prep summer menu", TaskStatus.DONE))
     ]
     assert json.loads(result.content)["status"] == "done"
+
+
+async def test_delete_task_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = DeleteTaskTool(service)
+    context = _context()
+
+    result = await tool.execute({"task_title": "Prep summer menu"}, context)
+
+    assert service.calls == [("delete_task", (context.user_id, "Prep summer menu"))]
+    assert json.loads(result.content) == {"deleted": True}
+
+
+async def test_assign_task_to_client_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = AssignTaskToClientTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"task_title": "Prep summer menu", "client_name": "Baron's"}, context
+    )
+
+    assert service.calls == [
+        ("assign_task_client", (context.user_id, "Prep summer menu", "Baron's"))
+    ]
+    assert json.loads(result.content)["client_id"] is not None
+
+
+async def test_assign_task_to_client_tool_clears_when_omitted() -> None:
+    service = _FakeWorkspaceService()
+    tool = AssignTaskToClientTool(service)
+    context = _context()
+
+    result = await tool.execute({"task_title": "Prep summer menu"}, context)
+
+    assert service.calls == [
+        ("assign_task_client", (context.user_id, "Prep summer menu", None))
+    ]
+    assert json.loads(result.content)["client_id"] is None
 
 
 async def test_list_tasks_tool() -> None:

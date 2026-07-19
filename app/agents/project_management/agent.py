@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from app.agents.project_management.service import WorkspaceService
 from app.agents.project_management.tools import (
+    AssignTaskToClientTool,
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    DeleteTaskTool,
     GetClientDetailTool,
     ListProjectsTool,
     ListTasksTool,
@@ -35,5 +37,7 @@ class ProjectManagementAgent(BaseAgent):
             CreateTaskTool(self._service),
             UpdateTaskStatusTool(self._service),
             SetTaskDueDateTool(self._service),
+            DeleteTaskTool(self._service),
+            AssignTaskToClientTool(self._service),
             ListTasksTool(self._service),
         ]

@@ -52,6 +52,14 @@ const els = {
   newTaskDueAt: document.getElementById("new-task-due-at"),
   newTaskSave: document.getElementById("new-task-save"),
   newTaskCancel: document.getElementById("new-task-cancel"),
+  editTaskModal: document.getElementById("edit-task-modal"),
+  editTaskTitle: document.getElementById("edit-task-title"),
+  editTaskDueAt: document.getElementById("edit-task-due-at"),
+  editTaskProject: document.getElementById("edit-task-project"),
+  editTaskClient: document.getElementById("edit-task-client"),
+  editTaskSave: document.getElementById("edit-task-save"),
+  editTaskCancel: document.getElementById("edit-task-cancel"),
+  editTaskDelete: document.getElementById("edit-task-delete"),
   notificationsBtn: document.getElementById("notifications-btn"),
   notificationsBadge: document.getElementById("notifications-badge"),
   notificationsPanel: document.getElementById("notifications-panel"),
@@ -527,9 +535,12 @@ function dueDateBadge(task) {
   return badge;
 }
 
+let currentTasks = [];
+
 async function loadTasks() {
   try {
     const tasks = await apiFetch("/tasks");
+    currentTasks = tasks;
     els.tasksList.innerHTML = "";
     els.tasksEmpty.hidden = tasks.length > 0;
     for (const task of tasks) {
@@ -549,16 +560,116 @@ async function loadTasks() {
       const title = document.createElement("span");
       title.className = "task-title";
       title.textContent = task.title;
+      title.addEventListener("click", () => openEditTaskModal(task.id));
       row.appendChild(checkbox);
       row.appendChild(title);
       const badge = dueDateBadge(task);
       if (badge) row.appendChild(badge);
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "task-delete-btn";
+      deleteBtn.title = "מחיקת משימה";
+      deleteBtn.textContent = "✕";
+      deleteBtn.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
+        await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
+        loadTasks();
+        loadDashboardSummary();
+      });
+      row.appendChild(deleteBtn);
       els.tasksList.appendChild(row);
     }
   } catch {
     // not authenticated yet
   }
 }
+
+function toDatetimeLocalValue(isoString) {
+  const date = new Date(isoString);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+let currentEditTaskId = null;
+
+async function openEditTaskModal(taskId) {
+  const task = currentTasks.find((t) => t.id === taskId);
+  if (!task) return;
+  currentEditTaskId = taskId;
+
+  try {
+    const [projects, clientsList] = await Promise.all([
+      apiFetch("/projects"),
+      apiFetch("/clients"),
+    ]);
+    els.editTaskProject.innerHTML =
+      '<option value="">ללא פרויקט</option>' +
+      projects
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+        .join("");
+    els.editTaskClient.innerHTML =
+      '<option value="">ללא לקוח</option>' +
+      clientsList
+        .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+        .join("");
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
+
+  els.editTaskTitle.value = task.title;
+  els.editTaskDueAt.value = task.due_at ? toDatetimeLocalValue(task.due_at) : "";
+  els.editTaskProject.value = task.project_id || "";
+  els.editTaskClient.value = task.client_id || "";
+  els.editTaskModal.hidden = false;
+}
+
+els.editTaskCancel.addEventListener("click", () => {
+  els.editTaskModal.hidden = true;
+});
+
+els.editTaskSave.addEventListener("click", async () => {
+  if (!currentEditTaskId) return;
+  const title = els.editTaskTitle.value.trim();
+  if (!title) return;
+  try {
+    const dueValue = els.editTaskDueAt.value;
+    await apiFetch(`/tasks/${currentEditTaskId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        title,
+        due_at: dueValue ? new Date(dueValue).toISOString() : null,
+        project_id: els.editTaskProject.value || null,
+        client_id: els.editTaskClient.value || null,
+      }),
+    });
+    els.editTaskModal.hidden = true;
+    loadTasks();
+    loadProjects();
+    loadDashboardSummary();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.editTaskDelete.addEventListener("click", async () => {
+  if (!currentEditTaskId) return;
+  const task = currentTasks.find((t) => t.id === currentEditTaskId);
+  if (!confirm(`למחוק את המשימה "${task ? task.title : ""}"?`)) return;
+  try {
+    await apiFetch(`/tasks/${currentEditTaskId}`, { method: "DELETE" });
+    els.editTaskModal.hidden = true;
+    loadTasks();
+    loadDashboardSummary();
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 async function loadClients() {
   try {

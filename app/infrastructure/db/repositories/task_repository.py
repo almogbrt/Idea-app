@@ -22,6 +22,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         title: str,
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
+        client_id: uuid.UUID | None = None,
     ) -> Task:
         row = TaskModel(
             user_id=user_id,
@@ -29,6 +30,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             project_id=project_id,
             status=TaskStatus.OPEN.value,
             due_at=due_at,
+            client_id=client_id,
         )
         self._session.add(row)
         await self._session.flush()
@@ -66,6 +68,32 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def update_details(
+        self,
+        task_id: uuid.UUID,
+        title: str,
+        due_at: datetime | None,
+        project_id: uuid.UUID | None,
+        client_id: uuid.UUID | None,
+    ) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.title = title
+        row.due_at = due_at
+        row.project_id = project_id
+        row.client_id = client_id
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
+    async def delete(self, task_id: uuid.UUID) -> None:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        await self._session.delete(row)
+        await self._session.flush()
+
     async def count_open(self, user_id: uuid.UUID) -> int:
         stmt = (
             select(func.count())
@@ -85,4 +113,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             created_at=row.created_at,
             updated_at=row.updated_at,
             due_at=row.due_at,
+            client_id=row.client_id,
         )

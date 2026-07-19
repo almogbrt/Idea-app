@@ -152,6 +152,7 @@ class TaskModel(Base):
     __table_args__ = (
         Index("ix_tasks_user_id", "user_id"),
         Index("ix_tasks_project_id", "project_id"),
+        Index("ix_tasks_client_id", "client_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -166,6 +167,9 @@ class TaskModel(Base):
         _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()
     )
     due_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class NotificationModel(Base):

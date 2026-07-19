@@ -265,7 +265,7 @@ def test_dashboard_activity_reflects_only_current_user(client: TestClient) -> No
     assert response.json() == []
 
 
-def test_create_task_with_due_at_and_update_due_date(client: TestClient) -> None:
+def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:
     _install_scope(client)
     task = client.post(
         "/api/v1/tasks", json={"title": "Send invoice", "due_at": "2026-08-01T09:00:00Z"}
@@ -273,14 +273,15 @@ def test_create_task_with_due_at_and_update_due_date(client: TestClient) -> None
     assert task["due_at"] is not None
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/due-date", json={"due_at": "2026-09-01T09:00:00Z"}
+        f"/api/v1/tasks/{task['id']}",
+        json={"title": "Send invoice", "due_at": "2026-09-01T09:00:00Z"},
     )
 
     assert response.status_code == 200
     assert response.json()["due_at"].startswith("2026-09-01")
 
 
-def test_update_task_due_at_rejects_other_users_task(client: TestClient) -> None:
+def test_update_task_rejects_other_users_task(client: TestClient) -> None:
     resources = _install_scope(client)
     task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
 
@@ -289,8 +290,54 @@ def test_update_task_due_at_rejects_other_users_task(client: TestClient) -> None
     stored.user_id = uuid.uuid4()
 
     response = client.patch(
-        f"/api/v1/tasks/{task['id']}/due-date", json={"due_at": "2026-09-01T09:00:00Z"}
+        f"/api/v1/tasks/{task['id']}",
+        json={"title": "Not yours", "due_at": "2026-09-01T09:00:00Z"},
     )
+
+    assert response.status_code == 403
+
+
+def test_update_task_can_assign_client_and_clear_project(client: TestClient) -> None:
+    resources = _install_scope(client)
+    clients_repo = resources["clients_repo"]
+    client_entity = client.post("/api/v1/clients", json={"name": "Acme"}).json()
+    project = client.post("/api/v1/projects", json={"name": "Website"}).json()
+    task = client.post(
+        "/api/v1/tasks", json={"title": "Kickoff call", "project_id": project["id"]}
+    ).json()
+    assert clients_repo  # sanity: fixture wired, avoids unused-var lint
+
+    response = client.patch(
+        f"/api/v1/tasks/{task['id']}",
+        json={"title": "Kickoff call", "project_id": None, "client_id": client_entity["id"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["project_id"] is None
+    assert body["client_id"] == client_entity["id"]
+
+
+def test_delete_task_removes_it(client: TestClient) -> None:
+    _install_scope(client)
+    task = client.post("/api/v1/tasks", json={"title": "Throwaway"}).json()
+
+    response = client.delete(f"/api/v1/tasks/{task['id']}")
+    assert response.status_code == 204
+
+    list_response = client.get("/api/v1/tasks")
+    assert list_response.json() == []
+
+
+def test_delete_task_rejects_other_users_task(client: TestClient) -> None:
+    resources = _install_scope(client)
+    task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
+
+    tasks_repo = resources["tasks_repo"]
+    stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.delete(f"/api/v1/tasks/{task['id']}")
 
     assert response.status_code == 403
 

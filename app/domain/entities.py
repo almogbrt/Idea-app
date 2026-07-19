@@ -159,6 +159,9 @@ class Task:
     created_at: datetime
     updated_at: datetime
     due_at: datetime | None = None
+    client_id: uuid.UUID | None = None
+    """Direct client association — independent of `project_id`, since not
+    every client-related task belongs to a project."""
 
 
 @dataclass(slots=True)

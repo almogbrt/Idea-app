@@ -98,7 +98,11 @@ class ManageClientsUseCase:
         project_ids = {summary.project.id for summary in client_projects}
 
         all_tasks = await self._tasks.list_by_user(user_id)
-        client_tasks = [task for task in all_tasks if task.project_id in project_ids]
+        client_tasks = [
+            task
+            for task in all_tasks
+            if task.project_id in project_ids or task.client_id == client_id
+        ]
 
         return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
 
@@ -141,8 +145,9 @@ class ManageTasksUseCase:
         title: str,
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
+        client_id: uuid.UUID | None = None,
     ) -> Task:
-        return await self._tasks.create(user_id, title, project_id, due_at)
+        return await self._tasks.create(user_id, title, project_id, due_at, client_id)
 
     async def list_all(self, user_id: uuid.UUID) -> list[Task]:
         return await self._tasks.list_by_user(user_id)
@@ -152,6 +157,19 @@ class ManageTasksUseCase:
 
     async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
         return await self._tasks.set_due_at(task_id, due_at)
+
+    async def update_details(
+        self,
+        task_id: uuid.UUID,
+        title: str,
+        due_at: datetime | None,
+        project_id: uuid.UUID | None,
+        client_id: uuid.UUID | None,
+    ) -> Task:
+        return await self._tasks.update_details(task_id, title, due_at, project_id, client_id)
+
+    async def delete(self, task_id: uuid.UUID) -> None:
+        await self._tasks.delete(task_id)
 
     async def get_or_raise(self, task_id: uuid.UUID) -> Task:
         task = await self._tasks.get(task_id)

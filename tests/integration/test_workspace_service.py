@@ -162,6 +162,37 @@ async def test_update_client_raises_when_no_match(
         await workspace_service.update_client(user.id, "nonexistent", email="x@example.com")
 
 
+async def test_delete_task_removes_it(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-11", "owner-ws11@example.com", "Owner")
+    await db_session.commit()
+
+    await workspace_service.create_task(user.id, "Throwaway task")
+    await workspace_service.delete_task(user.id, "throwaway")
+
+    remaining = await workspace_service.list_tasks(user.id)
+    assert remaining == []
+
+
+async def test_assign_task_client_links_and_clears(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-12", "owner-ws12@example.com", "Owner")
+    await db_session.commit()
+
+    client = await workspace_service.create_client(user.id, "Baron's")
+    await workspace_service.create_task(user.id, "Kickoff call")
+
+    linked = await workspace_service.assign_task_client(user.id, "kickoff", "baron's")
+    assert linked.client_id == client.id
+
+    cleared = await workspace_service.assign_task_client(user.id, "kickoff", None)
+    assert cleared.client_id is None
+
+
 async def test_get_client_detail_returns_linked_projects_and_tasks(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:

@@ -844,6 +844,27 @@ input {
 
 .task-title {
   flex: 1;
+  cursor: pointer;
+}
+
+.task-title:hover {
+  text-decoration: underline;
+}
+
+.task-delete-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.task-delete-btn:hover {
+  color: #b3261e;
+  background: #fdecec;
 }
 
 .task-due {
@@ -1231,6 +1252,10 @@ input {
   margin-top: 16px;
 }
 
+.modal-actions--split {
+  justify-content: space-between;
+}
+
 .btn {
   padding: 8px 16px;
   border-radius: 9px;
@@ -1254,6 +1279,14 @@ input {
 .btn--ghost:hover {
   background: var(--panel-bg-hover);
   color: var(--text);
+}
+
+.btn--danger {
+  color: #b3261e;
+}
+
+.btn--danger:hover {
+  background: #fdecec;
 }
 
 /* ---------- Responsive ---------- */

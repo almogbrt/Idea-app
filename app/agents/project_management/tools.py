@@ -59,6 +59,7 @@ def _task_json(task: Task) -> dict[str, Any]:
         "title": task.title,
         "status": task.status.value,
         "project_id": str(task.project_id) if task.project_id else None,
+        "client_id": str(task.client_id) if task.client_id else None,
         "due_at": task.due_at.isoformat() if task.due_at else None,
     }
 
@@ -323,6 +324,60 @@ class SetTaskDueDateTool(Tool):
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
         task = await self._service.set_task_due_at(
             context.user_id, arguments["task_title"], _parse_due_at(arguments.get("due_at"))
+        )
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))
+        )
+
+
+class DeleteTaskTool(Tool):
+    name = "workspace_delete_task"
+    description = "Permanently delete a task. Match the task by (partial) title."
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "task_title": {"type": "string", "description": "Task title (or part of it)."},
+        },
+        "required": ["task_title"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        await self._service.delete_task(context.user_id, arguments["task_title"])
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps({"deleted": True})
+        )
+
+
+class AssignTaskToClientTool(Tool):
+    name = "workspace_assign_task_to_client"
+    description = (
+        "Link (or unlink) a task directly to a client, independent of any project. Match the "
+        "task by (partial) title and the client by (partial) name. Omit client_name (or pass "
+        "null) to remove the task's client link."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "task_title": {"type": "string", "description": "Task title (or part of it)."},
+            "client_name": {
+                "type": "string",
+                "description": "Client to link this task to (or part of the name).",
+            },
+        },
+        "required": ["task_title"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        task = await self._service.assign_task_client(
+            context.user_id, arguments["task_title"], arguments.get("client_name")
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))

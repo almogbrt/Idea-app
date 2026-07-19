@@ -342,6 +342,33 @@
     </div>
   </div>
 
+  <div id="edit-task-modal" class="modal" hidden>
+    <div class="modal-card">
+      <h3>עריכת משימה</h3>
+      <input id="edit-task-title" type="text" placeholder="שם המשימה" autocomplete="off" />
+      <label class="modal-field-label">תאריך יעד (לא חובה)
+        <input id="edit-task-due-at" type="datetime-local" />
+      </label>
+      <label class="modal-field-label">פרויקט (לא חובה)
+        <select id="edit-task-project">
+          <option value="">ללא פרויקט</option>
+        </select>
+      </label>
+      <label class="modal-field-label">לקוח (לא חובה)
+        <select id="edit-task-client">
+          <option value="">ללא לקוח</option>
+        </select>
+      </label>
+      <div class="modal-actions modal-actions--split">
+        <button id="edit-task-delete" class="btn btn--danger">מחיקת משימה</button>
+        <div class="modal-actions">
+          <button id="edit-task-cancel" class="btn btn--ghost">ביטול</button>
+          <button id="edit-task-save" class="btn btn--primary">שמירה</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="new-client-modal" class="modal" hidden>
     <div class="modal-card">
       <h3>לקוח חדש</h3>

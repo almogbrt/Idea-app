@@ -227,6 +227,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         title: str,
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
+        client_id: uuid.UUID | None = None,
     ) -> Task:
         now = datetime.now(UTC)
         task = Task(
@@ -238,6 +239,7 @@ class FakeTaskRepository(TaskRepositoryPort):
             created_at=now,
             updated_at=now,
             due_at=due_at,
+            client_id=client_id,
         )
         self.tasks[task.id] = task
         return task
@@ -261,6 +263,28 @@ class FakeTaskRepository(TaskRepositoryPort):
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         task.due_at = due_at
         return task
+
+    async def update_details(
+        self,
+        task_id: uuid.UUID,
+        title: str,
+        due_at: datetime | None,
+        project_id: uuid.UUID | None,
+        client_id: uuid.UUID | None,
+    ) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.title = title
+        task.due_at = due_at
+        task.project_id = project_id
+        task.client_id = client_id
+        return task
+
+    async def delete(self, task_id: uuid.UUID) -> None:
+        if task_id not in self.tasks:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        del self.tasks[task_id]
 
     async def count_open(self, user_id: uuid.UUID) -> int:
         return sum(

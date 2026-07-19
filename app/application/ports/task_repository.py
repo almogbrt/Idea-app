@@ -15,6 +15,7 @@ class TaskRepositoryPort(ABC):
         title: str,
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
+        client_id: uuid.UUID | None = None,
     ) -> Task:
         raise NotImplementedError
 
@@ -32,6 +33,24 @@ class TaskRepositoryPort(ABC):
 
     @abstractmethod
     async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_details(
+        self,
+        task_id: uuid.UUID,
+        title: str,
+        due_at: datetime | None,
+        project_id: uuid.UUID | None,
+        client_id: uuid.UUID | None,
+    ) -> Task:
+        """A full-form save (edit modal), not a partial patch — every field
+        is set exactly to what's given, `None` included, so clearing a
+        project/client assignment or due date works as expected."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, task_id: uuid.UUID) -> None:
         raise NotImplementedError
 
     @abstractmethod

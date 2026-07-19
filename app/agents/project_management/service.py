@@ -154,6 +154,32 @@ class WorkspaceService:
         async with self._session_factory() as session:
             return await SqlAlchemyTaskRepository(session).list_by_user(user_id)
 
+    async def delete_task(self, user_id: uuid.UUID, task_title: str) -> None:
+        async with self._session_factory() as session:
+            task = await self._find_task(session, user_id, task_title)
+            await SqlAlchemyTaskRepository(session).delete(task.id)
+            await session.commit()
+
+    async def assign_task_client(
+        self, user_id: uuid.UUID, task_title: str, client_name: str | None
+    ) -> Task:
+        async with self._session_factory() as session:
+            task = await self._find_task(session, user_id, task_title)
+            client_id = None
+            if client_name:
+                client = await self._find_client(session, user_id, client_name)
+                if client is None:
+                    raise NotFoundError(
+                        f"No client matching '{client_name}' found",
+                        details={"query": client_name},
+                    )
+                client_id = client.id
+            updated = await SqlAlchemyTaskRepository(session).update_details(
+                task.id, task.title, task.due_at, task.project_id, client_id
+            )
+            await session.commit()
+            return updated
+
     @staticmethod
     async def _find_client(session: AsyncSession, user_id: uuid.UUID, name: str) -> Client | None:
         clients = await SqlAlchemyClientRepository(session).list_by_user(user_id)

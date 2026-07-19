@@ -38,7 +38,7 @@ from app.interfaces.api.schemas.workspace import (
     TaskView,
     UpdateClientRequest,
     UpdateProjectStatusRequest,
-    UpdateTaskDueAtRequest,
+    UpdateTaskRequest,
     UpdateTaskStatusRequest,
 )
 
@@ -224,6 +224,7 @@ def _task_view(task: Task) -> TaskView:
         created_at=task.created_at,
         updated_at=task.updated_at,
         due_at=task.due_at,
+        client_id=task.client_id,
     )
 
 
@@ -233,7 +234,9 @@ async def create_task(
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> TaskView:
-    task = await scope.manage_tasks.create(user.id, body.title, body.project_id, body.due_at)
+    task = await scope.manage_tasks.create(
+        user.id, body.title, body.project_id, body.due_at, body.client_id
+    )
     return _task_view(task)
 
 
@@ -250,17 +253,30 @@ async def update_task_status(
     return _task_view(updated)
 
 
-@router.patch("/tasks/{task_id}/due-date", response_model=TaskView)
-async def update_task_due_at(
+@router.patch("/tasks/{task_id}", response_model=TaskView)
+async def update_task(
     task_id: uuid.UUID,
-    body: UpdateTaskDueAtRequest,
+    body: UpdateTaskRequest,
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> TaskView:
     existing = await scope.manage_tasks.get_or_raise(task_id)
     _ensure_task_owned_by(existing, user)
-    updated = await scope.manage_tasks.set_due_at(task_id, body.due_at)
+    updated = await scope.manage_tasks.update_details(
+        task_id, body.title, body.due_at, body.project_id, body.client_id
+    )
     return _task_view(updated)
+
+
+@router.delete("/tasks/{task_id}", status_code=204)
+async def delete_task(
+    task_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    existing = await scope.manage_tasks.get_or_raise(task_id)
+    _ensure_task_owned_by(existing, user)
+    await scope.manage_tasks.delete(task_id)
 
 
 def _notification_view(notification: Notification) -> NotificationView:
