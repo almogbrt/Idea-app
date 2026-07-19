@@ -192,6 +192,30 @@ def test_create_and_list_clients(client: TestClient) -> None:
     assert [c["name"] for c in list_response.json()] == ["Baron's"]
 
 
+def test_delete_client_removes_it(client: TestClient) -> None:
+    _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    response = client.delete(f"/api/v1/clients/{created['id']}")
+    assert response.status_code == 204
+
+    list_response = client.get("/api/v1/clients")
+    assert list_response.json() == []
+
+
+def test_delete_client_rejects_other_users_client(client: TestClient) -> None:
+    resources = _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    clients_repo = resources["clients_repo"]
+    stored = clients_repo.clients[uuid.UUID(created["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.delete(f"/api/v1/clients/{created['id']}")
+
+    assert response.status_code == 403
+
+
 def test_create_and_list_projects(client: TestClient) -> None:
     _install_scope(client)
 

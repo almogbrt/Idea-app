@@ -67,6 +67,16 @@ class WorkspaceService:
             await session.commit()
             return updated
 
+    async def delete_client(self, user_id: uuid.UUID, client_name: str) -> None:
+        async with self._session_factory() as session:
+            client = await self._find_client(session, user_id, client_name)
+            if client is None:
+                raise NotFoundError(
+                    f"No client matching '{client_name}' found", details={"query": client_name}
+                )
+            await SqlAlchemyClientRepository(session).delete(client.id)
+            await session.commit()
+
     async def get_client_detail(self, user_id: uuid.UUID, client_name: str) -> ClientDetail:
         async with self._session_factory() as session:
             client = await self._find_client(session, user_id, client_name)

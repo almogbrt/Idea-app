@@ -151,6 +151,11 @@ class FakeClientRepository(ClientRepositoryPort):
             client.next_follow_up_at = next_follow_up_at
         return client
 
+    async def delete(self, client_id: uuid.UUID) -> None:
+        if client_id not in self.clients:
+            raise NotFoundError("Client not found", details={"client_id": str(client_id)})
+        del self.clients[client_id]
+
 
 class FakeProjectRepository(ProjectRepositoryPort):
     def __init__(self) -> None:

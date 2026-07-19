@@ -42,6 +42,7 @@ const els = {
   clientModalTasks: document.getElementById("client-modal-tasks"),
   clientModalSave: document.getElementById("client-modal-save"),
   clientModalCancel: document.getElementById("client-modal-cancel"),
+  clientModalDelete: document.getElementById("client-modal-delete"),
   clientModalNewMeetingBtn: document.getElementById("client-modal-new-meeting-btn"),
   clientModalNewTaskTitle: document.getElementById("client-modal-new-task-title"),
   clientModalNewTaskAdd: document.getElementById("client-modal-new-task-add"),
@@ -549,6 +550,23 @@ els.clientModalSave.addEventListener("click", async () => {
     });
     els.clientModal.hidden = true;
     loadClients();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.clientModalDelete.addEventListener("click", async () => {
+  if (!currentClientId) return;
+  if (!confirm(`למחוק את הלקוח "${els.clientModalName.textContent}"? הפרויקטים והמשימות שלו יישארו, רק הקישור ללקוח יוסר.`)) {
+    return;
+  }
+  try {
+    await apiFetch(`/clients/${currentClientId}`, { method: "DELETE" });
+    els.clientModal.hidden = true;
+    loadClients();
+    loadTasks();
+    loadProjects();
+    loadDashboardSummary();
   } catch (err) {
     alert(err.message);
   }

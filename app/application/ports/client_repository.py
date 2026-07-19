@@ -34,3 +34,7 @@ class ClientRepositoryPort(ABC):
         """Only fields explicitly passed are changed; omitted (`None`) fields
         keep their current stored value."""
         raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, client_id: uuid.UUID) -> None:
+        raise NotImplementedError

@@ -6,6 +6,7 @@ from app.agents.project_management.tools import (
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    DeleteClientTool,
     DeleteTaskTool,
     GetClientDetailTool,
     ListProjectsTool,
@@ -30,6 +31,7 @@ class ProjectManagementAgent(BaseAgent):
         return [
             CreateClientTool(self._service),
             UpdateClientTool(self._service),
+            DeleteClientTool(self._service),
             GetClientDetailTool(self._service),
             CreateProjectTool(self._service),
             UpdateProjectStatusTool(self._service),

@@ -193,6 +193,32 @@ async def test_assign_task_client_links_and_clears(
     assert cleared.client_id is None
 
 
+async def test_delete_client_resolves_by_partial_name(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-13", "owner-ws13@example.com", "Owner")
+    await db_session.commit()
+
+    await workspace_service.create_client(user.id, "Baron's Wine House")
+
+    await workspace_service.delete_client(user.id, "baron's")
+
+    with pytest.raises(NotFoundError):
+        await workspace_service.update_client(user.id, "baron's", email="x@example.com")
+
+
+async def test_delete_client_raises_when_no_match(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-14", "owner-ws14@example.com", "Owner")
+    await db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        await workspace_service.delete_client(user.id, "nonexistent")
+
+
 async def test_get_client_detail_returns_linked_projects_and_tasks(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:

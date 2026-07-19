@@ -10,6 +10,7 @@ from app.agents.project_management.tools import (
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    DeleteClientTool,
     DeleteTaskTool,
     GetClientDetailTool,
     ListProjectsTool,
@@ -58,6 +59,9 @@ class _FakeWorkspaceService:
             phone=phone,
             notes=notes,
         )
+
+    async def delete_client(self, user_id: uuid.UUID, client_name: str) -> None:
+        self.calls.append(("delete_client", (user_id, client_name)))
 
     async def get_client_detail(self, user_id: uuid.UUID, client_name: str) -> ClientDetail:
         self.calls.append(("get_client_detail", (user_id, client_name)))
@@ -228,6 +232,17 @@ async def test_update_client_tool() -> None:
     body = json.loads(result.content)
     assert body["email"] == "baron@example.com"
     assert body["notes"] == "VIP"
+
+
+async def test_delete_client_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = DeleteClientTool(service)
+    context = _context()
+
+    result = await tool.execute({"client_name": "Baron's"}, context)
+
+    assert service.calls == [("delete_client", (context.user_id, "Baron's"))]
+    assert json.loads(result.content) == {"deleted": True}
 
 
 async def test_get_client_detail_tool() -> None:

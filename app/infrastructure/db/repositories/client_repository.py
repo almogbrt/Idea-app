@@ -63,6 +63,13 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def delete(self, client_id: uuid.UUID) -> None:
+        row = await self._session.get(ClientModel, client_id)
+        if row is None:
+            raise NotFoundError("Client not found", details={"client_id": str(client_id)})
+        await self._session.delete(row)
+        await self._session.flush()
+
     @staticmethod
     def _to_entity(row: ClientModel) -> Client:
         return Client(

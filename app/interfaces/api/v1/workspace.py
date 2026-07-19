@@ -159,6 +159,17 @@ async def update_client(
     return _client_view(updated)
 
 
+@router.delete("/clients/{client_id}", status_code=204)
+async def delete_client(
+    client_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    await scope.manage_clients.delete(client_id)
+
+
 def _project_view(summary: ProjectSummary) -> ProjectView:
     return ProjectView(
         id=summary.project.id,

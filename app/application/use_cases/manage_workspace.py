@@ -85,6 +85,9 @@ class ManageClientsUseCase:
             next_follow_up_at=next_follow_up_at,
         )
 
+    async def delete(self, client_id: uuid.UUID) -> None:
+        await self._clients.delete(client_id)
+
     async def get_detail(self, user_id: uuid.UUID, client_id: uuid.UUID) -> ClientDetail:
         """The "full history" view: the client plus every project and task
         linked to it, however many hops that takes today (task -> project ->

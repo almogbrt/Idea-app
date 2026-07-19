@@ -157,6 +157,31 @@ class GetClientDetailTool(Tool):
         )
 
 
+class DeleteClientTool(Tool):
+    name = "workspace_delete_client"
+    description = (
+        "Permanently delete a client. Their projects and tasks are kept but lose the client "
+        "link. Match the client by (partial) name."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "client_name": {"type": "string", "description": "Client name (or part of it)."},
+        },
+        "required": ["client_name"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        await self._service.delete_client(context.user_id, arguments["client_name"])
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps({"deleted": True})
+        )
+
+
 class CreateProjectTool(Tool):
     name = "workspace_create_project"
     description = (
