@@ -35,6 +35,20 @@ from tests.conftest import (
     FakeUserRepository,
 )
 
+
+def _task_payload(**overrides: object) -> dict[str, object]:
+    """Every task the REST API creates now requires start_at/due_at — this
+    fills in valid defaults so tests only spell out what they're actually
+    exercising."""
+    payload: dict[str, object] = {
+        "title": "Task",
+        "start_at": "2026-08-01T08:00:00Z",
+        "due_at": "2026-08-01T09:00:00Z",
+    }
+    payload.update(overrides)
+    return payload
+
+
 _USER = User(
     id=uuid.uuid4(),
     google_sub="sub-workspace",
@@ -260,7 +274,7 @@ def test_update_project_status_rejects_other_users_project(client: TestClient) -
 
 def test_create_and_toggle_task(client: TestClient) -> None:
     _install_scope(client)
-    task = client.post("/api/v1/tasks", json={"title": "Prep summer menu"}).json()
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Prep summer menu")).json()
     assert task["status"] == "open"
 
     response = client.patch(f"/api/v1/tasks/{task['id']}/status", json={"status": "done"})
@@ -271,7 +285,7 @@ def test_create_and_toggle_task(client: TestClient) -> None:
 
 def test_update_task_status_rejects_other_users_task(client: TestClient) -> None:
     resources = _install_scope(client)
-    task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Not yours")).json()
 
     tasks_repo = resources["tasks_repo"]
     stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
@@ -289,10 +303,29 @@ def test_dashboard_activity_reflects_only_current_user(client: TestClient) -> No
     assert response.json() == []
 
 
+def test_create_task_requires_start_at_and_due_at(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.post("/api/v1/tasks", json={"title": "No times given"})
+
+    assert response.status_code == 422
+    assert response.json()["error_code"] == "validation_error"
+
+
+def test_create_task_requires_start_at_even_with_due_at(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.post(
+        "/api/v1/tasks", json={"title": "Only end time", "due_at": "2026-08-01T09:00:00Z"}
+    )
+
+    assert response.status_code == 422
+
+
 def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:
     _install_scope(client)
     task = client.post(
-        "/api/v1/tasks", json={"title": "Send invoice", "due_at": "2026-08-01T09:00:00Z"}
+        "/api/v1/tasks", json=_task_payload(title="Send invoice", due_at="2026-08-01T09:00:00Z")
     ).json()
     assert task["due_at"] is not None
 
@@ -307,7 +340,7 @@ def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:
 
 def test_update_task_rejects_other_users_task(client: TestClient) -> None:
     resources = _install_scope(client)
-    task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Not yours")).json()
 
     tasks_repo = resources["tasks_repo"]
     stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
@@ -327,7 +360,7 @@ def test_update_task_can_assign_client_and_clear_project(client: TestClient) -> 
     client_entity = client.post("/api/v1/clients", json={"name": "Acme"}).json()
     project = client.post("/api/v1/projects", json={"name": "Website"}).json()
     task = client.post(
-        "/api/v1/tasks", json={"title": "Kickoff call", "project_id": project["id"]}
+        "/api/v1/tasks", json=_task_payload(title="Kickoff call", project_id=project["id"])
     ).json()
     assert clients_repo  # sanity: fixture wired, avoids unused-var lint
 
@@ -344,7 +377,7 @@ def test_update_task_can_assign_client_and_clear_project(client: TestClient) -> 
 
 def test_delete_task_removes_it(client: TestClient) -> None:
     _install_scope(client)
-    task = client.post("/api/v1/tasks", json={"title": "Throwaway"}).json()
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Throwaway")).json()
 
     response = client.delete(f"/api/v1/tasks/{task['id']}")
     assert response.status_code == 204
@@ -355,7 +388,7 @@ def test_delete_task_removes_it(client: TestClient) -> None:
 
 def test_delete_task_rejects_other_users_task(client: TestClient) -> None:
     resources = _install_scope(client)
-    task = client.post("/api/v1/tasks", json={"title": "Not yours"}).json()
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Not yours")).json()
 
     tasks_repo = resources["tasks_repo"]
     stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]

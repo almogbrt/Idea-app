@@ -21,6 +21,9 @@ from tests.integration.conftest import TEST_DATABASE_URL, requires_postgres
 
 pytestmark = requires_postgres
 
+_START_AT = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
+_DUE_AT = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+
 
 @pytest.fixture
 def workspace_service() -> WorkspaceService:
@@ -94,7 +97,9 @@ async def test_create_task_resolves_project_by_partial_name(
     await db_session.commit()
 
     project = await workspace_service.create_project(user.id, "Summer menu")
-    task = await workspace_service.create_task(user.id, "Prep dishes", "summer")
+    task = await workspace_service.create_task(
+        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+    )
 
     assert task.project_id == project.id
 
@@ -107,7 +112,9 @@ async def test_create_task_resolves_client_by_partial_name(
     await db_session.commit()
 
     client = await workspace_service.create_client(user.id, "Baron's Wine House")
-    task = await workspace_service.create_task(user.id, "Kickoff call", client_name="baron's")
+    task = await workspace_service.create_task(
+        user.id, "Kickoff call", client_name="baron's", due_at=_DUE_AT, start_at=_START_AT
+    )
 
     assert task.client_id == client.id
 
@@ -120,7 +127,9 @@ async def test_create_task_raises_when_client_name_has_no_match(
     await db_session.commit()
 
     with pytest.raises(NotFoundError):
-        await workspace_service.create_task(user.id, "Kickoff call", client_name="nonexistent")
+        await workspace_service.create_task(
+            user.id, "Kickoff call", client_name="nonexistent", due_at=_DUE_AT, start_at=_START_AT
+        )
 
 
 async def test_update_task_status_resolves_by_partial_title(
@@ -130,7 +139,9 @@ async def test_update_task_status_resolves_by_partial_title(
     user = await users.create("google-sub-ws-6", "owner-ws6@example.com", "Owner")
     await db_session.commit()
 
-    await workspace_service.create_task(user.id, "Prep the summer menu dishes")
+    await workspace_service.create_task(
+        user.id, "Prep the summer menu dishes", due_at=_DUE_AT, start_at=_START_AT
+    )
 
     updated = await workspace_service.update_task_status(
         user.id, "summer menu", TaskStatus.DONE
@@ -147,7 +158,9 @@ async def test_create_task_with_due_at_and_set_task_due_at_resolves_by_partial_t
     await db_session.commit()
 
     due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
-    task = await workspace_service.create_task(user.id, "Send invoice", due_at=due)
+    task = await workspace_service.create_task(
+        user.id, "Send invoice", due_at=due, start_at=_START_AT
+    )
     assert task.due_at == due
 
     new_due = datetime(2026, 9, 1, 9, 0, tzinfo=UTC)
@@ -193,7 +206,9 @@ async def test_delete_task_removes_it(
     user = await users.create("google-sub-ws-11", "owner-ws11@example.com", "Owner")
     await db_session.commit()
 
-    await workspace_service.create_task(user.id, "Throwaway task")
+    await workspace_service.create_task(
+        user.id, "Throwaway task", due_at=_DUE_AT, start_at=_START_AT
+    )
     await workspace_service.delete_task(user.id, "throwaway")
 
     remaining = await workspace_service.list_tasks(user.id)
@@ -208,7 +223,9 @@ async def test_assign_task_client_links_and_clears(
     await db_session.commit()
 
     client = await workspace_service.create_client(user.id, "Baron's")
-    await workspace_service.create_task(user.id, "Kickoff call")
+    await workspace_service.create_task(
+        user.id, "Kickoff call", due_at=_DUE_AT, start_at=_START_AT
+    )
 
     linked = await workspace_service.assign_task_client(user.id, "kickoff", "baron's")
     assert linked.client_id == client.id
@@ -251,7 +268,9 @@ async def test_get_client_detail_returns_linked_projects_and_tasks(
     await db_session.commit()
 
     project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
-    await workspace_service.create_task(user.id, "Prep dishes", "summer")
+    await workspace_service.create_task(
+        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+    )
     await workspace_service.create_project(user.id, "Unrelated project")
 
     detail = await workspace_service.get_client_detail(user.id, "baron's")

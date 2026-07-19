@@ -170,6 +170,7 @@ class TaskModel(Base):
     client_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
     )
+    start_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
 
 
 class NotificationModel(Base):

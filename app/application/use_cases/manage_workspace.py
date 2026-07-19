@@ -19,7 +19,7 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.project_repository import ProjectRepositoryPort
 from app.application.ports.schedule import SchedulePort
 from app.application.ports.task_repository import TaskRepositoryPort
-from app.core.exceptions import AuthError, ExternalServiceError, NotFoundError
+from app.core.exceptions import AuthError, ExternalServiceError, NotFoundError, ValidationError
 from app.core.logging import get_logger
 from app.domain.entities import (
     AgentExecution,
@@ -149,8 +149,17 @@ class ManageTasksUseCase:
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
-        return await self._tasks.create(user_id, title, project_id, due_at, client_id)
+        if start_at is None or due_at is None:
+            raise ValidationError(
+                "A new task needs both a start time and an end time.",
+                details={
+                    "start_at": start_at.isoformat() if start_at else None,
+                    "due_at": due_at.isoformat() if due_at else None,
+                },
+            )
+        return await self._tasks.create(user_id, title, project_id, due_at, client_id, start_at)
 
     async def list_all(self, user_id: uuid.UUID) -> list[Task]:
         return await self._tasks.list_by_user(user_id)
@@ -168,8 +177,13 @@ class ManageTasksUseCase:
         due_at: datetime | None,
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
+        start_at: datetime | None = None,
     ) -> Task:
-        return await self._tasks.update_details(task_id, title, due_at, project_id, client_id)
+        """A full-form save — unlike `create`, editing an existing task does
+        not force adding a start/end time retroactively if it never had one."""
+        return await self._tasks.update_details(
+            task_id, title, due_at, project_id, client_id, start_at
+        )
 
     async def delete(self, task_id: uuid.UUID) -> None:
         await self._tasks.delete(task_id)

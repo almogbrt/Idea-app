@@ -16,6 +16,7 @@ class TaskRepositoryPort(ABC):
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
         raise NotImplementedError
 
@@ -43,6 +44,7 @@ class TaskRepositoryPort(ABC):
         due_at: datetime | None,
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
+        start_at: datetime | None = None,
     ) -> Task:
         """A full-form save (edit modal), not a partial patch — every field
         is set exactly to what's given, `None` included, so clearing a

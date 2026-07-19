@@ -23,6 +23,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
         row = TaskModel(
             user_id=user_id,
@@ -31,6 +32,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             status=TaskStatus.OPEN.value,
             due_at=due_at,
             client_id=client_id,
+            start_at=start_at,
         )
         self._session.add(row)
         await self._session.flush()
@@ -75,6 +77,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         due_at: datetime | None,
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
+        start_at: datetime | None = None,
     ) -> Task:
         row = await self._session.get(TaskModel, task_id)
         if row is None:
@@ -83,6 +86,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         row.due_at = due_at
         row.project_id = project_id
         row.client_id = client_id
+        row.start_at = start_at
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -114,4 +118,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             updated_at=row.updated_at,
             due_at=row.due_at,
             client_id=row.client_id,
+            start_at=row.start_at,
         )

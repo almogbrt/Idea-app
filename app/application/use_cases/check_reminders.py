@@ -21,6 +21,11 @@ from app.domain.entities import NotificationKind, TaskStatus, User
 logger = get_logger(__name__)
 
 DUE_SOON_WINDOW = timedelta(hours=24)
+ENDING_SOON_WINDOW = timedelta(minutes=10)
+"""How far ahead of a task's end time (`due_at`) to send the "time's almost
+up" email — checked on whatever cadence Cloud Scheduler runs this sweep at,
+so the actual lead time seen is anywhere from ENDING_SOON_WINDOW down to
+(ENDING_SOON_WINDOW - sweep interval)."""
 
 
 class CheckRemindersUseCase:
@@ -42,13 +47,16 @@ class CheckRemindersUseCase:
         """Returns how many new notifications were raised this run."""
         now = datetime.now(UTC)
         due_soon_cutoff = now + DUE_SOON_WINDOW
+        ending_soon_cutoff = now + ENDING_SOON_WINDOW
         raised = 0
         for user in await self._users.list_all():
-            raised += await self._check_tasks(user, now, due_soon_cutoff)
+            raised += await self._check_tasks(user, now, due_soon_cutoff, ending_soon_cutoff)
             raised += await self._check_client_follow_ups(user, now)
         return raised
 
-    async def _check_tasks(self, user: User, now: datetime, due_soon_cutoff: datetime) -> int:
+    async def _check_tasks(
+        self, user: User, now: datetime, due_soon_cutoff: datetime, ending_soon_cutoff: datetime
+    ) -> int:
         raised = 0
         for task in await self._tasks.list_by_user(user.id):
             if task.due_at is None or task.status == TaskStatus.DONE:
@@ -64,7 +72,19 @@ class CheckRemindersUseCase:
                         f"ב-{task.due_at:%d/%m/%Y %H:%M} וטרם סומנה כהושלמה."
                     ),
                 )
-            elif task.due_at <= due_soon_cutoff:
+                continue
+            if task.due_at <= ending_soon_cutoff:
+                raised += await self._raise_once(
+                    user,
+                    NotificationKind.TASK_ENDING_SOON,
+                    task.id,
+                    title=f"נגמר הזמן בעוד מעט: {task.title}",
+                    body=(
+                        f'פחות מ-10 דקות למשימה "{task.title}" '
+                        f"(סיום ב-{task.due_at:%H:%M})."
+                    ),
+                )
+            if task.due_at <= due_soon_cutoff:
                 raised += await self._raise_once(
                     user,
                     NotificationKind.TASK_DUE_SOON,

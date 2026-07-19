@@ -1259,12 +1259,14 @@ input {
 
 .client-modal-new-task {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
 
 .client-modal-new-task input {
   flex: 1;
+  min-width: 0;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -1273,6 +1275,10 @@ input {
   font-size: 13px;
   font-family: inherit;
   outline: none;
+}
+
+.client-modal-new-task input[type="datetime-local"] {
+  flex: 1 1 170px;
 }
 
 .client-modal-new-task input:focus {

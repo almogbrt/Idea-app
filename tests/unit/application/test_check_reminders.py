@@ -91,6 +91,34 @@ async def test_raises_due_soon_notification_for_task_due_within_24h(
     assert unread[0].kind == NotificationKind.TASK_DUE_SOON
 
 
+async def test_raises_ending_soon_notification_for_task_due_within_10_minutes(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_repository: FakeClientRepository,
+    fake_notification_repository: FakeNotificationRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-2b", "owner2b@example.com", "Owner")
+    await fake_task_repository.create(
+        user.id, "Almost done task", due_at=datetime.now(UTC) + timedelta(minutes=5)
+    )
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        fake_client_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+    )
+
+    raised = await use_case.execute()
+
+    # A task within 10 minutes is also within the 24h "due soon" window, so
+    # both notifications fire independently on this same sweep.
+    assert raised == 2
+    unread = await fake_notification_repository.list_unread(user.id)
+    kinds = {n.kind for n in unread}
+    assert kinds == {NotificationKind.TASK_ENDING_SOON, NotificationKind.TASK_DUE_SOON}
+
+
 async def test_does_not_notify_for_done_task_or_far_future_task(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,

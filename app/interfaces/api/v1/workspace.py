@@ -236,6 +236,7 @@ def _task_view(task: Task) -> TaskView:
         updated_at=task.updated_at,
         due_at=task.due_at,
         client_id=task.client_id,
+        start_at=task.start_at,
     )
 
 
@@ -246,7 +247,7 @@ async def create_task(
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> TaskView:
     task = await scope.manage_tasks.create(
-        user.id, body.title, body.project_id, body.due_at, body.client_id
+        user.id, body.title, body.project_id, body.due_at, body.client_id, body.start_at
     )
     return _task_view(task)
 
@@ -274,7 +275,7 @@ async def update_task(
     existing = await scope.manage_tasks.get_or_raise(task_id)
     _ensure_task_owned_by(existing, user)
     updated = await scope.manage_tasks.update_details(
-        task_id, body.title, body.due_at, body.project_id, body.client_id
+        task_id, body.title, body.due_at, body.project_id, body.client_id, body.start_at
     )
     return _task_view(updated)
 

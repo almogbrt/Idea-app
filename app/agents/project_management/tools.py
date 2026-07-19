@@ -61,6 +61,7 @@ def _task_json(task: Task) -> dict[str, Any]:
         "project_id": str(task.project_id) if task.project_id else None,
         "client_id": str(task.client_id) if task.client_id else None,
         "due_at": task.due_at.isoformat() if task.due_at else None,
+        "start_at": task.start_at.isoformat() if task.start_at else None,
     }
 
 
@@ -264,7 +265,8 @@ class CreateTaskTool(Tool):
     name = "workspace_create_task"
     description = (
         "Create a new task, optionally under a project and/or directly for a client "
-        "(both matched by partial name)."
+        "(both matched by partial name). Every task needs a start time AND an end time — "
+        "if the user didn't give both, ask them before calling this tool."
     )
     parameters_schema: dict[str, Any] = {
         "type": "object",
@@ -281,12 +283,16 @@ class CreateTaskTool(Tool):
                     "client for the task, even if they didn't mention a project."
                 ),
             },
+            "start_at": {
+                "type": "string",
+                "description": "Start date/time in ISO 8601, e.g. 2026-08-01T09:00:00Z.",
+            },
             "due_at": {
                 "type": "string",
-                "description": "Due date/time in ISO 8601 (optional), e.g. 2026-08-01T09:00:00Z.",
+                "description": "End (due) date/time in ISO 8601, e.g. 2026-08-01T10:00:00Z.",
             },
         },
-        "required": ["title"],
+        "required": ["title", "start_at", "due_at"],
     }
     agent_name = AGENT_NAME
 
@@ -300,6 +306,7 @@ class CreateTaskTool(Tool):
             arguments.get("project_name"),
             _parse_due_at(arguments.get("due_at")),
             arguments.get("client_name"),
+            _parse_due_at(arguments.get("start_at")),
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))

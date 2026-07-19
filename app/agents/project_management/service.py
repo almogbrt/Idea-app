@@ -18,7 +18,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.domain.entities import (
     Client,
     ClientDetail,
@@ -131,7 +131,16 @@ class WorkspaceService:
         project_name: str | None = None,
         due_at: datetime | None = None,
         client_name: str | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
+        if start_at is None or due_at is None:
+            raise ValidationError(
+                "A new task needs both a start time and an end time.",
+                details={
+                    "start_at": start_at.isoformat() if start_at else None,
+                    "due_at": due_at.isoformat() if due_at else None,
+                },
+            )
         async with self._session_factory() as session:
             project_id = None
             if project_name:
@@ -146,7 +155,12 @@ class WorkspaceService:
                     )
                 client_id = client.id
             task = await SqlAlchemyTaskRepository(session).create(
-                user_id, title, project_id=project_id, due_at=due_at, client_id=client_id
+                user_id,
+                title,
+                project_id=project_id,
+                due_at=due_at,
+                client_id=client_id,
+                start_at=start_at,
             )
             await session.commit()
             return task

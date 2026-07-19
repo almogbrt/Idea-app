@@ -288,8 +288,11 @@
     <div class="modal-card">
       <h3>משימה חדשה</h3>
       <input id="new-task-title" type="text" placeholder="שם המשימה" autocomplete="off" />
-      <label class="modal-field-label">תאריך יעד (לא חובה)
-        <input id="new-task-due-at" type="datetime-local" />
+      <label class="modal-field-label">זמן התחלה
+        <input id="new-task-start-at" type="datetime-local" required />
+      </label>
+      <label class="modal-field-label">זמן סיום
+        <input id="new-task-due-at" type="datetime-local" required />
       </label>
       <div class="modal-actions">
         <button id="new-task-cancel" class="btn btn--ghost">ביטול</button>
@@ -302,7 +305,10 @@
     <div class="modal-card">
       <h3>עריכת משימה</h3>
       <input id="edit-task-title" type="text" placeholder="שם המשימה" autocomplete="off" />
-      <label class="modal-field-label">תאריך יעד (לא חובה)
+      <label class="modal-field-label">זמן התחלה (לא חובה)
+        <input id="edit-task-start-at" type="datetime-local" />
+      </label>
+      <label class="modal-field-label">זמן סיום (לא חובה)
         <input id="edit-task-due-at" type="datetime-local" />
       </label>
       <label class="modal-field-label">פרויקט (לא חובה)
@@ -367,6 +373,8 @@
         <div id="client-modal-projects" class="client-modal-project-groups"></div>
         <div class="client-modal-new-task">
           <input id="client-modal-new-task-title" type="text" placeholder="משימה חדשה..." autocomplete="off" />
+          <input id="client-modal-new-task-start-at" type="datetime-local" title="זמן התחלה" required />
+          <input id="client-modal-new-task-due-at" type="datetime-local" title="זמן סיום" required />
           <button id="client-modal-new-task-add" class="btn btn--ghost btn--small">הוספה</button>
         </div>
       </div>

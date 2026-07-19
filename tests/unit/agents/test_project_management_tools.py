@@ -121,8 +121,11 @@ class _FakeWorkspaceService:
         project_name: str | None = None,
         due_at: datetime | None = None,
         client_name: str | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
-        self.calls.append(("create_task", (user_id, title, project_name, due_at, client_name)))
+        self.calls.append(
+            ("create_task", (user_id, title, project_name, due_at, client_name, start_at))
+        )
         now = datetime.now(UTC)
         return Task(
             id=uuid.uuid4(),
@@ -134,6 +137,7 @@ class _FakeWorkspaceService:
             created_at=now,
             updated_at=now,
             due_at=due_at,
+            start_at=start_at,
         )
 
     async def update_task_status(
@@ -304,20 +308,43 @@ async def test_create_task_tool_passes_project_name() -> None:
     tool = CreateTaskTool(service)
     context = _context()
 
-    await tool.execute({"title": "Prep summer menu", "project_name": "Summer menu"}, context)
+    await tool.execute(
+        {
+            "title": "Prep summer menu",
+            "project_name": "Summer menu",
+            "start_at": "2026-08-01T08:00:00+00:00",
+            "due_at": "2026-08-01T09:00:00+00:00",
+        },
+        context,
+    )
 
     assert service.calls == [
-        ("create_task", (context.user_id, "Prep summer menu", "Summer menu", None, None))
+        (
+            "create_task",
+            (
+                context.user_id,
+                "Prep summer menu",
+                "Summer menu",
+                datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+                None,
+                datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+            ),
+        )
     ]
 
 
-async def test_create_task_tool_parses_due_at() -> None:
+async def test_create_task_tool_parses_start_and_due_at() -> None:
     service = _FakeWorkspaceService()
     tool = CreateTaskTool(service)
     context = _context()
 
     result = await tool.execute(
-        {"title": "Send invoice", "due_at": "2026-08-01T09:00:00+00:00"}, context
+        {
+            "title": "Send invoice",
+            "start_at": "2026-08-01T08:00:00+00:00",
+            "due_at": "2026-08-01T09:00:00+00:00",
+        },
+        context,
     )
 
     assert service.calls == [
@@ -329,10 +356,12 @@ async def test_create_task_tool_parses_due_at() -> None:
                 None,
                 datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
                 None,
+                datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
             ),
         )
     ]
     assert json.loads(result.content)["due_at"] == "2026-08-01T09:00:00+00:00"
+    assert json.loads(result.content)["start_at"] == "2026-08-01T08:00:00+00:00"
 
 
 async def test_create_task_tool_passes_client_name() -> None:
@@ -341,11 +370,27 @@ async def test_create_task_tool_passes_client_name() -> None:
     context = _context()
 
     result = await tool.execute(
-        {"title": "Kickoff call", "client_name": "Baron's"}, context
+        {
+            "title": "Kickoff call",
+            "client_name": "Baron's",
+            "start_at": "2026-08-01T08:00:00+00:00",
+            "due_at": "2026-08-01T09:00:00+00:00",
+        },
+        context,
     )
 
     assert service.calls == [
-        ("create_task", (context.user_id, "Kickoff call", None, None, "Baron's"))
+        (
+            "create_task",
+            (
+                context.user_id,
+                "Kickoff call",
+                None,
+                datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+                "Baron's",
+                datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+            ),
+        )
     ]
     assert json.loads(result.content)["client_id"] is not None
 

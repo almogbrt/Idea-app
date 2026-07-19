@@ -168,7 +168,9 @@ async def test_manage_tasks_create_list_and_update_status(
     use_case = ManageTasksUseCase(fake_task_repository)
     user_id = uuid.uuid4()
 
-    task = await use_case.create(user_id, "Prep summer menu")
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
+    due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+    task = await use_case.create(user_id, "Prep summer menu", due_at=due, start_at=start)
     tasks = await use_case.list_all(user_id)
 
     assert tasks[0].id == task.id

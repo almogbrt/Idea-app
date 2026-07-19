@@ -46,15 +46,19 @@ const els = {
   clientModalDelete: document.getElementById("client-modal-delete"),
   clientModalNewMeetingBtn: document.getElementById("client-modal-new-meeting-btn"),
   clientModalNewTaskTitle: document.getElementById("client-modal-new-task-title"),
+  clientModalNewTaskStartAt: document.getElementById("client-modal-new-task-start-at"),
+  clientModalNewTaskDueAt: document.getElementById("client-modal-new-task-due-at"),
   clientModalNewTaskAdd: document.getElementById("client-modal-new-task-add"),
   newTaskBtn: document.getElementById("new-task-btn"),
   newTaskModal: document.getElementById("new-task-modal"),
   newTaskTitle: document.getElementById("new-task-title"),
+  newTaskStartAt: document.getElementById("new-task-start-at"),
   newTaskDueAt: document.getElementById("new-task-due-at"),
   newTaskSave: document.getElementById("new-task-save"),
   newTaskCancel: document.getElementById("new-task-cancel"),
   editTaskModal: document.getElementById("edit-task-modal"),
   editTaskTitle: document.getElementById("edit-task-title"),
+  editTaskStartAt: document.getElementById("edit-task-start-at"),
   editTaskDueAt: document.getElementById("edit-task-due-at"),
   editTaskProject: document.getElementById("edit-task-project"),
   editTaskClient: document.getElementById("edit-task-client"),
@@ -357,6 +361,7 @@ els.newProjectSave.addEventListener("click", async () => {
 els.newTaskBtn.addEventListener("click", () => {
   els.newTaskModal.hidden = false;
   els.newTaskTitle.value = "";
+  els.newTaskStartAt.value = "";
   els.newTaskDueAt.value = "";
   els.newTaskTitle.focus();
 });
@@ -365,14 +370,20 @@ els.newTaskCancel.addEventListener("click", () => {
 });
 els.newTaskSave.addEventListener("click", async () => {
   const title = els.newTaskTitle.value.trim();
+  const startValue = els.newTaskStartAt.value;
+  const dueValue = els.newTaskDueAt.value;
   if (!title) return;
+  if (!startValue || !dueValue) {
+    alert("צריך להזין גם זמן התחלה וגם זמן סיום למשימה.");
+    return;
+  }
   try {
-    const dueValue = els.newTaskDueAt.value;
     await apiFetch("/tasks", {
       method: "POST",
       body: JSON.stringify({
         title,
-        due_at: dueValue ? new Date(dueValue).toISOString() : null,
+        start_at: new Date(startValue).toISOString(),
+        due_at: new Date(dueValue).toISOString(),
       }),
     });
     els.newTaskModal.hidden = true;
@@ -614,13 +625,26 @@ function renderClientModalProjectGroups(projects, tasks) {
 
 els.clientModalNewTaskAdd.addEventListener("click", async () => {
   const title = els.clientModalNewTaskTitle.value.trim();
+  const startValue = els.clientModalNewTaskStartAt.value;
+  const dueValue = els.clientModalNewTaskDueAt.value;
   if (!title || !currentClientId) return;
+  if (!startValue || !dueValue) {
+    alert("צריך להזין גם זמן התחלה וגם זמן סיום למשימה.");
+    return;
+  }
   try {
     await apiFetch("/tasks", {
       method: "POST",
-      body: JSON.stringify({ title, client_id: currentClientId }),
+      body: JSON.stringify({
+        title,
+        client_id: currentClientId,
+        start_at: new Date(startValue).toISOString(),
+        due_at: new Date(dueValue).toISOString(),
+      }),
     });
     els.clientModalNewTaskTitle.value = "";
+    els.clientModalNewTaskStartAt.value = "";
+    els.clientModalNewTaskDueAt.value = "";
     loadTasks();
     loadDashboardSummary();
     openClientModal(currentClientId);
@@ -831,6 +855,7 @@ async function openEditTaskModal(taskId) {
   }
 
   els.editTaskTitle.value = task.title;
+  els.editTaskStartAt.value = task.start_at ? toDatetimeLocalValue(task.start_at) : "";
   els.editTaskDueAt.value = task.due_at ? toDatetimeLocalValue(task.due_at) : "";
   els.editTaskProject.value = task.project_id || "";
   els.editTaskClient.value = task.client_id || "";
@@ -854,11 +879,13 @@ els.editTaskSave.addEventListener("click", async () => {
   const title = els.editTaskTitle.value.trim();
   if (!title) return;
   try {
+    const startValue = els.editTaskStartAt.value;
     const dueValue = els.editTaskDueAt.value;
     await apiFetch(`/tasks/${currentEditTaskId}`, {
       method: "PATCH",
       body: JSON.stringify({
         title,
+        start_at: startValue ? new Date(startValue).toISOString() : null,
         due_at: dueValue ? new Date(dueValue).toISOString() : null,
         project_id: els.editTaskProject.value || null,
         client_id: els.editTaskClient.value || null,

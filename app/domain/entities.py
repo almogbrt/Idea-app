@@ -41,6 +41,7 @@ class TaskStatus(StrEnum):
 class NotificationKind(StrEnum):
     TASK_DUE_SOON = "task_due_soon"
     TASK_OVERDUE = "task_overdue"
+    TASK_ENDING_SOON = "task_ending_soon"
     CLIENT_FOLLOW_UP_DUE = "client_follow_up_due"
 
 
@@ -162,6 +163,11 @@ class Task:
     client_id: uuid.UUID | None = None
     """Direct client association — independent of `project_id`, since not
     every client-related task belongs to a project."""
+    start_at: datetime | None = None
+    """When work on the task is scheduled to begin. Required (alongside
+    `due_at`, its end time) when a task is created through the normal
+    creation paths — nullable here only so older rows created before this
+    field existed keep loading."""
 
 
 @dataclass(slots=True)

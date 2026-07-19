@@ -233,6 +233,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         project_id: uuid.UUID | None = None,
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
+        start_at: datetime | None = None,
     ) -> Task:
         now = datetime.now(UTC)
         task = Task(
@@ -245,6 +246,7 @@ class FakeTaskRepository(TaskRepositoryPort):
             updated_at=now,
             due_at=due_at,
             client_id=client_id,
+            start_at=start_at,
         )
         self.tasks[task.id] = task
         return task
@@ -276,6 +278,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         due_at: datetime | None,
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
+        start_at: datetime | None = None,
     ) -> Task:
         task = self.tasks.get(task_id)
         if task is None:
@@ -284,6 +287,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         task.due_at = due_at
         task.project_id = project_id
         task.client_id = client_id
+        task.start_at = start_at
         return task
 
     async def delete(self, task_id: uuid.UUID) -> None:

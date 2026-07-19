@@ -59,13 +59,19 @@ class TaskView(BaseModel):
     updated_at: datetime
     due_at: datetime | None = None
     client_id: uuid.UUID | None = None
+    start_at: datetime | None = None
 
 
 class CreateTaskRequest(BaseModel):
+    """start_at/due_at are optional here at the schema level — the use case
+    is the single place that enforces both being required for new tasks, so
+    every entry point (dashboard, chat) is held to the same rule."""
+
     title: str = Field(..., min_length=1, max_length=500)
     project_id: uuid.UUID | None = None
     due_at: datetime | None = None
     client_id: uuid.UUID | None = None
+    start_at: datetime | None = None
 
 
 class UpdateTaskStatusRequest(BaseModel):
@@ -74,12 +80,14 @@ class UpdateTaskStatusRequest(BaseModel):
 
 class UpdateTaskRequest(BaseModel):
     """A full-form save (edit modal) — every field is set exactly to what's
-    given, not a partial patch."""
+    given, not a partial patch. Unlike creation, editing does not force
+    adding a start/end time to a task that never had one."""
 
     title: str = Field(..., min_length=1, max_length=500)
     due_at: datetime | None = None
     project_id: uuid.UUID | None = None
     client_id: uuid.UUID | None = None
+    start_at: datetime | None = None
 
 
 class ClientDetailView(BaseModel):
