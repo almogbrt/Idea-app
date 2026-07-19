@@ -315,6 +315,32 @@ if (SpeechRecognitionCtor) {
   });
 }
 
+async function speakQuickOverview() {
+  let tasks;
+  try {
+    tasks = await apiFetch("/tasks");
+  } catch {
+    return;
+  }
+  const openTasks = tasks.filter((t) => t.status !== "done");
+  let text;
+  if (openTasks.length === 0) {
+    text = "אין לך משימות פתוחות כרגע. כל הכבוד בוס!";
+  } else {
+    const now = new Date();
+    const overdue = openTasks.filter((t) => t.due_at && new Date(t.due_at) < now);
+    text = `יש לך ${openTasks.length} משימות פתוחות: ${openTasks.map((t) => t.title).join(", ")}.`;
+    if (overdue.length > 0) {
+      text += ` שים לב, ${overdue.length} מהן באיחור: ${overdue.map((t) => t.title).join(", ")}.`;
+    }
+  }
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "he-IL";
+  window.speechSynthesis.speak(utterance);
+}
+
 document.querySelectorAll(".nav-item").forEach((item) => {
   if (item.tagName === "A") return; // real links (e.g. Gmail) navigate on their own
   item.addEventListener("click", () => {
@@ -330,7 +356,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       calendar: "calendar-section",
       files: "files-section",
     };
-    if (sectionMap[target]) {
+    if (target === "overview") {
+      document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
+      speakQuickOverview();
+    } else if (sectionMap[target]) {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
       if (target === "chat") els.chatInput.focus();
     } else {
