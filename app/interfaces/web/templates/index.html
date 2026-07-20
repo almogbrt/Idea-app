@@ -282,9 +282,15 @@
         </select>
       </label>
       <label class="modal-field-label">לקוח (לא חובה)
-        <select id="edit-task-client">
-          <option value="">ללא לקוח</option>
-        </select>
+        <input
+          id="edit-task-client"
+          type="text"
+          list="edit-task-client-options"
+          maxlength="20"
+          placeholder="שם לקוח..."
+          autocomplete="off"
+        />
+        <datalist id="edit-task-client-options"></datalist>
       </label>
       <div class="modal-actions modal-actions--split">
         <button id="edit-task-delete" class="btn btn--danger">מחיקת משימה</button>

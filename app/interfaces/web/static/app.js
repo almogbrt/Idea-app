@@ -61,6 +61,7 @@ const els = {
   editTaskDueAt: document.getElementById("edit-task-due-at"),
   editTaskProject: document.getElementById("edit-task-project"),
   editTaskClient: document.getElementById("edit-task-client"),
+  editTaskClientOptions: document.getElementById("edit-task-client-options"),
   editTaskSave: document.getElementById("edit-task-save"),
   editTaskCancel: document.getElementById("edit-task-cancel"),
   editTaskDelete: document.getElementById("edit-task-delete"),
@@ -937,6 +938,7 @@ function toDatetimeLocalValue(isoString) {
 
 let currentEditTaskId = null;
 let editTaskOpenedFromClientBoard = false;
+let editTaskClientsList = [];
 
 async function openEditTaskModal(taskId) {
   const task = currentTasks.find((t) => t.id === taskId);
@@ -953,22 +955,37 @@ async function openEditTaskModal(taskId) {
       projects
         .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
         .join("");
-    els.editTaskClient.innerHTML =
-      '<option value="">ללא לקוח</option>' +
-      clientsList
-        .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
-        .join("");
+    editTaskClientsList = clientsList;
+    els.editTaskClientOptions.innerHTML = clientsList
+      .map((c) => `<option value="${escapeHtml(c.name)}"></option>`)
+      .join("");
   } catch (err) {
     alert(err.message);
     return;
   }
 
+  const currentClient = editTaskClientsList.find((c) => c.id === task.client_id);
   els.editTaskTitle.value = task.title;
   els.editTaskStartAt.value = task.start_at ? toDatetimeLocalValue(task.start_at) : "";
   els.editTaskDueAt.value = task.due_at ? toDatetimeLocalValue(task.due_at) : "";
   els.editTaskProject.value = task.project_id || "";
-  els.editTaskClient.value = task.client_id || "";
+  els.editTaskClient.value = currentClient ? currentClient.name : "";
   els.editTaskModal.hidden = false;
+}
+
+async function resolveClientIdByName(name) {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const existing = editTaskClientsList.find(
+    (c) => c.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (existing) return existing.id;
+  const created = await apiFetch("/clients", {
+    method: "POST",
+    body: JSON.stringify({ name: trimmed }),
+  });
+  editTaskClientsList.push(created);
+  return created.id;
 }
 
 function returnToClientBoardIfNeeded() {
@@ -990,6 +1007,7 @@ els.editTaskSave.addEventListener("click", async () => {
   try {
     const startValue = els.editTaskStartAt.value;
     const dueValue = els.editTaskDueAt.value;
+    const clientId = await resolveClientIdByName(els.editTaskClient.value);
     await apiFetch(`/tasks/${currentEditTaskId}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -997,7 +1015,7 @@ els.editTaskSave.addEventListener("click", async () => {
         start_at: startValue ? new Date(startValue).toISOString() : null,
         due_at: dueValue ? new Date(dueValue).toISOString() : null,
         project_id: els.editTaskProject.value || null,
-        client_id: els.editTaskClient.value || null,
+        client_id: clientId,
       }),
     });
     els.editTaskModal.hidden = true;
