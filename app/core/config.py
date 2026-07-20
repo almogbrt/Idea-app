@@ -66,6 +66,17 @@ class Settings(BaseSettings):
     # substitutes for a session JWT.
     scheduler_shared_secret: str = ""
 
+    # WhatsApp Business Platform (Meta Cloud API). Empty by default — the
+    # webhook/agent simply don't do anything until these are configured.
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_app_secret: str = ""
+    whatsapp_verify_token: str = ""
+    whatsapp_owner_phone_number: str = ""
+    """The owner's own personal number (E.164, e.g. 9725xxxxxxxx) — inbound
+    messages from this number are routed to Edith as chat commands instead
+    of being logged as a client conversation."""
+
     @field_validator("google_oauth_scopes")
     @classmethod
     def _normalize_scopes(cls, v: str) -> str:

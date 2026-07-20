@@ -25,6 +25,15 @@ class SqlAlchemyConversationRepository(ConversationRepositoryPort):
         row = await self._session.get(ConversationModel, conversation_id)
         return self._conversation_to_entity(row) if row else None
 
+    async def get_or_create_by_title(self, user_id: uuid.UUID, title: str) -> Conversation:
+        stmt = select(ConversationModel).where(
+            ConversationModel.user_id == user_id, ConversationModel.title == title
+        )
+        row = (await self._session.scalars(stmt)).first()
+        if row is not None:
+            return self._conversation_to_entity(row)
+        return await self.create_conversation(user_id, title)
+
     async def append_message(self, message: Message) -> Message:
         row = MessageModel(
             id=message.id,

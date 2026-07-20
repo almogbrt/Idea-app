@@ -44,6 +44,11 @@ class NotificationKind(StrEnum):
     TASK_ENDING_SOON = "task_ending_soon"
 
 
+class WhatsAppDirection(StrEnum):
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
 @dataclass(slots=True)
 class User:
     id: uuid.UUID
@@ -223,6 +228,21 @@ class Thought:
 
     id: uuid.UUID
     user_id: uuid.UUID
+    content: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class WhatsAppMessage:
+    """One message sent or received over the business WhatsApp number.
+    `phone_number` is always the *other* party (a client, or the owner's own
+    personal number when they're commanding Edith directly) — there's only
+    ever one business number, so it isn't stored per-message."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    phone_number: str
+    direction: WhatsAppDirection
     content: str
     created_at: datetime
 

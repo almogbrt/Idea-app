@@ -183,6 +183,27 @@ class ThoughtModel(Base):
     created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
 
 
+class WhatsAppMessageModel(Base):
+    """`sequence` (not `created_at`) is the ordering key — see `MessageModel`
+    above: Postgres's `now()` is frozen for the duration of a transaction, so
+    several messages logged in the same transaction (e.g. a webhook batch)
+    can share an identical `created_at`."""
+
+    __tablename__ = "whatsapp_messages"
+    __table_args__ = (
+        Index("ix_whatsapp_messages_user_id", "user_id"),
+        Index("ix_whatsapp_messages_phone_sequence", "phone_number", "sequence"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    phone_number: Mapped[str] = mapped_column(String(32))
+    sequence: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True, nullable=False)
+    direction: Mapped[str] = mapped_column(String(10))
+    content: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
 class NotificationModel(Base):
     __tablename__ = "notifications"
     __table_args__ = (

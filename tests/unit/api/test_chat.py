@@ -15,6 +15,7 @@ from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
+from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -42,6 +43,7 @@ from tests.conftest import (
     FakeTaskRepository,
     FakeThoughtRepository,
     FakeUserRepository,
+    FakeWhatsAppMessageRepository,
 )
 
 
@@ -114,6 +116,7 @@ def _workspace_kwargs() -> dict[str, object]:
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
         "manage_thoughts": ManageThoughtsUseCase(FakeThoughtRepository()),
+        "manage_whatsapp_messages": ManageWhatsAppMessagesUseCase(FakeWhatsAppMessageRepository()),
         "dashboard_summary": DashboardSummaryUseCase(
             projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),

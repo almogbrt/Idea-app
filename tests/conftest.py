@@ -27,6 +27,7 @@ from app.application.ports.project_repository import ProjectRepositoryPort
 from app.application.ports.task_repository import TaskRepositoryPort
 from app.application.ports.thought_repository import ThoughtRepositoryPort
 from app.application.ports.user_repository import UserRepositoryPort
+from app.application.ports.whatsapp_message_repository import WhatsAppMessageRepositoryPort
 from app.core.exceptions import NotFoundError
 from app.domain.entities import (
     AgentExecution,
@@ -44,6 +45,8 @@ from app.domain.entities import (
     Thought,
     ToolDefinition,
     User,
+    WhatsAppDirection,
+    WhatsAppMessage,
 )
 from app.domain.value_objects import OAuthTokenSet
 
@@ -63,6 +66,19 @@ class FakeConversationRepository(ConversationRepositoryPort):
 
     async def get_conversation(self, conversation_id: uuid.UUID) -> Conversation | None:
         return self.conversations.get(conversation_id)
+
+    async def get_or_create_by_title(self, user_id: uuid.UUID, title: str) -> Conversation:
+        existing = next(
+            (
+                c
+                for c in self.conversations.values()
+                if c.user_id == user_id and c.title == title
+            ),
+            None,
+        )
+        if existing is not None:
+            return existing
+        return await self.create_conversation(user_id, title)
 
     async def append_message(self, message: Message) -> Message:
         self.messages.setdefault(message.conversation_id, []).append(message)
@@ -363,6 +379,39 @@ class FakeThoughtRepository(ThoughtRepositoryPort):
         del self.thoughts[thought_id]
 
 
+class FakeWhatsAppMessageRepository(WhatsAppMessageRepositoryPort):
+    def __init__(self) -> None:
+        self.messages: list[WhatsAppMessage] = []
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        phone_number: str,
+        direction: WhatsAppDirection,
+        content: str,
+    ) -> WhatsAppMessage:
+        message = WhatsAppMessage(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            phone_number=phone_number,
+            direction=direction,
+            content=content,
+            created_at=datetime.now(UTC),
+        )
+        self.messages.append(message)
+        return message
+
+    async def list_by_phone_number(
+        self, user_id: uuid.UUID, phone_number: str, limit: int = 50
+    ) -> list[WhatsAppMessage]:
+        matches = [
+            m
+            for m in self.messages
+            if m.user_id == user_id and m.phone_number == phone_number
+        ]
+        return matches[-limit:]
+
+
 class FakeOAuthTokenRepository(OAuthTokenRepositoryPort):
     def __init__(self) -> None:
         self.tokens: dict[tuple[uuid.UUID, str], OAuthTokenSet] = {}
@@ -538,6 +587,11 @@ def fake_task_repository() -> FakeTaskRepository:
 @pytest.fixture
 def fake_thought_repository() -> FakeThoughtRepository:
     return FakeThoughtRepository()
+
+
+@pytest.fixture
+def fake_whatsapp_message_repository() -> FakeWhatsAppMessageRepository:
+    return FakeWhatsAppMessageRepository()
 
 
 @pytest.fixture

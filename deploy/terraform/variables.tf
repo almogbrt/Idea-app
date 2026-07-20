@@ -72,6 +72,54 @@ variable "upstash_redis_url" {
   sensitive   = true
 }
 
+variable "whatsapp_access_token" {
+  description = <<-EOT
+    Permanent access token for the WhatsApp Business Platform (Meta Cloud
+    API), generated from a System User in Meta Business Settings. Leave
+    empty until you've finished Meta-side setup — the feature stays inert.
+  EOT
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "whatsapp_phone_number_id" {
+  description = <<-EOT
+    The Phone Number ID (not the phone number itself) shown in the
+    WhatsApp > API Setup page for your registered business number.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "whatsapp_app_secret" {
+  description = "App Secret from the Meta app's Settings > Basic page, used to verify inbound webhook signatures."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "whatsapp_verify_token" {
+  description = <<-EOT
+    Arbitrary string you choose and enter twice: once here, once in the
+    Meta webhook configuration screen ("Verify token") — Meta echoes it
+    back on setup to prove you control the endpoint.
+  EOT
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "whatsapp_owner_phone_number" {
+  description = <<-EOT
+    Your own personal WhatsApp number in E.164 with no leading "+" (e.g.
+    972501234567) — inbound messages from this number are routed to Edith
+    as chat commands instead of being logged as a client conversation.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "cloud_run_service_url" {
   description = <<-EOT
     The deployed Cloud Run service's HTTPS URL (e.g.

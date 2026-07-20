@@ -16,6 +16,14 @@ class ConversationRepositoryPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_or_create_by_title(self, user_id: uuid.UUID, title: str) -> Conversation:
+        """Finds the user's existing conversation with this exact title, or
+        creates one — used for channels like WhatsApp that need one durable
+        conversation to keep appending to rather than a fresh one per
+        message."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def append_message(self, message: Message) -> Message:
         raise NotImplementedError
 

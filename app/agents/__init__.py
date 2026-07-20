@@ -10,6 +10,7 @@ the orchestrator, intent router, or API layer needs to change.
 from __future__ import annotations
 
 from app.agents.project_management.service import WorkspaceService
+from app.agents.whatsapp.service import WhatsAppService
 from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
 from app.orchestrator.agent_registry import AgentRegistry
 
@@ -17,6 +18,7 @@ from app.orchestrator.agent_registry import AgentRegistry
 def register_all_agents(
     google_clients: GoogleApiClientFactory,
     workspace_service: WorkspaceService,
+    whatsapp_service: WhatsAppService,
     registry: AgentRegistry,
 ) -> None:
     from app.agents.gmail.agent import GmailAgent
@@ -24,9 +26,11 @@ def register_all_agents(
     from app.agents.google_drive.agent import GoogleDriveAgent
     from app.agents.google_sheets.agent import GoogleSheetsAgent
     from app.agents.project_management.agent import ProjectManagementAgent
+    from app.agents.whatsapp.agent import WhatsAppAgent
 
     registry.register(GoogleDriveAgent(google_clients))
     registry.register(GmailAgent(google_clients))
     registry.register(GoogleCalendarAgent(google_clients))
     registry.register(GoogleSheetsAgent(google_clients))
     registry.register(ProjectManagementAgent(workspace_service))
+    registry.register(WhatsAppAgent(whatsapp_service))

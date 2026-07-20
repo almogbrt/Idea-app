@@ -24,6 +24,7 @@ from app.domain.entities import (
     MessageRole,
     ProjectType,
     TaskStatus,
+    WhatsAppDirection,
 )
 from app.domain.value_objects import OAuthTokenSet
 from app.infrastructure.db.repositories.agent_execution_repository import (
@@ -41,6 +42,9 @@ from app.infrastructure.db.repositories.project_repository import SqlAlchemyProj
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
 from app.infrastructure.db.repositories.thought_repository import SqlAlchemyThoughtRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
+from app.infrastructure.db.repositories.whatsapp_message_repository import (
+    SqlAlchemyWhatsAppMessageRepository,
+)
 from tests.integration.conftest import requires_postgres
 
 pytestmark = requires_postgres
@@ -392,3 +396,26 @@ async def test_thought_repository_round_trip(db_session: AsyncSession) -> None:
 
     with pytest.raises(NotFoundError):
         await thoughts_repo.delete(thought.id)
+
+
+async def test_whatsapp_message_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-whatsapp-1", "whatsapp-owner@example.com", "Owner")
+
+    messages_repo = SqlAlchemyWhatsAppMessageRepository(db_session)
+    await messages_repo.create(
+        user.id, "972500000001", WhatsAppDirection.INBOUND, "Hey, are we still on for Tuesday?"
+    )
+    await messages_repo.create(
+        user.id, "972500000001", WhatsAppDirection.OUTBOUND, "Yes, see you then!"
+    )
+    await messages_repo.create(user.id, "972500000002", WhatsAppDirection.INBOUND, "Other client")
+
+    thread = await messages_repo.list_by_phone_number(user.id, "972500000001")
+
+    assert [m.content for m in thread] == [
+        "Hey, are we still on for Tuesday?",
+        "Yes, see you then!",
+    ]
+    assert thread[0].direction == WhatsAppDirection.INBOUND
+    assert thread[1].direction == WhatsAppDirection.OUTBOUND

@@ -101,6 +101,31 @@ spec:
                 secretKeyRef:
                   name: idea-os-scheduler-shared-secret
                   key: latest
+            - name: WHATSAPP_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-whatsapp-access-token
+                  key: latest
+            - name: WHATSAPP_PHONE_NUMBER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-whatsapp-phone-number-id
+                  key: latest
+            - name: WHATSAPP_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-whatsapp-app-secret
+                  key: latest
+            - name: WHATSAPP_VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-whatsapp-verify-token
+                  key: latest
+            - name: WHATSAPP_OWNER_PHONE_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-whatsapp-owner-phone-number
+                  key: latest
   traffic:
     - latestRevision: true
       percent: 100

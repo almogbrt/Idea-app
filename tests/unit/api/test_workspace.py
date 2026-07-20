@@ -15,6 +15,7 @@ from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
+from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -36,6 +37,7 @@ from tests.conftest import (
     FakeTaskRepository,
     FakeThoughtRepository,
     FakeUserRepository,
+    FakeWhatsAppMessageRepository,
 )
 
 
@@ -142,6 +144,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     projects_repo = FakeProjectRepository(clients_repo)
     tasks_repo = FakeTaskRepository()
     thoughts_repo = FakeThoughtRepository()
+    whatsapp_messages_repo = FakeWhatsAppMessageRepository()
     executions_repo = FakeAgentExecutionRepository()
     notifications_repo = FakeNotificationRepository()
     users_repo = FakeUserRepository()
@@ -157,6 +160,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
         manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
+        manage_whatsapp_messages=ManageWhatsAppMessagesUseCase(whatsapp_messages_repo),
         dashboard_summary=DashboardSummaryUseCase(
             projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),
@@ -175,6 +179,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "projects_repo": projects_repo,
         "tasks_repo": tasks_repo,
         "thoughts_repo": thoughts_repo,
+        "whatsapp_messages_repo": whatsapp_messages_repo,
         "executions_repo": executions_repo,
         "notifications_repo": notifications_repo,
         "calendar_port": calendar_port,

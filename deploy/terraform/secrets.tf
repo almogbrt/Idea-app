@@ -43,6 +43,11 @@ locals {
     "idea-os-google-oauth-client-secret" = var.google_oauth_client_secret
     "idea-os-owner-email"                = var.owner_email
     "idea-os-scheduler-shared-secret"    = random_password.scheduler_shared_secret.result
+    "idea-os-whatsapp-access-token"      = var.whatsapp_access_token
+    "idea-os-whatsapp-phone-number-id"   = var.whatsapp_phone_number_id
+    "idea-os-whatsapp-app-secret"        = var.whatsapp_app_secret
+    "idea-os-whatsapp-verify-token"      = var.whatsapp_verify_token
+    "idea-os-whatsapp-owner-phone-number" = var.whatsapp_owner_phone_number
   }
 }
 

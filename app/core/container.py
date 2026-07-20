@@ -24,6 +24,7 @@ from app.agents.google_drive.client import DriveClient
 from app.agents.google_drive.drive_port_adapter import GoogleDrivePortAdapter
 from app.agents.google_drive.logo_storage_adapter import GoogleDriveLogoStorageAdapter
 from app.agents.project_management.service import WorkspaceService
+from app.agents.whatsapp.service import WhatsAppService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
@@ -31,6 +32,7 @@ from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
+from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
 from app.application.use_cases.manage_workspace import (
     DashboardSummaryUseCase,
     ListActivityUseCase,
@@ -65,6 +67,9 @@ from app.infrastructure.db.repositories.project_repository import SqlAlchemyProj
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
 from app.infrastructure.db.repositories.thought_repository import SqlAlchemyThoughtRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
+from app.infrastructure.db.repositories.whatsapp_message_repository import (
+    SqlAlchemyWhatsAppMessageRepository,
+)
 from app.infrastructure.db.session import create_engine, create_session_factory
 from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
 from app.infrastructure.google.oauth import GoogleOAuthClient
@@ -72,6 +77,7 @@ from app.infrastructure.llm.anthropic_gateway import AnthropicLLMGateway
 from app.infrastructure.llm.openai_embeddings import OpenAIEmbeddingGateway
 from app.infrastructure.secrets.env_secret_manager import EnvSecretManager
 from app.infrastructure.secrets.gcp_secret_manager import GcpSecretManager
+from app.infrastructure.whatsapp.client import WhatsAppClient
 from app.orchestrator.agent_registry import AgentRegistry
 from app.orchestrator.intent_router import IntentRouter
 from app.orchestrator.orchestrator import Orchestrator
@@ -88,6 +94,7 @@ class RequestScopedServices:
     manage_projects: ManageProjectsUseCase
     manage_tasks: ManageTasksUseCase
     manage_thoughts: ManageThoughtsUseCase
+    manage_whatsapp_messages: ManageWhatsAppMessagesUseCase
     dashboard_summary: DashboardSummaryUseCase
     list_activity: ListActivityUseCase
     manage_notifications: ManageNotificationsUseCase
@@ -145,6 +152,14 @@ class Container:
         self.agent_registry = AgentRegistry()
         self.workspace_service = WorkspaceService(session_factory=self.session_factory)
 
+        self.whatsapp_client = WhatsAppClient(
+            access_token=settings.whatsapp_access_token,
+            phone_number_id=settings.whatsapp_phone_number_id,
+        )
+        self.whatsapp_service = WhatsAppService(
+            session_factory=self.session_factory, client=self.whatsapp_client
+        )
+
         # Storing a just-handled command as long-term memory doesn't need to
         # block the response — session-per-call (like WorkspaceService above)
         # so the Orchestrator can fire it in the background safely, without
@@ -174,6 +189,7 @@ class Container:
         projects_repo = SqlAlchemyProjectRepository(session)
         tasks_repo = SqlAlchemyTaskRepository(session)
         thoughts_repo = SqlAlchemyThoughtRepository(session)
+        whatsapp_messages_repo = SqlAlchemyWhatsAppMessageRepository(session)
         notifications_repo = SqlAlchemyNotificationRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
@@ -206,6 +222,7 @@ class Container:
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),
             manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
+            manage_whatsapp_messages=ManageWhatsAppMessagesUseCase(whatsapp_messages_repo),
             dashboard_summary=DashboardSummaryUseCase(
                 projects_repo, tasks_repo, clients_repo, self.inbox_port, self.schedule_port
             ),
@@ -229,7 +246,10 @@ class Container:
         from app.agents import register_all_agents
 
         register_all_agents(
-            self.google_api_client_factory, self.workspace_service, self.agent_registry
+            self.google_api_client_factory,
+            self.workspace_service,
+            self.whatsapp_service,
+            self.agent_registry,
         )
         logger.info("agents_bootstrapped", agents=self.agent_registry.list_agents())
 

@@ -26,6 +26,7 @@ from app.interfaces.api.v1 import chat as chat_router
 from app.interfaces.api.v1 import files as files_router
 from app.interfaces.api.v1 import health as health_router
 from app.interfaces.api.v1 import internal as internal_router
+from app.interfaces.api.v1 import whatsapp_webhook as whatsapp_webhook_router
 from app.interfaces.api.v1 import workspace as workspace_router
 
 _WEB_DIR = Path(__file__).parent / "interfaces" / "web"
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(internal_router.router, prefix="/api/v1")
     app.include_router(calendar_router.router, prefix="/api/v1")
     app.include_router(files_router.router, prefix="/api/v1")
+    app.include_router(whatsapp_webhook_router.router, prefix="/api/v1")
 
     app.mount("/static", StaticFiles(directory=str(_WEB_DIR / "static")), name="static")
     templates = Jinja2Templates(directory=str(_WEB_DIR / "templates"))

@@ -16,6 +16,9 @@ class ManageConversationUseCase:
     ) -> Conversation:
         return await self._conversations.create_conversation(user_id, title)
 
+    async def get_or_create_by_title(self, user_id: uuid.UUID, title: str) -> Conversation:
+        return await self._conversations.get_or_create_by_title(user_id, title)
+
     async def get_conversation_or_raise(self, conversation_id: uuid.UUID) -> Conversation:
         conversation = await self._conversations.get_conversation(conversation_id)
         if conversation is None:
