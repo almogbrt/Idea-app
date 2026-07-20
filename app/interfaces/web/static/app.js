@@ -296,41 +296,59 @@ els.chatForm.addEventListener("submit", (event) => {
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 let voiceRecognition = null;
 let isRecording = false;
+let voiceFinalTranscript = "";
 
 if (SpeechRecognitionCtor) {
   els.voiceInputBtn.hidden = false;
 
   voiceRecognition = new SpeechRecognitionCtor();
   voiceRecognition.lang = "he-IL";
-  voiceRecognition.continuous = true;
+  // continuous:true triggers a well-known Android Chrome bug where the
+  // engine periodically restarts internally and re-emits already-final
+  // results, tripling the transcript. Each recognition session only
+  // captures one utterance instead; "end" restarts it manually so dictation
+  // still feels continuous, without that duplication bug.
+  voiceRecognition.continuous = false;
   voiceRecognition.interimResults = true;
 
   voiceRecognition.addEventListener("result", (event) => {
-    let transcript = "";
-    for (let i = 0; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
+    let interimTranscript = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) {
+        voiceFinalTranscript += result[0].transcript;
+      } else {
+        interimTranscript += result[0].transcript;
+      }
     }
-    els.chatInput.value = transcript;
+    els.chatInput.value = voiceFinalTranscript + interimTranscript;
   });
 
   voiceRecognition.addEventListener("error", (event) => {
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       alert("אין הרשאה למיקרופון. אפשר הרשאת מיקרופון לאתר בהגדרות הדפדפן ונסה שוב.");
+      isRecording = false;
     } else if (event.error !== "no-speech" && event.error !== "aborted") {
       alert("לא הצלחתי להקליט. נסה שוב.");
+      isRecording = false;
     }
   });
 
   voiceRecognition.addEventListener("end", () => {
-    isRecording = false;
+    if (isRecording) {
+      voiceRecognition.start();
+      return;
+    }
     els.voiceInputBtn.classList.remove("recording");
   });
 
   els.voiceInputBtn.addEventListener("click", () => {
     if (isRecording) {
+      isRecording = false;
       voiceRecognition.stop();
       return;
     }
+    voiceFinalTranscript = "";
     els.chatInput.value = "";
     isRecording = true;
     els.voiceInputBtn.classList.add("recording");
