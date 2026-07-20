@@ -1,30 +1,35 @@
-/* Brand palette sampled directly from the IDEA OS mockups/logo (idea4rest.co.il
-   was not reachable from this environment — colors below are pixel-extracted
-   from the provided images, not guessed). */
+/* Dark, high-contrast "urban" theme: bold Rubik type, neon-tinted accents on
+   near-black panels. Accent hues keep the original purple/green/gold/blue
+   family but pushed to saturated, glow-friendly values for a dark surface. */
 :root {
-  color-scheme: light;
-  --bg: #f7f7f5;
-  --sidebar-bg: #fdfdfd;
-  --panel-bg: #ffffff;
-  --panel-bg-hover: #f4f1f9;
-  --border: #e8e6ee;
-  --text: #201c28;
-  --text-muted: #6f6b7a;
-  --text-faint: #a8a4b3;
-  --purple: #7c3fb8;
-  --purple-dark: #632f96;
-  --purple-bg: #f1e7fa;
-  --green: #2f7d45;
-  --green-soft: #9cc49b;
-  --green-bg: #e7f3e6;
-  --gold: #c98a2e;
-  --gold-bg: #fbf1de;
-  --blue: #4a7fc9;
-  --blue-bg: #e9f0fb;
-  --orange: #c98a2e;
-  --orange-bg: #fbf1de;
+  color-scheme: dark;
+  --bg: #0b0b10;
+  --sidebar-bg: #101015;
+  --panel-bg: #17171f;
+  --panel-bg-hover: #201f2c;
+  --border: #2b2a38;
+  --text: #f3f2f8;
+  --text-muted: #a29eb3;
+  --text-faint: #6d6a7c;
+  --purple: #a855f7;
+  --purple-dark: #8b3ff0;
+  --purple-bg: rgba(168, 85, 247, 0.16);
+  --green: #34d399;
+  --green-soft: #6ee7b7;
+  --green-bg: rgba(52, 211, 153, 0.14);
+  --gold: #fbbf24;
+  --gold-bg: rgba(251, 191, 36, 0.14);
+  --gold-border: rgba(251, 191, 36, 0.35);
+  --blue: #38bdf8;
+  --blue-bg: rgba(56, 189, 248, 0.14);
+  --orange: #fb923c;
+  --orange-bg: rgba(251, 146, 60, 0.14);
+  --danger: #f87171;
+  --danger-strong: #ef4444;
+  --danger-bg: rgba(248, 113, 113, 0.14);
+  --danger-border: rgba(248, 113, 113, 0.35);
   --radius: 14px;
-  --shadow: 0 1px 2px rgba(32, 28, 40, 0.04), 0 4px 16px rgba(32, 28, 40, 0.05);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px rgba(168, 85, 247, 0.08);
 }
 
 * {
@@ -33,10 +38,18 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 svg {
@@ -93,7 +106,7 @@ input {
   z-index: 80;
   transform: translateX(-100%);
   transition: transform 0.22s ease;
-  box-shadow: 4px 0 28px rgba(32, 28, 40, 0.18);
+  box-shadow: 4px 0 28px rgba(0, 0, 0, 0.5);
 }
 
 #shell.sidebar-open #sidebar {
@@ -114,9 +127,9 @@ input {
 }
 
 .logo-wordmark {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
 }
 
 .logo-accent {
@@ -312,8 +325,8 @@ input {
 }
 
 #voice-input-btn.recording {
-  color: #d64545;
-  background: #fdecec;
+  color: var(--danger);
+  background: var(--danger-bg);
   animation: voice-pulse 1.4s ease-in-out infinite;
 }
 
@@ -338,7 +351,7 @@ input {
   height: 15px;
   padding: 0 3px;
   border-radius: 999px;
-  background: #d64545;
+  background: var(--danger-strong);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -356,7 +369,7 @@ input {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 32px rgba(32, 28, 40, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   padding: 14px;
   z-index: 60;
 }
@@ -418,7 +431,9 @@ input {
 }
 
 #greeting h1 {
-  font-size: 26px;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
   margin: 0 0 6px;
 }
 
@@ -511,9 +526,9 @@ input {
 
 .bubble.error {
   align-self: flex-end;
-  background: #fdecec;
-  color: #b3261e;
-  border: 1px solid #f6c8c5;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
 }
 
 .tool-trace {
@@ -635,7 +650,7 @@ input {
 }
 
 .calendar-item-delete:hover {
-  color: #b3261e;
+  color: var(--danger);
 }
 
 #files-table-wrap {
@@ -763,8 +778,8 @@ input {
 }
 
 .task-delete-btn:hover {
-  color: #b3261e;
-  background: #fdecec;
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .task-due {
@@ -777,8 +792,8 @@ input {
 }
 
 .task-due--overdue {
-  background: #fdecec;
-  color: #b3261e;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .task-due--soon {
@@ -966,7 +981,7 @@ input {
 .insight-card {
   margin-top: 24px;
   background: var(--gold-bg);
-  border: 1px solid #eddcb5;
+  border: 1px solid var(--gold-border);
   border-radius: var(--radius);
   padding: 16px;
 }
@@ -1012,7 +1027,7 @@ input {
   border-radius: var(--radius);
   padding: 22px;
   width: min(340px, 92vw);
-  box-shadow: 0 8px 32px rgba(32, 28, 40, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 #sidebar-backdrop {
@@ -1402,11 +1417,11 @@ input {
 }
 
 .btn--danger {
-  color: #b3261e;
+  color: var(--danger);
 }
 
 .btn--danger:hover {
-  background: #fdecec;
+  background: var(--danger-bg);
 }
 
 /* ---------- Responsive ---------- */
