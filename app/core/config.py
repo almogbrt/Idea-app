@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     token_encryption_key: str = Field(default="")
     jwt_signing_key: str = Field(default="")
-    jwt_access_token_ttl_minutes: int = 60
+    jwt_access_token_ttl_minutes: int = 60 * 24 * 30  # 30 days
     jwt_refresh_token_ttl_days: int = 30
 
     secret_manager_backend: SecretManagerBackend = SecretManagerBackend.ENV
