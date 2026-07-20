@@ -1,35 +1,35 @@
-/* Dark, high-contrast "urban" theme: bold Rubik type, neon-tinted accents on
-   near-black panels. Accent hues keep the original purple/green/gold/blue
-   family but pushed to saturated, glow-friendly values for a dark surface. */
+/* Light, young/modern "brand" theme: bold Rubik type, a soft lilac page
+   background, on the actual IDEA OS brand colors sampled from the logo
+   (deep orchid-purple, sage green, near-black wordmark). */
 :root {
-  color-scheme: dark;
-  --bg: #0b0b10;
-  --sidebar-bg: #101015;
-  --panel-bg: #17171f;
-  --panel-bg-hover: #201f2c;
-  --border: #2b2a38;
-  --text: #f3f2f8;
-  --text-muted: #a29eb3;
-  --text-faint: #6d6a7c;
-  --purple: #a855f7;
-  --purple-dark: #8b3ff0;
-  --purple-bg: rgba(168, 85, 247, 0.16);
-  --green: #34d399;
-  --green-soft: #6ee7b7;
-  --green-bg: rgba(52, 211, 153, 0.14);
-  --gold: #fbbf24;
-  --gold-bg: rgba(251, 191, 36, 0.14);
-  --gold-border: rgba(251, 191, 36, 0.35);
-  --blue: #38bdf8;
-  --blue-bg: rgba(56, 189, 248, 0.14);
-  --orange: #fb923c;
-  --orange-bg: rgba(251, 146, 60, 0.14);
-  --danger: #f87171;
-  --danger-strong: #ef4444;
-  --danger-bg: rgba(248, 113, 113, 0.14);
-  --danger-border: rgba(248, 113, 113, 0.35);
+  color-scheme: light;
+  --bg: #f3ebfc;
+  --sidebar-bg: #faf6ff;
+  --panel-bg: #ffffff;
+  --panel-bg-hover: #f1e3fc;
+  --border: #e3d3f3;
+  --text: #241a33;
+  --text-muted: #6f5f82;
+  --text-faint: #a999bd;
+  --purple: #7c3fb8;
+  --purple-dark: #632f96;
+  --purple-bg: #f1e7fa;
+  --green: #4c9a4c;
+  --green-soft: #b8d9b0;
+  --green-bg: #e7f3e6;
+  --gold: #c98a2e;
+  --gold-bg: #fbf1de;
+  --gold-border: #eddcb5;
+  --blue: #4a7fc9;
+  --blue-bg: #e9f0fb;
+  --orange: #c98a2e;
+  --orange-bg: #fbf1de;
+  --danger: #b3261e;
+  --danger-strong: #d64545;
+  --danger-bg: #fdecec;
+  --danger-border: #f6c8c5;
   --radius: 14px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px rgba(168, 85, 247, 0.08);
+  --shadow: 0 1px 2px rgba(43, 31, 61, 0.05), 0 4px 16px rgba(124, 63, 184, 0.07);
 }
 
 * {
@@ -106,7 +106,7 @@ input {
   z-index: 80;
   transform: translateX(-100%);
   transition: transform 0.22s ease;
-  box-shadow: 4px 0 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 0 28px rgba(43, 31, 61, 0.18);
 }
 
 #shell.sidebar-open #sidebar {
@@ -369,7 +369,7 @@ input {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(43, 31, 61, 0.18);
   padding: 14px;
   z-index: 60;
 }
@@ -1074,7 +1074,7 @@ input {
   border-radius: var(--radius);
   padding: 22px;
   width: min(340px, 92vw);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(43, 31, 61, 0.18);
 }
 
 #sidebar-backdrop {
