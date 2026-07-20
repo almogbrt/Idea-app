@@ -34,6 +34,7 @@ from app.domain.entities import (
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
+    FakeClientLogoStorage,
     FakeClientRepository,
     FakeNotificationRepository,
     FakeProjectRepository,
@@ -105,7 +106,9 @@ def _workspace_kwargs() -> dict[str, object]:
     tasks_repo = FakeTaskRepository()
     notifications_repo = FakeNotificationRepository()
     return {
-        "manage_clients": ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
+        "manage_clients": ManageClientsUseCase(
+            clients_repo, projects_repo, tasks_repo, FakeClientLogoStorage()
+        ),
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
         "dashboard_summary": DashboardSummaryUseCase(

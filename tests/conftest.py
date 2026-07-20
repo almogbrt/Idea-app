@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.conversation_repository import ConversationRepositoryPort
 from app.application.ports.embedding import EmbeddingPort
@@ -135,6 +136,7 @@ class FakeClientRepository(ClientRepositoryPort):
         phone: str | None = None,
         notes: str | None = None,
         next_follow_up_at: datetime | None = None,
+        logo_file_id: str | None = None,
     ) -> Client:
         client = self.clients.get(client_id)
         if client is None:
@@ -149,6 +151,8 @@ class FakeClientRepository(ClientRepositoryPort):
             client.notes = notes
         if next_follow_up_at is not None:
             client.next_follow_up_at = next_follow_up_at
+        if logo_file_id is not None:
+            client.logo_file_id = logo_file_id
         return client
 
     async def delete(self, client_id: uuid.UUID) -> None:
@@ -158,6 +162,23 @@ class FakeClientRepository(ClientRepositoryPort):
 
     async def count(self, user_id: uuid.UUID) -> int:
         return len([c for c in self.clients.values() if c.user_id == user_id])
+
+
+class FakeClientLogoStorage(ClientLogoStoragePort):
+    def __init__(self) -> None:
+        self.files: dict[str, tuple[bytes, str]] = {}
+        self._next_id = 0
+
+    async def upload(
+        self, user_id: uuid.UUID, filename: str, content: bytes, mime_type: str
+    ) -> str:
+        self._next_id += 1
+        file_id = f"fake-logo-{self._next_id}"
+        self.files[file_id] = (content, mime_type)
+        return file_id
+
+    async def download(self, user_id: uuid.UUID, file_id: str) -> tuple[bytes, str]:
+        return self.files[file_id]
 
 
 class FakeProjectRepository(ProjectRepositoryPort):
@@ -477,6 +498,11 @@ def fake_embedding_gateway() -> FakeEmbeddingGateway:
 @pytest.fixture
 def fake_client_repository() -> FakeClientRepository:
     return FakeClientRepository()
+
+
+@pytest.fixture
+def fake_client_logo_storage() -> FakeClientLogoStorage:
+    return FakeClientLogoStorage()
 
 
 @pytest.fixture

@@ -869,6 +869,47 @@ input {
   color: var(--text-faint);
 }
 
+.client-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-inline-end: 8px;
+  flex-shrink: 0;
+}
+
+.client-avatar--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--purple), var(--green-soft));
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.client-avatar--large {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+  margin-inline-end: 12px;
+}
+
+.client-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.client-modal-logo-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
 /* ---------- Side panel ---------- */
 
 #side-panel {

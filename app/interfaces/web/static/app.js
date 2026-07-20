@@ -39,6 +39,8 @@ const els = {
   newClientCancel: document.getElementById("new-client-cancel"),
   clientModal: document.getElementById("client-modal"),
   clientModalName: document.getElementById("client-modal-name"),
+  clientModalAvatar: document.getElementById("client-modal-avatar"),
+  clientModalLogoInput: document.getElementById("client-modal-logo-input"),
   clientEditName: document.getElementById("client-edit-name"),
   clientEditEmail: document.getElementById("client-edit-email"),
   clientEditPhone: document.getElementById("client-edit-phone"),
@@ -593,11 +595,20 @@ els.newClientSave.addEventListener("click", async () => {
 
 let currentClientId = null;
 
+function setClientModalAvatar(client) {
+  const html = client.has_logo
+    ? `<img id="client-modal-avatar" class="client-avatar client-avatar--large" src="${API_BASE}/clients/${client.id}/logo" alt="" />`
+    : `<span id="client-modal-avatar" class="client-avatar client-avatar--large client-avatar--placeholder">${escapeHtml(client.name ? client.name.charAt(0).toUpperCase() : "?")}</span>`;
+  els.clientModalAvatar.outerHTML = html;
+  els.clientModalAvatar = document.getElementById("client-modal-avatar");
+}
+
 async function openClientModal(clientId) {
   try {
     const detail = await apiFetch(`/clients/${clientId}`);
     currentClientId = clientId;
     els.clientModalName.textContent = detail.client.name;
+    setClientModalAvatar(detail.client);
     els.clientEditName.value = detail.client.name;
     els.clientEditEmail.value = detail.client.email || "";
     els.clientEditPhone.value = detail.client.phone || "";
@@ -787,6 +798,35 @@ els.clientModalSave.addEventListener("click", async () => {
     loadClients();
   } catch (err) {
     alert(err.message);
+  }
+});
+
+async function uploadClientLogo(clientId, file) {
+  const formData = new FormData();
+  formData.append("logo", file);
+  const response = await fetch(`${API_BASE}/clients/${clientId}/logo`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(error.message || "העלאת הלוגו נכשלה");
+  }
+  return response.json();
+}
+
+els.clientModalLogoInput.addEventListener("change", async () => {
+  const file = els.clientModalLogoInput.files[0];
+  if (!file || !currentClientId) return;
+  try {
+    const updated = await uploadClientLogo(currentClientId, file);
+    setClientModalAvatar(updated);
+    loadClients();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    els.clientModalLogoInput.value = "";
   }
 });
 
@@ -1061,6 +1101,15 @@ els.editTaskDelete.addEventListener("click", async () => {
   }
 });
 
+function clientAvatarHtml(client, sizeClass) {
+  const sizeCls = sizeClass ? ` ${sizeClass}` : "";
+  if (client.has_logo) {
+    return `<img class="client-avatar${sizeCls}" src="${API_BASE}/clients/${client.id}/logo" alt="" />`;
+  }
+  const initial = client.name ? client.name.charAt(0).toUpperCase() : "?";
+  return `<span class="client-avatar client-avatar--placeholder${sizeCls}">${escapeHtml(initial)}</span>`;
+}
+
 async function loadClients() {
   try {
     const [clientsList, tasks] = await Promise.all([apiFetch("/clients"), apiFetch("/tasks")]);
@@ -1088,7 +1137,7 @@ async function loadClients() {
             .join("")}</div>`
         : "";
       tr.innerHTML = `
-        <td>${escapeHtml(c.name)}${tasksHtml}</td>
+        <td>${clientAvatarHtml(c)}${escapeHtml(c.name)}${tasksHtml}</td>
         <td>${c.email ? escapeHtml(c.email) : "—"}</td>
         <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
         <td>${followup}</td>

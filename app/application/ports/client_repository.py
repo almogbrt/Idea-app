@@ -30,6 +30,7 @@ class ClientRepositoryPort(ABC):
         phone: str | None = None,
         notes: str | None = None,
         next_follow_up_at: datetime | None = None,
+        logo_file_id: str | None = None,
     ) -> Client:
         """Only fields explicitly passed are changed; omitted (`None`) fields
         keep their current stored value."""

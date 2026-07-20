@@ -274,6 +274,9 @@ async def test_client_repository_get_and_update(db_session: AsyncSession) -> Non
     assert refetched is not None
     assert refetched.email == "baron@example.com"
 
+    logo_updated = await repo.update(client.id, logo_file_id="drive-file-123")
+    assert logo_updated.logo_file_id == "drive-file-123"
+
 
 async def test_client_repository_update_missing_client_raises(db_session: AsyncSession) -> None:
     repo = SqlAlchemyClientRepository(db_session)

@@ -350,7 +350,16 @@
 
   <div id="client-modal" class="modal" hidden>
     <div class="modal-card modal-card--wide">
-      <h3 id="client-modal-name">לקוח</h3>
+      <div class="client-modal-header">
+        <span id="client-modal-avatar" class="client-avatar client-avatar--large client-avatar--placeholder">?</span>
+        <div>
+          <h3 id="client-modal-name">לקוח</h3>
+          <label class="btn btn--ghost btn--small">
+            העלאת לוגו
+            <input id="client-modal-logo-input" type="file" accept="image/*" hidden />
+          </label>
+        </div>
+      </div>
       <div class="client-modal-fields">
         <label>שם
           <input id="client-edit-name" type="text" autocomplete="off" />

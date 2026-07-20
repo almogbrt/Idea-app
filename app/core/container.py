@@ -22,6 +22,7 @@ from app.agents.google_calendar.client import CalendarClient
 from app.agents.google_calendar.schedule_adapter import CalendarScheduleAdapter
 from app.agents.google_drive.client import DriveClient
 from app.agents.google_drive.drive_port_adapter import GoogleDrivePortAdapter
+from app.agents.google_drive.logo_storage_adapter import GoogleDriveLogoStorageAdapter
 from app.agents.project_management.service import WorkspaceService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
@@ -158,6 +159,7 @@ class Container:
         self.email_sender_port = GmailEmailSenderAdapter(gmail_client)
         self.calendar_port = GoogleCalendarPortAdapter(calendar_client)
         self.drive_port = GoogleDrivePortAdapter(drive_client)
+        self.client_logo_storage = GoogleDriveLogoStorageAdapter(drive_client)
 
     def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
         conversations = SqlAlchemyConversationRepository(session)
@@ -194,7 +196,9 @@ class Container:
             orchestrator=orchestrator,
             manage_conversation=ManageConversationUseCase(conversations),
             authenticate_user=authenticate_user,
-            manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
+            manage_clients=ManageClientsUseCase(
+                clients_repo, projects_repo, tasks_repo, self.client_logo_storage
+            ),
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),
             dashboard_summary=DashboardSummaryUseCase(

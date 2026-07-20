@@ -28,6 +28,7 @@ from app.domain.entities import CalendarEvent, DriveFile, NotificationKind, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
+    FakeClientLogoStorage,
     FakeClientRepository,
     FakeNotificationRepository,
     FakeProjectRepository,
@@ -143,12 +144,13 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     users_repo = FakeUserRepository()
     calendar_port = _FakeCalendar()
     drive_port = _FakeDrive()
+    logo_storage = FakeClientLogoStorage()
 
     scope = RequestScopedServices(
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
         manage_conversation=None,  # type: ignore[arg-type]
         authenticate_user=None,  # type: ignore[arg-type]
-        manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),
+        manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo, logo_storage),
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
         dashboard_summary=DashboardSummaryUseCase(
@@ -172,6 +174,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "notifications_repo": notifications_repo,
         "calendar_port": calendar_port,
         "drive_port": drive_port,
+        "logo_storage": logo_storage,
     }
 
 
@@ -227,6 +230,52 @@ def test_delete_client_rejects_other_users_client(client: TestClient) -> None:
     stored.user_id = uuid.uuid4()
 
     response = client.delete(f"/api/v1/clients/{created['id']}")
+
+    assert response.status_code == 403
+
+
+def test_upload_and_fetch_client_logo(client: TestClient) -> None:
+    _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    assert created["has_logo"] is False
+
+    upload_response = client.post(
+        f"/api/v1/clients/{created['id']}/logo",
+        files={"logo": ("logo.png", b"fake-image-bytes", "image/png")},
+    )
+    assert upload_response.status_code == 200
+    assert upload_response.json()["has_logo"] is True
+
+    logo_response = client.get(f"/api/v1/clients/{created['id']}/logo")
+    assert logo_response.status_code == 200
+    assert logo_response.content == b"fake-image-bytes"
+    assert logo_response.headers["content-type"] == "image/png"
+
+
+def test_upload_client_logo_rejects_non_image(client: TestClient) -> None:
+    _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    response = client.post(
+        f"/api/v1/clients/{created['id']}/logo",
+        files={"logo": ("notes.txt", b"hello", "text/plain")},
+    )
+
+    assert response.status_code == 422
+
+
+def test_upload_client_logo_rejects_other_users_client(client: TestClient) -> None:
+    resources = _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    clients_repo = resources["clients_repo"]
+    stored = clients_repo.clients[uuid.UUID(created["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.post(
+        f"/api/v1/clients/{created['id']}/logo",
+        files={"logo": ("logo.png", b"fake-image-bytes", "image/png")},
+    )
 
     assert response.status_code == 403
 

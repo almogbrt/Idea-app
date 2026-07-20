@@ -137,6 +137,8 @@ class Client:
     phone: str | None = None
     notes: str | None = None
     next_follow_up_at: datetime | None = None
+    logo_file_id: str | None = None
+    """Google Drive file id of the client's logo image, if one was uploaded."""
 
 
 @dataclass(slots=True)

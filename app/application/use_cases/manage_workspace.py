@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.inbox import InboxPort
 from app.application.ports.project_repository import ProjectRepositoryPort
@@ -49,10 +50,12 @@ class ManageClientsUseCase:
         client_repository: ClientRepositoryPort,
         project_repository: ProjectRepositoryPort,
         task_repository: TaskRepositoryPort,
+        logo_storage: ClientLogoStoragePort,
     ) -> None:
         self._clients = client_repository
         self._projects = project_repository
         self._tasks = task_repository
+        self._logo_storage = logo_storage
 
     async def create(self, user_id: uuid.UUID, name: str) -> Client:
         return await self._clients.create(user_id, name)
@@ -87,6 +90,24 @@ class ManageClientsUseCase:
 
     async def delete(self, client_id: uuid.UUID) -> None:
         await self._clients.delete(client_id)
+
+    async def upload_logo(
+        self,
+        user_id: uuid.UUID,
+        client_id: uuid.UUID,
+        filename: str,
+        content: bytes,
+        mime_type: str,
+    ) -> Client:
+        await self.get_or_raise(client_id)
+        file_id = await self._logo_storage.upload(user_id, filename, content, mime_type)
+        return await self._clients.update(client_id, logo_file_id=file_id)
+
+    async def get_logo(self, user_id: uuid.UUID, client_id: uuid.UUID) -> tuple[bytes, str]:
+        client = await self.get_or_raise(client_id)
+        if client.logo_file_id is None:
+            raise NotFoundError("Client has no logo", details={"client_id": str(client_id)})
+        return await self._logo_storage.download(user_id, client.logo_file_id)
 
     async def get_detail(self, user_id: uuid.UUID, client_id: uuid.UUID) -> ClientDetail:
         """The "full history" view: the client plus every project and task

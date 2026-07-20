@@ -16,6 +16,7 @@ class ClientView(BaseModel):
     phone: str | None = None
     notes: str | None = None
     next_follow_up_at: datetime | None = None
+    has_logo: bool = False
 
 
 class CreateClientRequest(BaseModel):

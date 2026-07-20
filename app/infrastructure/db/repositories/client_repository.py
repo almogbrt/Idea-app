@@ -45,6 +45,7 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
         phone: str | None = None,
         notes: str | None = None,
         next_follow_up_at: datetime | None = None,
+        logo_file_id: str | None = None,
     ) -> Client:
         row = await self._session.get(ClientModel, client_id)
         if row is None:
@@ -59,6 +60,8 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
             row.notes = notes
         if next_follow_up_at is not None:
             row.next_follow_up_at = next_follow_up_at
+        if logo_file_id is not None:
+            row.logo_file_id = logo_file_id
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -85,4 +88,5 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
             phone=row.phone,
             notes=row.notes,
             next_follow_up_at=row.next_follow_up_at,
+            logo_file_id=row.logo_file_id,
         )

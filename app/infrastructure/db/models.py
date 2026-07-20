@@ -128,6 +128,7 @@ class ClientModel(Base):
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     notes: Mapped[str | None] = mapped_column(nullable=True)
     next_follow_up_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    logo_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class ProjectModel(Base):

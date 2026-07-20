@@ -23,6 +23,7 @@ from app.domain.entities import (
 )
 from tests.conftest import (
     FakeAgentExecutionRepository,
+    FakeClientLogoStorage,
     FakeClientRepository,
     FakeProjectRepository,
     FakeTaskRepository,
@@ -55,7 +56,10 @@ async def test_manage_clients_create_and_list(
     fake_task_repository: FakeTaskRepository,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        FakeClientLogoStorage(),
     )
     user_id = uuid.uuid4()
 
@@ -72,7 +76,10 @@ async def test_manage_clients_update_sets_only_provided_fields(
     fake_task_repository: FakeTaskRepository,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        FakeClientLogoStorage(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
@@ -93,7 +100,10 @@ async def test_manage_clients_get_or_raise_missing_client_raises(
     fake_task_repository: FakeTaskRepository,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        FakeClientLogoStorage(),
     )
 
     with pytest.raises(NotFoundError):
@@ -106,7 +116,10 @@ async def test_manage_clients_get_detail_returns_linked_projects_and_tasks(
     fake_task_repository: FakeTaskRepository,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        FakeClientLogoStorage(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
@@ -122,6 +135,46 @@ async def test_manage_clients_get_detail_returns_linked_projects_and_tasks(
     assert detail.client.id == client.id
     assert [s.project.id for s in detail.projects] == [project.id]
     assert [t.id for t in detail.tasks] == [task.id]
+
+
+async def test_manage_clients_upload_and_get_logo(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_logo_storage: FakeClientLogoStorage,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository,
+        fake_client_logo_storage,
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+
+    updated = await use_case.upload_logo(
+        user_id, client.id, "logo.png", b"fake-image-bytes", "image/png"
+    )
+    assert updated.logo_file_id is not None
+
+    content, mime_type = await use_case.get_logo(user_id, client.id)
+    assert content == b"fake-image-bytes"
+    assert mime_type == "image/png"
+
+
+async def test_manage_clients_get_logo_raises_when_none_set(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_logo_storage: FakeClientLogoStorage,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository, fake_project_repository, fake_task_repository,
+        fake_client_logo_storage,
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+
+    with pytest.raises(NotFoundError):
+        await use_case.get_logo(user_id, client.id)
 
 
 async def test_manage_projects_create_list_and_update_status(

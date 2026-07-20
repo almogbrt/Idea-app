@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import Response
 
 from app.core.container import RequestScopedServices
-from app.core.exceptions import ForbiddenError
+from app.core.exceptions import ForbiddenError, ValidationError
 from app.domain.entities import (
     Client,
     ClientDetail,
@@ -103,6 +104,7 @@ def _client_view(client: Client) -> ClientView:
         phone=client.phone,
         notes=client.notes,
         next_follow_up_at=client.next_follow_up_at,
+        has_logo=client.logo_file_id is not None,
     )
 
 
@@ -170,6 +172,41 @@ async def delete_client(
     existing = await scope.manage_clients.get_or_raise(client_id)
     _ensure_client_owned_by(existing, user)
     await scope.manage_clients.delete(client_id)
+
+
+_MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024
+
+
+@router.post("/clients/{client_id}/logo", response_model=ClientView)
+async def upload_client_logo(
+    client_id: uuid.UUID,
+    logo: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ClientView:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    if not logo.content_type or not logo.content_type.startswith("image/"):
+        raise ValidationError("The logo must be an image file.")
+    content = await logo.read()
+    if len(content) > _MAX_LOGO_SIZE_BYTES:
+        raise ValidationError("The logo image is too large (max 5MB).")
+    updated = await scope.manage_clients.upload_logo(
+        user.id, client_id, logo.filename or "logo", content, logo.content_type
+    )
+    return _client_view(updated)
+
+
+@router.get("/clients/{client_id}/logo")
+async def get_client_logo(
+    client_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> Response:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    content, mime_type = await scope.manage_clients.get_logo(user.id, client_id)
+    return Response(content=content, media_type=mime_type)
 
 
 def _project_view(summary: ProjectSummary) -> ProjectView:
