@@ -549,20 +549,6 @@ input {
   margin: 0;
 }
 
-.section-heading--tight {
-  margin-bottom: 10px;
-  margin-top: 24px;
-}
-
-.section-heading--tight h3 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-muted);
-  margin: 0;
-  font-weight: 700;
-}
-
 #tasks-section {
   margin-bottom: 32px;
 }
@@ -987,42 +973,6 @@ input {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 6px;
-  border-radius: 10px;
-}
-
-.activity-item:hover {
-  background: var(--panel-bg-hover);
-}
-
-.activity-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--purple-bg);
-  color: var(--purple);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 13px;
-}
-
-.activity-text {
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-
-.activity-time {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-top: 1px;
 }
 
 .insight-card {

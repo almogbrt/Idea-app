@@ -20,8 +20,6 @@ const els = {
   navBadgeClients: document.getElementById("nav-badge-clients"),
   tasksList: document.getElementById("tasks-list"),
   tasksEmpty: document.getElementById("tasks-empty"),
-  activityFeed: document.getElementById("activity-feed"),
-  activityEmpty: document.getElementById("activity-empty"),
   edithStatus: document.getElementById("edith-status"),
   shell: document.getElementById("shell"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
@@ -139,14 +137,6 @@ const TOOL_LABELS = {
   workspace_update_task_status: "עדכן סטטוס משימה",
   workspace_set_task_due_date: "עדכן תאריך יעד למשימה",
   workspace_list_tasks: "הציג משימות",
-};
-
-const AGENT_ICONS = {
-  google_drive: "🗂️",
-  gmail: "✉️",
-  google_calendar: "📅",
-  google_sheets: "📊",
-  project_management: "✅",
 };
 
 async function apiFetch(path, options = {}) {
@@ -1455,28 +1445,6 @@ async function loadNotifications() {
   }
 }
 
-async function loadActivity() {
-  try {
-    const items = await apiFetch("/dashboard/activity");
-    els.activityFeed.innerHTML = "";
-    els.activityEmpty.hidden = items.length > 0;
-    for (const item of items) {
-      const row = document.createElement("div");
-      row.className = "activity-item";
-      row.innerHTML = `
-        <div class="activity-icon">${AGENT_ICONS[item.agent_name] || "•"}</div>
-        <div>
-          <div class="activity-text">${TOOL_LABELS[item.tool_name] || item.tool_name}</div>
-          <div class="activity-time">${relativeTime(item.created_at)}</div>
-        </div>
-      `;
-      els.activityFeed.appendChild(row);
-    }
-  } catch {
-    // not authenticated yet
-  }
-}
-
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
@@ -1489,7 +1457,6 @@ function refreshWorkspace() {
   loadClients();
   loadCalendar();
   loadFiles();
-  loadActivity();
   loadNotifications();
   loadThoughts();
 }
