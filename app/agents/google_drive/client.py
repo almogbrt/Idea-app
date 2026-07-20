@@ -59,16 +59,50 @@ class DriveClient:
         return str(content_bytes)
 
     async def create_file(
-        self, user_id: uuid.UUID, name: str, content: str, mime_type: str
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        content: str,
+        mime_type: str,
+        parent_folder_id: str | None = None,
+        target_mime_type: str | None = None,
     ) -> dict[str, Any]:
         service = await self._google_clients.drive(user_id)
         media = MediaInMemoryUpload(content.encode("utf-8"), mimetype=mime_type)
+        body: dict[str, Any] = {"name": name}
+        if parent_folder_id:
+            body["parents"] = [parent_folder_id]
+        if target_mime_type:
+            body["mimeType"] = target_mime_type
         return await call_google_api(
             lambda: service.files()
-            .create(body={"name": name}, media_body=media, fields="id,name,webViewLink")
+            .create(body=body, media_body=media, fields="id,name,webViewLink")
             .execute(),
             action="drive.files.create",
         )
+
+    async def find_folder_by_name(self, user_id: uuid.UUID, name: str) -> str | None:
+        service = await self._google_clients.drive(user_id)
+        escaped = name.replace("\\", "\\\\").replace("'", "\\'")
+        query = (
+            f"mimeType='application/vnd.google-apps.folder' "
+            f"and name='{escaped}' and trashed=false"
+        )
+        response = await call_google_api(
+            lambda: service.files().list(q=query, pageSize=1, fields="files(id)").execute(),
+            action="drive.files.list_folder",
+        )
+        files = cast(list[dict[str, Any]], response.get("files", []))
+        return cast(str, files[0]["id"]) if files else None
+
+    async def create_folder(self, user_id: uuid.UUID, name: str) -> str:
+        service = await self._google_clients.drive(user_id)
+        body = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
+        result = await call_google_api(
+            lambda: service.files().create(body=body, fields="id").execute(),
+            action="drive.files.create_folder",
+        )
+        return cast(str, result["id"])
 
     async def upload_binary_file(
         self, user_id: uuid.UUID, name: str, content: bytes, mime_type: str

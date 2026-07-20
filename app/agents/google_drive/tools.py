@@ -62,7 +62,13 @@ class GetFileContentTool(Tool):
 
 class CreateFileTool(Tool):
     name = "drive_create_file"
-    description = "Create a new file in the user's Google Drive with the given text content."
+    description = (
+        "Create a new file in the user's Google Drive with the given text content. "
+        "Set as_google_doc=true when the user asks for a Word/Google Doc-style document "
+        "rather than a plain text file. Set folder_name to place the file inside a "
+        "specific Drive folder — the folder is created automatically if it doesn't "
+        "already exist."
+    )
     parameters_schema: dict[str, Any] = {
         "type": "object",
         "properties": {
@@ -73,6 +79,21 @@ class CreateFileTool(Tool):
                 "description": "MIME type of the file.",
                 "default": "text/plain",
             },
+            "as_google_doc": {
+                "type": "boolean",
+                "description": (
+                    "Create the file as a native Google Doc (opens as a Word-style "
+                    "document) instead of a plain file."
+                ),
+                "default": False,
+            },
+            "folder_name": {
+                "type": "string",
+                "description": (
+                    "Name of the Drive folder to create the file in. Created "
+                    "automatically if no folder with this name exists yet."
+                ),
+            },
         },
         "required": ["name", "content"],
     }
@@ -82,11 +103,25 @@ class CreateFileTool(Tool):
         self._client = client
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        parent_folder_id = None
+        folder_name = arguments.get("folder_name")
+        if folder_name:
+            parent_folder_id = await self._client.find_folder_by_name(
+                context.user_id, folder_name
+            )
+            if parent_folder_id is None:
+                parent_folder_id = await self._client.create_folder(context.user_id, folder_name)
+
+        target_mime_type = (
+            "application/vnd.google-apps.document" if arguments.get("as_google_doc") else None
+        )
         result = await self._client.create_file(
             context.user_id,
             arguments["name"],
             arguments["content"],
             arguments.get("mime_type", "text/plain"),
+            parent_folder_id=parent_folder_id,
+            target_mime_type=target_mime_type,
         )
         return ToolResult(tool_call_id="", tool_name=self.name, content=json.dumps(result))
 
