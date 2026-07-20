@@ -283,7 +283,20 @@ def test_upload_client_logo_rejects_other_users_client(client: TestClient) -> No
 def test_create_project_requires_client(client: TestClient) -> None:
     _install_scope(client)
 
-    response = client.post("/api/v1/projects", json={"name": "Summer menu"})
+    response = client.post(
+        "/api/v1/projects", json={"name": "Summer menu", "type": "consulting"}
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_project_requires_type(client: TestClient) -> None:
+    _install_scope(client)
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    response = client.post(
+        "/api/v1/projects", json={"name": "Summer menu", "client_id": client_entity["id"]}
+    )
 
     assert response.status_code == 422
 
@@ -293,31 +306,33 @@ def test_create_and_list_projects(client: TestClient) -> None:
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
 
     create_response = client.post(
-        "/api/v1/projects", json={"name": "Summer menu", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Summer menu", "client_id": client_entity["id"], "type": "consulting"},
     )
     assert create_response.status_code == 200
     body = create_response.json()
     assert body["name"] == "Summer menu"
-    assert body["status"] == "in_progress"
+    assert body["type"] == "consulting"
     assert body["client_name"] == "Baron's"
 
     list_response = client.get("/api/v1/projects")
     assert len(list_response.json()) == 1
 
 
-def test_update_project_status(client: TestClient) -> None:
+def test_update_project_type(client: TestClient) -> None:
     _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     project = client.post(
-        "/api/v1/projects", json={"name": "Rebrand", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Rebrand", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
     response = client.patch(
-        f"/api/v1/projects/{project['id']}/status", json={"status": "on_hold"}
+        f"/api/v1/projects/{project['id']}/type", json={"type": "mentoring"}
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "on_hold"
+    assert response.json()["type"] == "mentoring"
 
 
 def test_assign_project_client(client: TestClient) -> None:
@@ -325,7 +340,8 @@ def test_assign_project_client(client: TestClient) -> None:
     original_client = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     new_client = client.post("/api/v1/clients", json={"name": "Other Co"}).json()
     project = client.post(
-        "/api/v1/projects", json={"name": "Rebrand", "client_id": original_client["id"]}
+        "/api/v1/projects",
+        json={"name": "Rebrand", "client_id": original_client["id"], "type": "consulting"},
     ).json()
 
     response = client.patch(
@@ -341,7 +357,8 @@ def test_assign_project_client_rejects_other_users_project(client: TestClient) -
     resources = _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     other_user_project = client.post(
-        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Not yours", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
     projects_repo = resources["projects_repo"]
@@ -360,7 +377,8 @@ def test_delete_project_removes_it(client: TestClient) -> None:
     _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     project = client.post(
-        "/api/v1/projects", json={"name": "Throwaway", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Throwaway", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
     response = client.delete(f"/api/v1/projects/{project['id']}")
@@ -374,7 +392,8 @@ def test_delete_project_rejects_other_users_project(client: TestClient) -> None:
     resources = _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     other_user_project = client.post(
-        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Not yours", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
     projects_repo = resources["projects_repo"]
@@ -386,11 +405,12 @@ def test_delete_project_rejects_other_users_project(client: TestClient) -> None:
     assert response.status_code == 403
 
 
-def test_update_project_status_rejects_other_users_project(client: TestClient) -> None:
+def test_update_project_type_rejects_other_users_project(client: TestClient) -> None:
     resources = _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
     other_user_project = client.post(
-        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Not yours", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
     # simulate the project belonging to someone else by mutating the fake repo directly
@@ -399,7 +419,7 @@ def test_update_project_status_rejects_other_users_project(client: TestClient) -
     stored.user_id = uuid.uuid4()
 
     response = client.patch(
-        f"/api/v1/projects/{other_user_project['id']}/status", json={"status": "done"}
+        f"/api/v1/projects/{other_user_project['id']}/type", json={"type": "setup"}
     )
 
     assert response.status_code == 403
@@ -492,7 +512,8 @@ def test_update_task_can_assign_client_and_clear_project(client: TestClient) -> 
     clients_repo = resources["clients_repo"]
     client_entity = client.post("/api/v1/clients", json={"name": "Acme"}).json()
     project = client.post(
-        "/api/v1/projects", json={"name": "Website", "client_id": client_entity["id"]}
+        "/api/v1/projects",
+        json={"name": "Website", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
     task = client.post(
         "/api/v1/tasks", json=_task_payload(title="Kickoff call", project_id=project["id"])

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 
-from app.domain.entities import Project, ProjectStatus, ProjectSummary
+from app.domain.entities import Project, ProjectSummary, ProjectType
 
 
 class ProjectRepositoryPort(ABC):
@@ -12,8 +12,8 @@ class ProjectRepositoryPort(ABC):
         self,
         user_id: uuid.UUID,
         name: str,
-        client_id: uuid.UUID | None = None,
-        status: ProjectStatus = ProjectStatus.IN_PROGRESS,
+        client_id: uuid.UUID | None,
+        type: ProjectType,
     ) -> Project:
         raise NotImplementedError
 
@@ -32,11 +32,13 @@ class ProjectRepositoryPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def update_status(self, project_id: uuid.UUID, status: ProjectStatus) -> Project:
+    async def update_type(self, project_id: uuid.UUID, type: ProjectType) -> Project:
         raise NotImplementedError
 
     @abstractmethod
     async def count_active(self, user_id: uuid.UUID) -> int:
+        """Total number of projects for this user (kept as a headline count
+        for the dashboard now that projects no longer have a status)."""
         raise NotImplementedError
 
     @abstractmethod

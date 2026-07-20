@@ -39,7 +39,7 @@ from app.interfaces.api.schemas.workspace import (
     ProjectView,
     TaskView,
     UpdateClientRequest,
-    UpdateProjectStatusRequest,
+    UpdateProjectTypeRequest,
     UpdateTaskRequest,
     UpdateTaskStatusRequest,
 )
@@ -211,7 +211,7 @@ def _project_view(summary: ProjectSummary) -> ProjectView:
     return ProjectView(
         id=summary.project.id,
         name=summary.project.name,
-        status=summary.project.status,
+        type=summary.project.type,
         client_id=summary.project.client_id,
         client_name=summary.client_name,
         last_task_title=summary.last_task_title,
@@ -235,21 +235,21 @@ async def create_project(
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> ProjectView:
-    project = await scope.manage_projects.create(user.id, body.name, body.client_id)
+    project = await scope.manage_projects.create(user.id, body.name, body.client_id, body.type)
     summary = await scope.manage_projects.get_summary_or_raise(project.id)
     return _project_view(summary)
 
 
-@router.patch("/projects/{project_id}/status", response_model=ProjectView)
-async def update_project_status(
+@router.patch("/projects/{project_id}/type", response_model=ProjectView)
+async def update_project_type(
     project_id: uuid.UUID,
-    body: UpdateProjectStatusRequest,
+    body: UpdateProjectTypeRequest,
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> ProjectView:
     existing = await scope.manage_projects.get_or_raise(project_id)
     _ensure_project_owned_by(existing, user)
-    await scope.manage_projects.update_status(project_id, body.status)
+    await scope.manage_projects.update_type(project_id, body.type)
     summary = await scope.manage_projects.get_summary_or_raise(project_id)
     return _project_view(summary)
 

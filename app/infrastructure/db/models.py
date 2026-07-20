@@ -140,7 +140,7 @@ class ProjectModel(Base):
         ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(255))
-    status: Mapped[str] = mapped_column(String(20))
+    type: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()

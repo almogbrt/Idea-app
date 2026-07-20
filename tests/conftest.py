@@ -36,8 +36,8 @@ from app.domain.entities import (
     Notification,
     NotificationKind,
     Project,
-    ProjectStatus,
     ProjectSummary,
+    ProjectType,
     Task,
     TaskStatus,
     ToolDefinition,
@@ -194,8 +194,8 @@ class FakeProjectRepository(ProjectRepositoryPort):
         self,
         user_id: uuid.UUID,
         name: str,
-        client_id: uuid.UUID | None = None,
-        status: ProjectStatus = ProjectStatus.IN_PROGRESS,
+        client_id: uuid.UUID | None,
+        type: ProjectType = ProjectType.CONSULTING,
     ) -> Project:
         now = datetime.now(UTC)
         project = Project(
@@ -203,7 +203,7 @@ class FakeProjectRepository(ProjectRepositoryPort):
             user_id=user_id,
             client_id=client_id,
             name=name,
-            status=status,
+            type=type,
             created_at=now,
             updated_at=now,
         )
@@ -234,19 +234,15 @@ class FakeProjectRepository(ProjectRepositoryPort):
             last_task_title=self.last_task_titles.get(project_id),
         )
 
-    async def update_status(self, project_id: uuid.UUID, status: ProjectStatus) -> Project:
+    async def update_type(self, project_id: uuid.UUID, type: ProjectType) -> Project:
         project = self.projects.get(project_id)
         if project is None:
             raise NotFoundError("Project not found", details={"project_id": str(project_id)})
-        project.status = status
+        project.type = type
         return project
 
     async def count_active(self, user_id: uuid.UUID) -> int:
-        return sum(
-            1
-            for p in self.projects.values()
-            if p.user_id == user_id and p.status == ProjectStatus.IN_PROGRESS
-        )
+        return sum(1 for p in self.projects.values() if p.user_id == user_id)
 
     async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
         project = self.projects.get(project_id)

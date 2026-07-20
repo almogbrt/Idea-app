@@ -23,8 +23,8 @@ from app.domain.entities import (
     Client,
     ClientDetail,
     Project,
-    ProjectStatus,
     ProjectSummary,
+    ProjectType,
     Task,
     TaskStatus,
 )
@@ -92,16 +92,22 @@ class WorkspaceService:
             return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
 
     async def create_project(
-        self, user_id: uuid.UUID, name: str, client_name: str | None = None
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        client_name: str | None = None,
+        type: ProjectType | None = None,
     ) -> Project:
         if not client_name:
             raise ValidationError("A new project needs a client.")
+        if type is None:
+            raise ValidationError("A new project needs a type.")
         async with self._session_factory() as session:
             client = await self._find_client(session, user_id, client_name)
             if client is None:
                 client = await SqlAlchemyClientRepository(session).create(user_id, client_name)
             project = await SqlAlchemyProjectRepository(session).create(
-                user_id, name, client_id=client.id
+                user_id, name, client.id, type
             )
             await session.commit()
             return project
@@ -128,14 +134,12 @@ class WorkspaceService:
             await SqlAlchemyProjectRepository(session).delete(project.id)
             await session.commit()
 
-    async def update_project_status(
-        self, user_id: uuid.UUID, project_name: str, status: ProjectStatus
+    async def update_project_type(
+        self, user_id: uuid.UUID, project_name: str, type: ProjectType
     ) -> Project:
         async with self._session_factory() as session:
             project = await self._find_project(session, user_id, project_name)
-            updated = await SqlAlchemyProjectRepository(session).update_status(
-                project.id, status
-            )
+            updated = await SqlAlchemyProjectRepository(session).update_type(project.id, type)
             await session.commit()
             return updated
 

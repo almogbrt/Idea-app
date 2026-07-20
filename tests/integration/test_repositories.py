@@ -22,7 +22,7 @@ from app.domain.entities import (
     ExecutionStatus,
     Message,
     MessageRole,
-    ProjectStatus,
+    ProjectType,
     TaskStatus,
 )
 from app.domain.value_objects import OAuthTokenSet
@@ -294,7 +294,9 @@ async def test_project_repository_round_trip_with_client_and_task(
     client = await clients_repo.create(user.id, "Baron's")
 
     projects_repo = SqlAlchemyProjectRepository(db_session)
-    project = await projects_repo.create(user.id, "Summer menu", client_id=client.id)
+    project = await projects_repo.create(
+        user.id, "Summer menu", client_id=client.id, type=ProjectType.CONSULTING
+    )
 
     tasks_repo = SqlAlchemyTaskRepository(db_session)
     await tasks_repo.create(user.id, "Prep summer menu", project_id=project.id)
@@ -308,11 +310,11 @@ async def test_project_repository_round_trip_with_client_and_task(
     assert single_summary is not None
     assert single_summary.client_name == "Baron's"
 
-    updated = await projects_repo.update_status(project.id, ProjectStatus.ON_HOLD)
-    assert updated.status == ProjectStatus.ON_HOLD
+    updated = await projects_repo.update_type(project.id, ProjectType.MENTORING)
+    assert updated.type == ProjectType.MENTORING
 
     active_count = await projects_repo.count_active(user.id)
-    assert active_count == 0
+    assert active_count == 1
 
     other_client = await clients_repo.create(user.id, "Other Co")
     reassigned = await projects_repo.assign_client(project.id, other_client.id)
@@ -329,7 +331,9 @@ async def test_project_repository_delete_unlinks_tasks_instead_of_deleting_them(
     client = await clients_repo.create(user.id, "Baron's")
 
     projects_repo = SqlAlchemyProjectRepository(db_session)
-    project = await projects_repo.create(user.id, "Summer menu", client_id=client.id)
+    project = await projects_repo.create(
+        user.id, "Summer menu", client_id=client.id, type=ProjectType.CONSULTING
+    )
 
     tasks_repo = SqlAlchemyTaskRepository(db_session)
     task = await tasks_repo.create(user.id, "Prep summer menu", project_id=project.id)

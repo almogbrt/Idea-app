@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain.entities import NotificationKind, ProjectStatus, TaskStatus
+from app.domain.entities import NotificationKind, ProjectType, TaskStatus
 
 
 class ClientView(BaseModel):
@@ -32,7 +32,7 @@ class UpdateClientRequest(BaseModel):
 class ProjectView(BaseModel):
     id: uuid.UUID
     name: str
-    status: ProjectStatus
+    type: ProjectType
     client_id: uuid.UUID | None
     client_name: str | None
     last_task_title: str | None
@@ -43,10 +43,11 @@ class ProjectView(BaseModel):
 class CreateProjectRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     client_id: uuid.UUID | None = None
+    type: ProjectType | None = None
 
 
-class UpdateProjectStatusRequest(BaseModel):
-    status: ProjectStatus
+class UpdateProjectTypeRequest(BaseModel):
+    type: ProjectType
 
 
 class AssignProjectClientRequest(BaseModel):

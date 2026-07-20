@@ -27,8 +27,8 @@ from app.domain.entities import (
     Client,
     ClientDetail,
     Project,
-    ProjectStatus,
     ProjectSummary,
+    ProjectType,
     Task,
     TaskStatus,
 )
@@ -134,17 +134,23 @@ class ManageProjectsUseCase:
         self._projects = project_repository
 
     async def create(
-        self, user_id: uuid.UUID, name: str, client_id: uuid.UUID | None = None
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        client_id: uuid.UUID | None = None,
+        type: ProjectType | None = None,
     ) -> Project:
         if client_id is None:
             raise ValidationError("A new project needs a client.")
-        return await self._projects.create(user_id, name, client_id)
+        if type is None:
+            raise ValidationError("A new project needs a type.")
+        return await self._projects.create(user_id, name, client_id, type)
 
     async def list_all(self, user_id: uuid.UUID) -> list[ProjectSummary]:
         return await self._projects.list_by_user(user_id)
 
-    async def update_status(self, project_id: uuid.UUID, status: ProjectStatus) -> Project:
-        return await self._projects.update_status(project_id, status)
+    async def update_type(self, project_id: uuid.UUID, type: ProjectType) -> Project:
+        return await self._projects.update_type(project_id, type)
 
     async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
         return await self._projects.assign_client(project_id, client_id)

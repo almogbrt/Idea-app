@@ -10,8 +10,8 @@ from app.domain.entities import (
     Client,
     ClientDetail,
     Project,
-    ProjectStatus,
     ProjectSummary,
+    ProjectType,
     Task,
     TaskStatus,
     ToolResult,
@@ -38,7 +38,7 @@ def _project_json(project: Project) -> dict[str, Any]:
     return {
         "id": str(project.id),
         "name": project.name,
-        "status": project.status.value,
+        "type": project.type.value,
         "client_id": str(project.client_id) if project.client_id else None,
     }
 
@@ -184,8 +184,8 @@ class CreateProjectTool(Tool):
     name = "workspace_create_project"
     description = (
         "Create a new project for a client (the client is created automatically if it doesn't "
-        "exist yet). Every project must belong to a client — if the user doesn't say which "
-        "client, ask them before calling this tool."
+        "exist yet). Every project must belong to a client and have a type — if the user "
+        "doesn't say which client or type, ask them before calling this tool."
     )
     parameters_schema: dict[str, Any] = {
         "type": "object",
@@ -195,8 +195,13 @@ class CreateProjectTool(Tool):
                 "type": "string",
                 "description": "Client this project is for. Required — every project needs one.",
             },
+            "type": {
+                "type": "string",
+                "enum": [t.value for t in ProjectType],
+                "description": "Project type. Required — every project needs one.",
+            },
         },
-        "required": ["name", "client_name"],
+        "required": ["name", "client_name", "type"],
     }
     agent_name = AGENT_NAME
 
@@ -205,7 +210,10 @@ class CreateProjectTool(Tool):
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
         project = await self._service.create_project(
-            context.user_id, arguments["name"], arguments.get("client_name")
+            context.user_id,
+            arguments["name"],
+            arguments.get("client_name"),
+            ProjectType(arguments["type"]),
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_project_json(project))
@@ -237,20 +245,20 @@ class DeleteProjectTool(Tool):
         )
 
 
-class UpdateProjectStatusTool(Tool):
-    name = "workspace_update_project_status"
-    description = "Change a project's status. Match the project by (partial) name."
+class UpdateProjectTypeTool(Tool):
+    name = "workspace_update_project_type"
+    description = "Change a project's type. Match the project by (partial) name."
     parameters_schema: dict[str, Any] = {
         "type": "object",
         "properties": {
             "project_name": {"type": "string", "description": "Project name (or part of it)."},
-            "status": {
+            "type": {
                 "type": "string",
-                "enum": [s.value for s in ProjectStatus],
-                "description": "New status.",
+                "enum": [t.value for t in ProjectType],
+                "description": "New type.",
             },
         },
-        "required": ["project_name", "status"],
+        "required": ["project_name", "type"],
     }
     agent_name = AGENT_NAME
 
@@ -258,8 +266,8 @@ class UpdateProjectStatusTool(Tool):
         self._service = service
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
-        project = await self._service.update_project_status(
-            context.user_id, arguments["project_name"], ProjectStatus(arguments["status"])
+        project = await self._service.update_project_type(
+            context.user_id, arguments["project_name"], ProjectType(arguments["type"])
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_project_json(project))

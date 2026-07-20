@@ -12,21 +12,12 @@ const els = {
   voiceInputBtn: document.getElementById("voice-input-btn"),
   chatWindow: document.getElementById("chat-window"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
-  navBadgeProjects: document.getElementById("nav-badge-projects"),
   navBadgeClients: document.getElementById("nav-badge-clients"),
-  projectsTbody: document.getElementById("projects-tbody"),
-  projectsEmpty: document.getElementById("projects-empty"),
   tasksList: document.getElementById("tasks-list"),
   tasksEmpty: document.getElementById("tasks-empty"),
   activityFeed: document.getElementById("activity-feed"),
   activityEmpty: document.getElementById("activity-empty"),
   edithStatus: document.getElementById("edith-status"),
-  newProjectBtn: document.getElementById("new-project-btn"),
-  newProjectModal: document.getElementById("new-project-modal"),
-  newProjectName: document.getElementById("new-project-name"),
-  newProjectClient: document.getElementById("new-project-client"),
-  newProjectSave: document.getElementById("new-project-save"),
-  newProjectCancel: document.getElementById("new-project-cancel"),
   shell: document.getElementById("shell"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),
@@ -50,6 +41,9 @@ const els = {
   clientModalCancel: document.getElementById("client-modal-cancel"),
   clientModalDelete: document.getElementById("client-modal-delete"),
   clientModalNewMeetingBtn: document.getElementById("client-modal-new-meeting-btn"),
+  clientModalNewProjectName: document.getElementById("client-modal-new-project-name"),
+  clientModalNewProjectType: document.getElementById("client-modal-new-project-type"),
+  clientModalNewProjectAdd: document.getElementById("client-modal-new-project-add"),
   clientModalNewTaskTitle: document.getElementById("client-modal-new-task-title"),
   clientModalNewTaskStartAt: document.getElementById("client-modal-new-task-start-at"),
   clientModalNewTaskDueAt: document.getElementById("client-modal-new-task-due-at"),
@@ -112,7 +106,7 @@ const els = {
 
 let isAuthenticated = false;
 
-const STATUS_LABELS = { in_progress: "בתהליך", on_hold: "בהקפאה", done: "הושלם" };
+const PROJECT_TYPE_LABELS = { consulting: "ייעוץ", mentoring: "ליווי", setup: "הקמה" };
 
 const TOOL_LABELS = {
   drive_list_files: "חיפש קבצים ב-Drive",
@@ -133,7 +127,7 @@ const TOOL_LABELS = {
   workspace_update_client: "עדכן פרטי לקוח",
   workspace_get_client_detail: "הציג היסטוריית לקוח",
   workspace_create_project: "יצר פרויקט חדש",
-  workspace_update_project_status: "עדכן סטטוס פרויקט",
+  workspace_update_project_type: "עדכן סוג פרויקט",
   workspace_list_projects: "הציג פרויקטים",
   workspace_create_task: "יצר משימה חדשה",
   workspace_update_task_status: "עדכן סטטוס משימה",
@@ -379,7 +373,6 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       chat: "chat-form",
       overview: "greeting",
       tasks: "tasks-section",
-      projects: "projects-section",
       clients: "clients-section",
       calendar: "calendar-section",
       files: "files-section",
@@ -394,66 +387,6 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       addBubble("assistant", "האזור הזה עוד לא זמין — בקרוב.");
     }
   });
-});
-
-async function fetchClients() {
-  try {
-    return await apiFetch("/clients");
-  } catch {
-    return [];
-  }
-}
-
-function populateClientSelect(select, clients, selectedId) {
-  select.innerHTML = "";
-  if (!selectedId) {
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "בחר לקוח...";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    select.appendChild(placeholder);
-  }
-  for (const c of clients) {
-    const opt = document.createElement("option");
-    opt.value = c.id;
-    opt.textContent = c.name;
-    if (c.id === selectedId) opt.selected = true;
-    select.appendChild(opt);
-  }
-}
-
-els.newProjectBtn.addEventListener("click", async () => {
-  els.newProjectModal.hidden = false;
-  els.newProjectName.value = "";
-  const clients = await fetchClients();
-  populateClientSelect(els.newProjectClient, clients, null);
-  if (clients.length === 0) {
-    alert("צריך ליצור לקוח קודם — לכל פרויקט חייב להיות לקוח משויך.");
-  }
-  els.newProjectName.focus();
-});
-els.newProjectCancel.addEventListener("click", () => {
-  els.newProjectModal.hidden = true;
-});
-els.newProjectSave.addEventListener("click", async () => {
-  const name = els.newProjectName.value.trim();
-  const clientId = els.newProjectClient.value;
-  if (!name) return;
-  if (!clientId) {
-    alert("צריך לבחור לקוח — לכל פרויקט חייב להיות לקוח משויך.");
-    return;
-  }
-  try {
-    await apiFetch("/projects", {
-      method: "POST",
-      body: JSON.stringify({ name, client_id: clientId }),
-    });
-    els.newProjectModal.hidden = true;
-    refreshWorkspace();
-  } catch (err) {
-    alert(err.message);
-  }
 });
 
 els.newTaskBtn.addEventListener("click", () => {
@@ -666,16 +599,66 @@ function buildClientModalTaskRow(task) {
   return row;
 }
 
-function buildClientModalProjectGroup(titleText, statusBadgeHtml, tasks) {
+function buildClientModalProjectGroup(project, tasks) {
   const group = document.createElement("div");
   group.className = "client-modal-project-group";
   const header = document.createElement("div");
-  header.className = statusBadgeHtml
+  header.className = project
     ? "client-modal-project-header"
     : "client-modal-project-header client-modal-project-header--none";
-  header.innerHTML = statusBadgeHtml
-    ? `<span>${escapeHtml(titleText)}</span> ${statusBadgeHtml}`
-    : `<span>${escapeHtml(titleText)}</span>`;
+
+  const titleSpan = document.createElement("span");
+  titleSpan.textContent = project ? project.name : "ללא פרויקט";
+  header.appendChild(titleSpan);
+
+  if (project) {
+    const typeSelect = document.createElement("select");
+    typeSelect.className = "project-type-select";
+    for (const [value, label] of Object.entries(PROJECT_TYPE_LABELS)) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label;
+      if (value === project.type) opt.selected = true;
+      typeSelect.appendChild(opt);
+    }
+    typeSelect.addEventListener("change", async () => {
+      try {
+        await apiFetch(`/projects/${project.id}/type`, {
+          method: "PATCH",
+          body: JSON.stringify({ type: typeSelect.value }),
+        });
+        loadClients();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    header.appendChild(typeSelect);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "task-delete-btn";
+    deleteBtn.title = "מחיקת פרויקט";
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", async () => {
+      if (
+        !confirm(
+          `למחוק את הפרויקט "${project.name}"? המשימות שלו יישארו, רק הקישור לפרויקט יוסר.`
+        )
+      ) {
+        return;
+      }
+      try {
+        await apiFetch(`/projects/${project.id}`, { method: "DELETE" });
+        loadTasks();
+        loadClients();
+        openClientModal(currentClientId);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    header.appendChild(deleteBtn);
+  }
+
   group.appendChild(header);
 
   const tasksContainer = document.createElement("div");
@@ -712,21 +695,37 @@ function renderClientModalProjectGroups(projects, tasks) {
   }
 
   for (const project of projects) {
-    const statusBadge = `<span class="status-badge status-badge--${project.status}">${STATUS_LABELS[project.status]}</span>`;
-    const group = buildClientModalProjectGroup(
-      project.name,
-      statusBadge,
-      tasksByProject.get(project.id) || []
-    );
+    const group = buildClientModalProjectGroup(project, tasksByProject.get(project.id) || []);
     els.clientModalProjects.appendChild(group);
   }
 
   if (unassignedTasks.length) {
-    els.clientModalProjects.appendChild(
-      buildClientModalProjectGroup("ללא פרויקט", "", unassignedTasks)
-    );
+    els.clientModalProjects.appendChild(buildClientModalProjectGroup(null, unassignedTasks));
   }
 }
+
+els.clientModalNewProjectAdd.addEventListener("click", async () => {
+  const name = els.clientModalNewProjectName.value.trim();
+  const type = els.clientModalNewProjectType.value;
+  if (!name || !currentClientId) return;
+  try {
+    await apiFetch("/projects", {
+      method: "POST",
+      body: JSON.stringify({ name, client_id: currentClientId, type }),
+    });
+    els.clientModalNewProjectName.value = "";
+    loadClients();
+    openClientModal(currentClientId);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+els.clientModalNewProjectName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    els.clientModalNewProjectAdd.click();
+  }
+});
 
 els.clientModalNewTaskAdd.addEventListener("click", async () => {
   const title = els.clientModalNewTaskTitle.value.trim();
@@ -834,7 +833,6 @@ els.clientModalDelete.addEventListener("click", async () => {
     els.clientModal.hidden = true;
     loadClients();
     loadTasks();
-    loadProjects();
     loadDashboardSummary();
   } catch (err) {
     alert(err.message);
@@ -845,77 +843,9 @@ async function loadDashboardSummary() {
   try {
     const summary = await apiFetch("/dashboard/summary");
     els.navBadgeTasks.textContent = summary.open_tasks;
-    els.navBadgeProjects.textContent = summary.active_projects;
     els.navBadgeClients.textContent = summary.total_clients;
   } catch {
     // not authenticated yet — leave placeholders
-  }
-}
-
-async function loadProjects() {
-  try {
-    const [projects, clients] = await Promise.all([apiFetch("/projects"), fetchClients()]);
-    els.projectsTbody.innerHTML = "";
-    els.projectsEmpty.hidden = projects.length > 0;
-    for (const project of projects) {
-      const tr = document.createElement("tr");
-      if (!project.client_id) tr.classList.add("project-row--needs-client");
-      const updated = new Date(project.updated_at).toLocaleDateString("he-IL");
-      tr.innerHTML = `
-        <td>${escapeHtml(project.name)}</td>
-        <td></td>
-        <td><span class="status-badge status-badge--${project.status}">${STATUS_LABELS[project.status]}</span></td>
-        <td>${project.last_task_title ? escapeHtml(project.last_task_title) : "—"}</td>
-        <td>${updated}</td>
-        <td></td>
-      `;
-      const clientCell = tr.children[1];
-      const select = document.createElement("select");
-      select.className = "project-client-select";
-      populateClientSelect(select, clients, project.client_id || null);
-      select.addEventListener("change", async () => {
-        if (!select.value) return;
-        try {
-          await apiFetch(`/projects/${project.id}/client`, {
-            method: "PATCH",
-            body: JSON.stringify({ client_id: select.value }),
-          });
-          loadProjects();
-          loadDashboardSummary();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-      clientCell.appendChild(select);
-
-      const deleteCell = tr.children[5];
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "task-delete-btn";
-      deleteBtn.title = "מחיקת פרויקט";
-      deleteBtn.textContent = "✕";
-      deleteBtn.addEventListener("click", async () => {
-        if (
-          !confirm(
-            `למחוק את הפרויקט "${project.name}"? המשימות שלו יישארו, רק הקישור לפרויקט יוסר.`
-          )
-        ) {
-          return;
-        }
-        try {
-          await apiFetch(`/projects/${project.id}`, { method: "DELETE" });
-          loadProjects();
-          loadDashboardSummary();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-      deleteCell.appendChild(deleteBtn);
-
-      els.projectsTbody.appendChild(tr);
-    }
-  } catch {
-    // not authenticated yet
   }
 }
 
@@ -1072,7 +1002,7 @@ els.editTaskSave.addEventListener("click", async () => {
     });
     els.editTaskModal.hidden = true;
     loadTasks();
-    loadProjects();
+    loadClients();
     loadDashboardSummary();
     returnToClientBoardIfNeeded();
   } catch (err) {
@@ -1106,12 +1036,22 @@ function clientAvatarHtml(client, sizeClass) {
 
 async function loadClients() {
   try {
-    const [clientsList, tasks] = await Promise.all([apiFetch("/clients"), apiFetch("/tasks")]);
+    const [clientsList, tasks, projects] = await Promise.all([
+      apiFetch("/clients"),
+      apiFetch("/tasks"),
+      apiFetch("/projects"),
+    ]);
     const tasksByClient = new Map();
     for (const t of tasks) {
       if (!t.client_id) continue;
       if (!tasksByClient.has(t.client_id)) tasksByClient.set(t.client_id, []);
       tasksByClient.get(t.client_id).push(t);
+    }
+    const projectsByClient = new Map();
+    for (const p of projects) {
+      if (!p.client_id) continue;
+      if (!projectsByClient.has(p.client_id)) projectsByClient.set(p.client_id, []);
+      projectsByClient.get(p.client_id).push(p);
     }
     els.clientsTbody.innerHTML = "";
     els.clientsEmpty.hidden = clientsList.length > 0;
@@ -1127,8 +1067,18 @@ async function loadClients() {
             )
             .join("")}</div>`
         : "";
+      const clientProjects = projectsByClient.get(c.id) || [];
+      const typesHtml = clientProjects.length
+        ? `<div class="clients-table-project-types">${clientProjects
+            .map(
+              (p) =>
+                `<span class="project-type-chip project-type-chip--${p.type}">${PROJECT_TYPE_LABELS[p.type]}</span>`
+            )
+            .join("")}</div>`
+        : "—";
       tr.innerHTML = `
         <td>${clientAvatarHtml(c)}${escapeHtml(c.name)}${tasksHtml}</td>
+        <td>${typesHtml}</td>
         <td>${c.email ? escapeHtml(c.email) : "—"}</td>
         <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
       `;
@@ -1432,7 +1382,6 @@ function escapeHtml(text) {
 
 function refreshWorkspace() {
   loadDashboardSummary();
-  loadProjects();
   loadTasks();
   loadClients();
   loadCalendar();

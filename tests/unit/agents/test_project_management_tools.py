@@ -19,7 +19,7 @@ from app.agents.project_management.tools import (
     ListTasksTool,
     SetTaskDueDateTool,
     UpdateClientTool,
-    UpdateProjectStatusTool,
+    UpdateProjectTypeTool,
     UpdateTaskStatusTool,
 )
 from app.application.ports.agent_tool import ToolExecutionContext
@@ -27,8 +27,8 @@ from app.domain.entities import (
     Client,
     ClientDetail,
     Project,
-    ProjectStatus,
     ProjectSummary,
+    ProjectType,
     Task,
     TaskStatus,
 )
@@ -73,31 +73,35 @@ class _FakeWorkspaceService:
         return ClientDetail(client=client, projects=[], tasks=[])
 
     async def create_project(
-        self, user_id: uuid.UUID, name: str, client_name: str | None = None
+        self,
+        user_id: uuid.UUID,
+        name: str,
+        client_name: str | None = None,
+        type: ProjectType | None = None,
     ) -> Project:
-        self.calls.append(("create_project", (user_id, name, client_name)))
+        self.calls.append(("create_project", (user_id, name, client_name, type)))
         now = datetime.now(UTC)
         return Project(
             id=uuid.uuid4(),
             user_id=user_id,
             client_id=None,
             name=name,
-            status=ProjectStatus.IN_PROGRESS,
+            type=type or ProjectType.CONSULTING,
             created_at=now,
             updated_at=now,
         )
 
-    async def update_project_status(
-        self, user_id: uuid.UUID, project_name: str, status: ProjectStatus
+    async def update_project_type(
+        self, user_id: uuid.UUID, project_name: str, type: ProjectType
     ) -> Project:
-        self.calls.append(("update_project_status", (user_id, project_name, status)))
+        self.calls.append(("update_project_type", (user_id, project_name, type)))
         now = datetime.now(UTC)
         return Project(
             id=uuid.uuid4(),
             user_id=user_id,
             client_id=None,
             name=project_name,
-            status=status,
+            type=type,
             created_at=now,
             updated_at=now,
         )
@@ -112,7 +116,7 @@ class _FakeWorkspaceService:
             user_id=user_id,
             client_id=uuid.uuid4(),
             name=project_name,
-            status=ProjectStatus.IN_PROGRESS,
+            type=ProjectType.CONSULTING,
             created_at=now,
             updated_at=now,
         )
@@ -128,7 +132,7 @@ class _FakeWorkspaceService:
             user_id=user_id,
             client_id=None,
             name="Summer menu",
-            status=ProjectStatus.IN_PROGRESS,
+            type=ProjectType.CONSULTING,
             created_at=now,
             updated_at=now,
         )
@@ -285,15 +289,22 @@ async def test_get_client_detail_tool() -> None:
     assert body["tasks"] == []
 
 
-async def test_create_project_tool_passes_client_name() -> None:
+async def test_create_project_tool_passes_client_name_and_type() -> None:
     service = _FakeWorkspaceService()
     tool = CreateProjectTool(service)
     context = _context()
 
-    result = await tool.execute({"name": "Summer menu", "client_name": "Baron's"}, context)
+    result = await tool.execute(
+        {"name": "Summer menu", "client_name": "Baron's", "type": "consulting"}, context
+    )
 
-    assert service.calls == [("create_project", (context.user_id, "Summer menu", "Baron's"))]
-    assert json.loads(result.content)["status"] == "in_progress"
+    assert service.calls == [
+        (
+            "create_project",
+            (context.user_id, "Summer menu", "Baron's", ProjectType.CONSULTING),
+        )
+    ]
+    assert json.loads(result.content)["type"] == "consulting"
 
 
 async def test_assign_project_to_client_tool() -> None:
@@ -322,19 +333,19 @@ async def test_delete_project_tool() -> None:
     assert json.loads(result.content) == {"deleted": True}
 
 
-async def test_update_project_status_tool_parses_enum() -> None:
+async def test_update_project_type_tool_parses_enum() -> None:
     service = _FakeWorkspaceService()
-    tool = UpdateProjectStatusTool(service)
+    tool = UpdateProjectTypeTool(service)
     context = _context()
 
     result = await tool.execute(
-        {"project_name": "Summer menu", "status": "on_hold"}, context
+        {"project_name": "Summer menu", "type": "mentoring"}, context
     )
 
     assert service.calls == [
-        ("update_project_status", (context.user_id, "Summer menu", ProjectStatus.ON_HOLD))
+        ("update_project_type", (context.user_id, "Summer menu", ProjectType.MENTORING))
     ]
-    assert json.loads(result.content)["status"] == "on_hold"
+    assert json.loads(result.content)["type"] == "mentoring"
 
 
 async def test_list_projects_tool_includes_denormalized_fields() -> None:

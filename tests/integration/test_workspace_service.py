@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.project_management.service import WorkspaceService
 from app.core.exceptions import NotFoundError, ValidationError
-from app.domain.entities import ProjectStatus, TaskStatus
+from app.domain.entities import ProjectType, TaskStatus
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from tests.integration.conftest import TEST_DATABASE_URL, requires_postgres
 
@@ -40,7 +40,9 @@ async def test_create_project_auto_creates_client_by_name(
     user = await users.create("google-sub-ws-1", "owner-ws1@example.com", "Owner")
     await db_session.commit()
 
-    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    project = await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
 
     assert project.client_id is not None
     summaries = await workspace_service.list_projects(user.id)
@@ -55,7 +57,9 @@ async def test_create_project_reuses_existing_client_on_partial_match(
     await db_session.commit()
 
     first = await workspace_service.create_client(user.id, "Baron's Wine House")
-    project = await workspace_service.create_project(user.id, "Rebrand", "baron's")
+    project = await workspace_service.create_project(
+        user.id, "Rebrand", "baron's", ProjectType.CONSULTING
+    )
 
     assert project.client_id == first.id
 
@@ -71,6 +75,17 @@ async def test_create_project_requires_client(
         await workspace_service.create_project(user.id, "Summer menu")
 
 
+async def test_create_project_requires_type(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-20", "owner-ws20@example.com", "Owner")
+    await db_session.commit()
+
+    with pytest.raises(ValidationError):
+        await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+
+
 async def test_delete_project_resolves_by_partial_name_and_unlinks_tasks(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:
@@ -78,7 +93,9 @@ async def test_delete_project_resolves_by_partial_name_and_unlinks_tasks(
     user = await users.create("google-sub-ws-18", "owner-ws18@example.com", "Owner")
     await db_session.commit()
 
-    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    project = await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
     task = await workspace_service.create_task(
         user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
     )
@@ -111,7 +128,9 @@ async def test_assign_project_client_resolves_by_partial_name(
     user = await users.create("google-sub-ws-16", "owner-ws16@example.com", "Owner")
     await db_session.commit()
 
-    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    project = await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
     await workspace_service.create_client(user.id, "Other Co")
 
     updated = await workspace_service.assign_project_client(user.id, "summer", "other")
@@ -128,29 +147,33 @@ async def test_assign_project_client_raises_when_no_client_match(
     user = await users.create("google-sub-ws-17", "owner-ws17@example.com", "Owner")
     await db_session.commit()
 
-    await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
 
     with pytest.raises(NotFoundError):
         await workspace_service.assign_project_client(user.id, "summer", "nonexistent")
 
 
-async def test_update_project_status_resolves_by_partial_name(
+async def test_update_project_type_resolves_by_partial_name(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:
     users = SqlAlchemyUserRepository(db_session)
     user = await users.create("google-sub-ws-3", "owner-ws3@example.com", "Owner")
     await db_session.commit()
 
-    await workspace_service.create_project(user.id, "Q3 Marketing Campaign", "Acme")
-
-    updated = await workspace_service.update_project_status(
-        user.id, "marketing", ProjectStatus.ON_HOLD
+    await workspace_service.create_project(
+        user.id, "Q3 Marketing Campaign", "Acme", ProjectType.CONSULTING
     )
 
-    assert updated.status == ProjectStatus.ON_HOLD
+    updated = await workspace_service.update_project_type(
+        user.id, "marketing", ProjectType.MENTORING
+    )
+
+    assert updated.type == ProjectType.MENTORING
 
 
-async def test_update_project_status_raises_when_no_match(
+async def test_update_project_type_raises_when_no_match(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:
     users = SqlAlchemyUserRepository(db_session)
@@ -158,8 +181,8 @@ async def test_update_project_status_raises_when_no_match(
     await db_session.commit()
 
     with pytest.raises(NotFoundError):
-        await workspace_service.update_project_status(
-            user.id, "nonexistent project", ProjectStatus.DONE
+        await workspace_service.update_project_type(
+            user.id, "nonexistent project", ProjectType.SETUP
         )
 
 
@@ -170,7 +193,9 @@ async def test_create_task_resolves_project_by_partial_name(
     user = await users.create("google-sub-ws-5", "owner-ws5@example.com", "Owner")
     await db_session.commit()
 
-    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    project = await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
     task = await workspace_service.create_task(
         user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
     )
@@ -341,11 +366,15 @@ async def test_get_client_detail_returns_linked_projects_and_tasks(
     user = await users.create("google-sub-ws-9", "owner-ws9@example.com", "Owner")
     await db_session.commit()
 
-    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    project = await workspace_service.create_project(
+        user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
+    )
     await workspace_service.create_task(
         user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
     )
-    await workspace_service.create_project(user.id, "Unrelated project", "Other Co")
+    await workspace_service.create_project(
+        user.id, "Unrelated project", "Other Co", ProjectType.CONSULTING
+    )
 
     detail = await workspace_service.get_client_detail(user.id, "baron's")
 

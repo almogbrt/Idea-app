@@ -26,10 +26,10 @@ class ExecutionStatus(StrEnum):
     ERROR = "error"
 
 
-class ProjectStatus(StrEnum):
-    IN_PROGRESS = "in_progress"
-    ON_HOLD = "on_hold"
-    DONE = "done"
+class ProjectType(StrEnum):
+    CONSULTING = "consulting"
+    MENTORING = "mentoring"
+    SETUP = "setup"
 
 
 class TaskStatus(StrEnum):
@@ -145,7 +145,7 @@ class Project:
     user_id: uuid.UUID
     client_id: uuid.UUID | None
     name: str
-    status: ProjectStatus
+    type: ProjectType
     created_at: datetime
     updated_at: datetime
 

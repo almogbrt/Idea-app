@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.project_repository import ProjectRepositoryPort
 from app.core.exceptions import NotFoundError
-from app.domain.entities import Project, ProjectStatus, ProjectSummary
+from app.domain.entities import Project, ProjectSummary, ProjectType
 from app.infrastructure.db.models import ClientModel, ProjectModel, TaskModel
 
 
@@ -19,10 +19,10 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
         self,
         user_id: uuid.UUID,
         name: str,
-        client_id: uuid.UUID | None = None,
-        status: ProjectStatus = ProjectStatus.IN_PROGRESS,
+        client_id: uuid.UUID | None,
+        type: ProjectType,
     ) -> Project:
-        row = ProjectModel(user_id=user_id, name=name, client_id=client_id, status=status.value)
+        row = ProjectModel(user_id=user_id, name=name, client_id=client_id, type=type.value)
         self._session.add(row)
         await self._session.flush()
         await self._session.refresh(row)
@@ -89,11 +89,11 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
             last_task_title=last_task_title,
         )
 
-    async def update_status(self, project_id: uuid.UUID, status: ProjectStatus) -> Project:
+    async def update_type(self, project_id: uuid.UUID, type: ProjectType) -> Project:
         row = await self._session.get(ProjectModel, project_id)
         if row is None:
             raise NotFoundError("Project not found", details={"project_id": str(project_id)})
-        row.status = status.value
+        row.type = type.value
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -118,10 +118,7 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
         stmt = (
             select(func.count())
             .select_from(ProjectModel)
-            .where(
-                ProjectModel.user_id == user_id,
-                ProjectModel.status == ProjectStatus.IN_PROGRESS.value,
-            )
+            .where(ProjectModel.user_id == user_id)
         )
         return (await self._session.execute(stmt)).scalar_one()
 
@@ -132,7 +129,7 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
             user_id=row.user_id,
             client_id=row.client_id,
             name=row.name,
-            status=ProjectStatus(row.status),
+            type=ProjectType(row.type),
             created_at=row.created_at,
             updated_at=row.updated_at,
         )

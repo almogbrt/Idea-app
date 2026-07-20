@@ -15,7 +15,7 @@ from app.agents.project_management.tools import (
     ListTasksTool,
     SetTaskDueDateTool,
     UpdateClientTool,
-    UpdateProjectStatusTool,
+    UpdateProjectTypeTool,
     UpdateTaskStatusTool,
 )
 from app.application.ports.agent_tool import Tool
@@ -36,7 +36,7 @@ class ProjectManagementAgent(BaseAgent):
             DeleteClientTool(self._service),
             GetClientDetailTool(self._service),
             CreateProjectTool(self._service),
-            UpdateProjectStatusTool(self._service),
+            UpdateProjectTypeTool(self._service),
             AssignProjectToClientTool(self._service),
             DeleteProjectTool(self._service),
             ListProjectsTool(self._service),

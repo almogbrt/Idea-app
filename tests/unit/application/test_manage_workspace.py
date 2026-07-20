@@ -18,7 +18,7 @@ from app.core.exceptions import ExternalServiceError, NotFoundError, ValidationE
 from app.domain.entities import (
     AgentExecution,
     ExecutionStatus,
-    ProjectStatus,
+    ProjectType,
     TaskStatus,
 )
 from tests.conftest import (
@@ -177,7 +177,7 @@ async def test_manage_clients_get_logo_raises_when_none_set(
         await use_case.get_logo(user_id, client.id)
 
 
-async def test_manage_projects_create_list_and_update_status(
+async def test_manage_projects_create_list_and_update_type(
     fake_project_repository: FakeProjectRepository,
     fake_client_repository: FakeClientRepository,
 ) -> None:
@@ -185,14 +185,14 @@ async def test_manage_projects_create_list_and_update_status(
     user_id = uuid.uuid4()
     client = await fake_client_repository.create(user_id, "Summer Bistro")
 
-    project = await use_case.create(user_id, "Summer menu", client.id)
+    project = await use_case.create(user_id, "Summer menu", client.id, ProjectType.CONSULTING)
     summaries = await use_case.list_all(user_id)
 
     assert summaries[0].project.id == project.id
-    assert summaries[0].project.status == ProjectStatus.IN_PROGRESS
+    assert summaries[0].project.type == ProjectType.CONSULTING
 
-    updated = await use_case.update_status(project.id, ProjectStatus.ON_HOLD)
-    assert updated.status == ProjectStatus.ON_HOLD
+    updated = await use_case.update_type(project.id, ProjectType.MENTORING)
+    assert updated.type == ProjectType.MENTORING
 
 
 async def test_manage_projects_create_requires_client(
@@ -200,7 +200,18 @@ async def test_manage_projects_create_requires_client(
 ) -> None:
     use_case = ManageProjectsUseCase(fake_project_repository)
     with pytest.raises(ValidationError):
-        await use_case.create(uuid.uuid4(), "Summer menu")
+        await use_case.create(uuid.uuid4(), "Summer menu", type=ProjectType.CONSULTING)
+
+
+async def test_manage_projects_create_requires_type(
+    fake_project_repository: FakeProjectRepository,
+    fake_client_repository: FakeClientRepository,
+) -> None:
+    use_case = ManageProjectsUseCase(fake_project_repository)
+    user_id = uuid.uuid4()
+    client = await fake_client_repository.create(user_id, "Summer Bistro")
+    with pytest.raises(ValidationError):
+        await use_case.create(user_id, "Summer menu", client.id)
 
 
 async def test_manage_projects_get_or_raise_missing(
@@ -218,7 +229,7 @@ async def test_manage_projects_get_summary_or_raise(
     use_case = ManageProjectsUseCase(fake_project_repository)
     user_id = uuid.uuid4()
     client = await fake_client_repository.create(user_id, "Rebrand Co")
-    project = await use_case.create(user_id, "Rebrand", client.id)
+    project = await use_case.create(user_id, "Rebrand", client.id, ProjectType.CONSULTING)
 
     summary = await use_case.get_summary_or_raise(project.id)
     assert summary.project.id == project.id
@@ -234,7 +245,7 @@ async def test_manage_projects_delete(
     use_case = ManageProjectsUseCase(fake_project_repository)
     user_id = uuid.uuid4()
     client = await fake_client_repository.create(user_id, "Baron's")
-    project = await use_case.create(user_id, "Rebrand", client.id)
+    project = await use_case.create(user_id, "Rebrand", client.id, ProjectType.CONSULTING)
 
     await use_case.delete(project.id)
 
@@ -250,7 +261,7 @@ async def test_manage_projects_assign_client(
     user_id = uuid.uuid4()
     original_client = await fake_client_repository.create(user_id, "Old Client")
     new_client = await fake_client_repository.create(user_id, "New Client")
-    project = await use_case.create(user_id, "Rebrand", original_client.id)
+    project = await use_case.create(user_id, "Rebrand", original_client.id, ProjectType.CONSULTING)
 
     updated = await use_case.assign_client(project.id, new_client.id)
 
@@ -281,9 +292,9 @@ async def test_dashboard_summary_aggregates_counts(
     fake_client_repository: FakeClientRepository,
 ) -> None:
     user_id = uuid.uuid4()
-    await fake_project_repository.create(user_id, "Active project")
+    await fake_project_repository.create(user_id, "Consulting project", None)
     await fake_project_repository.create(
-        user_id, "On hold project", status=ProjectStatus.ON_HOLD
+        user_id, "Setup project", None, type=ProjectType.SETUP
     )
     await fake_task_repository.create(user_id, "Open task")
     done_task = await fake_task_repository.create(user_id, "Done task")
@@ -299,7 +310,7 @@ async def test_dashboard_summary_aggregates_counts(
     )
     summary = await use_case.execute(user_id)
 
-    assert summary.active_projects == 1
+    assert summary.active_projects == 2
     assert summary.open_tasks == 1
     assert summary.total_clients == 1
     assert summary.unread_emails == 7

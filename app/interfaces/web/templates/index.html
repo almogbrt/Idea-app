@@ -39,11 +39,6 @@
           <span>משימות</span>
           <span class="nav-badge" id="nav-badge-tasks">0</span>
         </button>
-        <button class="nav-item" data-nav="projects">
-          <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          <span>פרויקטים</span>
-          <span class="nav-badge" id="nav-badge-projects">0</span>
-        </button>
         <button class="nav-item" data-nav="clients">
           <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
           <span>לקוחות</span>
@@ -139,34 +134,6 @@
 
       <div id="chat-window"></div>
 
-      <section id="projects-section">
-        <div class="section-heading">
-          <h2>פרויקטים אחרונים</h2>
-          <button id="new-project-btn" class="btn btn--ghost">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            פרויקט חדש
-          </button>
-        </div>
-        <div id="projects-table-wrap">
-          <table id="projects-table">
-            <thead>
-              <tr>
-                <th>שם הפרויקט</th>
-                <th>לקוח</th>
-                <th>סטטוס</th>
-                <th>משימה אחרונה</th>
-                <th>עודכן</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="projects-tbody"></tbody>
-          </table>
-          <div id="projects-empty" class="empty-state" hidden>
-            עדיין אין פרויקטים. אפשר ליצור אחד עם הכפתור "צור פרויקט חדש", או פשוט לבקש מ-Edith בצ'אט.
-          </div>
-        </div>
-      </section>
-
       <section id="tasks-section">
         <div class="section-heading">
           <h2>משימות</h2>
@@ -192,6 +159,7 @@
             <thead>
               <tr>
                 <th>שם</th>
+                <th>סוג פרויקט</th>
                 <th>אימייל</th>
                 <th>טלפון</th>
               </tr>
@@ -273,20 +241,6 @@
         </p>
       </div>
     </aside>
-  </div>
-
-  <div id="new-project-modal" class="modal" hidden>
-    <div class="modal-card">
-      <h3>פרויקט חדש</h3>
-      <input id="new-project-name" type="text" placeholder="שם הפרויקט" autocomplete="off" />
-      <label class="modal-field-label">לקוח
-        <select id="new-project-client" required></select>
-      </label>
-      <div class="modal-actions">
-        <button id="new-project-cancel" class="btn btn--ghost">ביטול</button>
-        <button id="new-project-save" class="btn btn--primary">צור פרויקט</button>
-      </div>
-    </div>
   </div>
 
   <div id="new-task-modal" class="modal" hidden>
@@ -382,6 +336,15 @@
           </button>
         </div>
         <div id="client-modal-projects" class="client-modal-project-groups"></div>
+        <div class="client-modal-new-project">
+          <input id="client-modal-new-project-name" type="text" placeholder="פרויקט חדש..." autocomplete="off" />
+          <select id="client-modal-new-project-type">
+            <option value="consulting">ייעוץ</option>
+            <option value="mentoring">ליווי</option>
+            <option value="setup">הקמה</option>
+          </select>
+          <button id="client-modal-new-project-add" class="btn btn--ghost btn--small">הוספה</button>
+        </div>
         <div class="client-modal-new-task">
           <input id="client-modal-new-task-title" type="text" placeholder="משימה חדשה..." autocomplete="off" />
           <input id="client-modal-new-task-start-at" type="datetime-local" title="זמן התחלה" required />
