@@ -585,6 +585,26 @@ input {
   border-bottom: none;
 }
 
+.project-row--needs-client {
+  background: #fdecec;
+}
+
+.project-client-select {
+  font: inherit;
+  color: inherit;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  max-width: 100%;
+}
+
+.project-row--needs-client .project-client-select {
+  border-color: #b3261e;
+  color: #b3261e;
+  font-weight: 600;
+}
+
 #clients-section {
   margin-bottom: 32px;
 }

@@ -94,20 +94,33 @@ class WorkspaceService:
     async def create_project(
         self, user_id: uuid.UUID, name: str, client_name: str | None = None
     ) -> Project:
+        if not client_name:
+            raise ValidationError("A new project needs a client.")
         async with self._session_factory() as session:
-            client_id = None
-            if client_name:
-                client = await self._find_client(session, user_id, client_name)
-                if client is None:
-                    client = await SqlAlchemyClientRepository(session).create(
-                        user_id, client_name
-                    )
-                client_id = client.id
+            client = await self._find_client(session, user_id, client_name)
+            if client is None:
+                client = await SqlAlchemyClientRepository(session).create(user_id, client_name)
             project = await SqlAlchemyProjectRepository(session).create(
-                user_id, name, client_id=client_id
+                user_id, name, client_id=client.id
             )
             await session.commit()
             return project
+
+    async def assign_project_client(
+        self, user_id: uuid.UUID, project_name: str, client_name: str
+    ) -> Project:
+        async with self._session_factory() as session:
+            project = await self._find_project(session, user_id, project_name)
+            client = await self._find_client(session, user_id, client_name)
+            if client is None:
+                raise NotFoundError(
+                    f"No client matching '{client_name}' found", details={"query": client_name}
+                )
+            updated = await SqlAlchemyProjectRepository(session).assign_client(
+                project.id, client.id
+            )
+            await session.commit()
+            return updated
 
     async def update_project_status(
         self, user_id: uuid.UUID, project_name: str, status: ProjectStatus

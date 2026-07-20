@@ -311,6 +311,10 @@ async def test_project_repository_round_trip_with_client_and_task(
     active_count = await projects_repo.count_active(user.id)
     assert active_count == 0
 
+    other_client = await clients_repo.create(user.id, "Other Co")
+    reassigned = await projects_repo.assign_client(project.id, other_client.id)
+    assert reassigned.client_id == other_client.id
+
 
 async def test_task_repository_round_trip_and_count_open(db_session: AsyncSession) -> None:
     users = SqlAlchemyUserRepository(db_session)

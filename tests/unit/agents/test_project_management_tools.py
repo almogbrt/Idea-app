@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.agents.project_management.tools import (
+    AssignProjectToClientTool,
     AssignTaskToClientTool,
     CreateClientTool,
     CreateProjectTool,
@@ -96,6 +97,21 @@ class _FakeWorkspaceService:
             client_id=None,
             name=project_name,
             status=status,
+            created_at=now,
+            updated_at=now,
+        )
+
+    async def assign_project_client(
+        self, user_id: uuid.UUID, project_name: str, client_name: str
+    ) -> Project:
+        self.calls.append(("assign_project_client", (user_id, project_name, client_name)))
+        now = datetime.now(UTC)
+        return Project(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            client_id=uuid.uuid4(),
+            name=project_name,
+            status=ProjectStatus.IN_PROGRESS,
             created_at=now,
             updated_at=now,
         )
@@ -274,6 +290,21 @@ async def test_create_project_tool_passes_client_name() -> None:
 
     assert service.calls == [("create_project", (context.user_id, "Summer menu", "Baron's"))]
     assert json.loads(result.content)["status"] == "in_progress"
+
+
+async def test_assign_project_to_client_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = AssignProjectToClientTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {"project_name": "Summer menu", "client_name": "Baron's"}, context
+    )
+
+    assert service.calls == [
+        ("assign_project_client", (context.user_id, "Summer menu", "Baron's"))
+    ]
+    assert json.loads(result.content)["client_id"] is not None
 
 
 async def test_update_project_status_tool_parses_enum() -> None:

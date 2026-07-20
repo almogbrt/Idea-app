@@ -100,9 +100,9 @@ class _NullDrive(DrivePort):
 
 
 def _workspace_kwargs() -> dict[str, object]:
-    projects_repo = FakeProjectRepository()
-    tasks_repo = FakeTaskRepository()
     clients_repo = FakeClientRepository()
+    projects_repo = FakeProjectRepository(clients_repo)
+    tasks_repo = FakeTaskRepository()
     notifications_repo = FakeNotificationRepository()
     return {
         "manage_clients": ManageClientsUseCase(clients_repo, projects_repo, tasks_repo),

@@ -27,6 +27,7 @@ from app.domain.entities import (
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.workspace import (
     ActivityItemView,
+    AssignProjectClientRequest,
     ClientDetailView,
     ClientView,
     CreateClientRequest,
@@ -214,6 +215,20 @@ async def update_project_status(
     existing = await scope.manage_projects.get_or_raise(project_id)
     _ensure_project_owned_by(existing, user)
     await scope.manage_projects.update_status(project_id, body.status)
+    summary = await scope.manage_projects.get_summary_or_raise(project_id)
+    return _project_view(summary)
+
+
+@router.patch("/projects/{project_id}/client", response_model=ProjectView)
+async def assign_project_client(
+    project_id: uuid.UUID,
+    body: AssignProjectClientRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ProjectView:
+    existing = await scope.manage_projects.get_or_raise(project_id)
+    _ensure_project_owned_by(existing, user)
+    await scope.manage_projects.assign_client(project_id, body.client_id)
     summary = await scope.manage_projects.get_summary_or_raise(project_id)
     return _project_view(summary)
 

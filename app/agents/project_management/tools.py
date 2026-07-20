@@ -186,8 +186,9 @@ class DeleteClientTool(Tool):
 class CreateProjectTool(Tool):
     name = "workspace_create_project"
     description = (
-        "Create a new project, optionally for a client (the client is created automatically "
-        "if it doesn't exist yet)."
+        "Create a new project for a client (the client is created automatically if it doesn't "
+        "exist yet). Every project must belong to a client — if the user doesn't say which "
+        "client, ask them before calling this tool."
     )
     parameters_schema: dict[str, Any] = {
         "type": "object",
@@ -195,10 +196,10 @@ class CreateProjectTool(Tool):
             "name": {"type": "string", "description": "Project name."},
             "client_name": {
                 "type": "string",
-                "description": "Client this project is for (optional).",
+                "description": "Client this project is for. Required — every project needs one.",
             },
         },
-        "required": ["name"],
+        "required": ["name", "client_name"],
     }
     agent_name = AGENT_NAME
 
@@ -424,6 +425,38 @@ class AssignTaskToClientTool(Tool):
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))
+        )
+
+
+class AssignProjectToClientTool(Tool):
+    name = "workspace_assign_project_to_client"
+    description = (
+        "Change which client a project belongs to. Every project must have a client, so this "
+        "reassigns rather than removing the link. Match the project by (partial) name and the "
+        "client by (partial) name."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "project_name": {"type": "string", "description": "Project name (or part of it)."},
+            "client_name": {
+                "type": "string",
+                "description": "Client to link this project to (or part of the name).",
+            },
+        },
+        "required": ["project_name", "client_name"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        project = await self._service.assign_project_client(
+            context.user_id, arguments["project_name"], arguments["client_name"]
+        )
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_project_json(project))
         )
 
 

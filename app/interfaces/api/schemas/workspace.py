@@ -50,6 +50,10 @@ class UpdateProjectStatusRequest(BaseModel):
     status: ProjectStatus
 
 
+class AssignProjectClientRequest(BaseModel):
+    client_id: uuid.UUID
+
+
 class TaskView(BaseModel):
     id: uuid.UUID
     title: str

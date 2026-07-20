@@ -38,3 +38,7 @@ class ProjectRepositoryPort(ABC):
     @abstractmethod
     async def count_active(self, user_id: uuid.UUID) -> int:
         raise NotImplementedError
+
+    @abstractmethod
+    async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
+        raise NotImplementedError

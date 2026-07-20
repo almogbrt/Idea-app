@@ -161,10 +161,16 @@ class FakeClientRepository(ClientRepositoryPort):
 
 
 class FakeProjectRepository(ProjectRepositoryPort):
-    def __init__(self) -> None:
+    def __init__(self, clients: FakeClientRepository | None = None) -> None:
         self.projects: dict[uuid.UUID, Project] = {}
-        self.client_names: dict[uuid.UUID, str] = {}
+        self._clients = clients
         self.last_task_titles: dict[uuid.UUID, str] = {}
+
+    def _client_name(self, project: Project) -> str | None:
+        if project.client_id is None or self._clients is None:
+            return None
+        client = self._clients.clients.get(project.client_id)
+        return client.name if client is not None else None
 
     async def create(
         self,
@@ -190,7 +196,7 @@ class FakeProjectRepository(ProjectRepositoryPort):
         return [
             ProjectSummary(
                 project=p,
-                client_name=self.client_names.get(p.id),
+                client_name=self._client_name(p),
                 last_task_title=self.last_task_titles.get(p.id),
             )
             for p in self.projects.values()
@@ -206,7 +212,7 @@ class FakeProjectRepository(ProjectRepositoryPort):
             return None
         return ProjectSummary(
             project=project,
-            client_name=self.client_names.get(project_id),
+            client_name=self._client_name(project),
             last_task_title=self.last_task_titles.get(project_id),
         )
 
@@ -223,6 +229,13 @@ class FakeProjectRepository(ProjectRepositoryPort):
             for p in self.projects.values()
             if p.user_id == user_id and p.status == ProjectStatus.IN_PROGRESS
         )
+
+    async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
+        project = self.projects.get(project_id)
+        if project is None:
+            raise NotFoundError("Project not found", details={"project_id": str(project_id)})
+        project.client_id = client_id
+        return project
 
 
 class FakeTaskRepository(TaskRepositoryPort):
@@ -462,8 +475,10 @@ def fake_client_repository() -> FakeClientRepository:
 
 
 @pytest.fixture
-def fake_project_repository() -> FakeProjectRepository:
-    return FakeProjectRepository()
+def fake_project_repository(
+    fake_client_repository: FakeClientRepository,
+) -> FakeProjectRepository:
+    return FakeProjectRepository(fake_client_repository)
 
 
 @pytest.fixture

@@ -136,7 +136,7 @@ class _FakeDrive(DrivePort):
 
 def _install_scope(client: TestClient) -> dict[str, object]:
     clients_repo = FakeClientRepository()
-    projects_repo = FakeProjectRepository()
+    projects_repo = FakeProjectRepository(clients_repo)
     tasks_repo = FakeTaskRepository()
     executions_repo = FakeAgentExecutionRepository()
     notifications_repo = FakeNotificationRepository()
@@ -231,15 +231,26 @@ def test_delete_client_rejects_other_users_client(client: TestClient) -> None:
     assert response.status_code == 403
 
 
-def test_create_and_list_projects(client: TestClient) -> None:
+def test_create_project_requires_client(client: TestClient) -> None:
     _install_scope(client)
 
-    create_response = client.post("/api/v1/projects", json={"name": "Summer menu"})
+    response = client.post("/api/v1/projects", json={"name": "Summer menu"})
+
+    assert response.status_code == 422
+
+
+def test_create_and_list_projects(client: TestClient) -> None:
+    _install_scope(client)
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    create_response = client.post(
+        "/api/v1/projects", json={"name": "Summer menu", "client_id": client_entity["id"]}
+    )
     assert create_response.status_code == 200
     body = create_response.json()
     assert body["name"] == "Summer menu"
     assert body["status"] == "in_progress"
-    assert body["client_name"] is None
+    assert body["client_name"] == "Baron's"
 
     list_response = client.get("/api/v1/projects")
     assert len(list_response.json()) == 1
@@ -247,7 +258,10 @@ def test_create_and_list_projects(client: TestClient) -> None:
 
 def test_update_project_status(client: TestClient) -> None:
     _install_scope(client)
-    project = client.post("/api/v1/projects", json={"name": "Rebrand"}).json()
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    project = client.post(
+        "/api/v1/projects", json={"name": "Rebrand", "client_id": client_entity["id"]}
+    ).json()
 
     response = client.patch(
         f"/api/v1/projects/{project['id']}/status", json={"status": "on_hold"}
@@ -257,9 +271,48 @@ def test_update_project_status(client: TestClient) -> None:
     assert response.json()["status"] == "on_hold"
 
 
+def test_assign_project_client(client: TestClient) -> None:
+    _install_scope(client)
+    original_client = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    new_client = client.post("/api/v1/clients", json={"name": "Other Co"}).json()
+    project = client.post(
+        "/api/v1/projects", json={"name": "Rebrand", "client_id": original_client["id"]}
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/projects/{project['id']}/client", json={"client_id": new_client["id"]}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["client_id"] == new_client["id"]
+    assert response.json()["client_name"] == "Other Co"
+
+
+def test_assign_project_client_rejects_other_users_project(client: TestClient) -> None:
+    resources = _install_scope(client)
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    other_user_project = client.post(
+        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+    ).json()
+
+    projects_repo = resources["projects_repo"]
+    stored = projects_repo.projects[uuid.UUID(other_user_project["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.patch(
+        f"/api/v1/projects/{other_user_project['id']}/client",
+        json={"client_id": client_entity["id"]},
+    )
+
+    assert response.status_code == 403
+
+
 def test_update_project_status_rejects_other_users_project(client: TestClient) -> None:
     resources = _install_scope(client)
-    other_user_project = client.post("/api/v1/projects", json={"name": "Not yours"}).json()
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    other_user_project = client.post(
+        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+    ).json()
 
     # simulate the project belonging to someone else by mutating the fake repo directly
     projects_repo = resources["projects_repo"]
@@ -359,7 +412,9 @@ def test_update_task_can_assign_client_and_clear_project(client: TestClient) -> 
     resources = _install_scope(client)
     clients_repo = resources["clients_repo"]
     client_entity = client.post("/api/v1/clients", json={"name": "Acme"}).json()
-    project = client.post("/api/v1/projects", json={"name": "Website"}).json()
+    project = client.post(
+        "/api/v1/projects", json={"name": "Website", "client_id": client_entity["id"]}
+    ).json()
     task = client.post(
         "/api/v1/tasks", json=_task_payload(title="Kickoff call", project_id=project["id"])
     ).json()

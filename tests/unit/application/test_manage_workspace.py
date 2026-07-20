@@ -14,7 +14,7 @@ from app.application.use_cases.manage_workspace import (
     ManageProjectsUseCase,
     ManageTasksUseCase,
 )
-from app.core.exceptions import ExternalServiceError, NotFoundError
+from app.core.exceptions import ExternalServiceError, NotFoundError, ValidationError
 from app.domain.entities import (
     AgentExecution,
     ExecutionStatus,
@@ -126,11 +126,13 @@ async def test_manage_clients_get_detail_returns_linked_projects_and_tasks(
 
 async def test_manage_projects_create_list_and_update_status(
     fake_project_repository: FakeProjectRepository,
+    fake_client_repository: FakeClientRepository,
 ) -> None:
     use_case = ManageProjectsUseCase(fake_project_repository)
     user_id = uuid.uuid4()
+    client = await fake_client_repository.create(user_id, "Summer Bistro")
 
-    project = await use_case.create(user_id, "Summer menu")
+    project = await use_case.create(user_id, "Summer menu", client.id)
     summaries = await use_case.list_all(user_id)
 
     assert summaries[0].project.id == project.id
@@ -138,6 +140,14 @@ async def test_manage_projects_create_list_and_update_status(
 
     updated = await use_case.update_status(project.id, ProjectStatus.ON_HOLD)
     assert updated.status == ProjectStatus.ON_HOLD
+
+
+async def test_manage_projects_create_requires_client(
+    fake_project_repository: FakeProjectRepository,
+) -> None:
+    use_case = ManageProjectsUseCase(fake_project_repository)
+    with pytest.raises(ValidationError):
+        await use_case.create(uuid.uuid4(), "Summer menu")
 
 
 async def test_manage_projects_get_or_raise_missing(
@@ -150,16 +160,33 @@ async def test_manage_projects_get_or_raise_missing(
 
 async def test_manage_projects_get_summary_or_raise(
     fake_project_repository: FakeProjectRepository,
+    fake_client_repository: FakeClientRepository,
 ) -> None:
     use_case = ManageProjectsUseCase(fake_project_repository)
     user_id = uuid.uuid4()
-    project = await use_case.create(user_id, "Rebrand")
+    client = await fake_client_repository.create(user_id, "Rebrand Co")
+    project = await use_case.create(user_id, "Rebrand", client.id)
 
     summary = await use_case.get_summary_or_raise(project.id)
     assert summary.project.id == project.id
 
     with pytest.raises(NotFoundError):
         await use_case.get_summary_or_raise(uuid.uuid4())
+
+
+async def test_manage_projects_assign_client(
+    fake_project_repository: FakeProjectRepository,
+    fake_client_repository: FakeClientRepository,
+) -> None:
+    use_case = ManageProjectsUseCase(fake_project_repository)
+    user_id = uuid.uuid4()
+    original_client = await fake_client_repository.create(user_id, "Old Client")
+    new_client = await fake_client_repository.create(user_id, "New Client")
+    project = await use_case.create(user_id, "Rebrand", original_client.id)
+
+    updated = await use_case.assign_client(project.id, new_client.id)
+
+    assert updated.client_id == new_client.id
 
 
 async def test_manage_tasks_create_list_and_update_status(

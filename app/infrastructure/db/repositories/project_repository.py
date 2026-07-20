@@ -98,6 +98,15 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
+        row = await self._session.get(ProjectModel, project_id)
+        if row is None:
+            raise NotFoundError("Project not found", details={"project_id": str(project_id)})
+        row.client_id = client_id
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
     async def count_active(self, user_id: uuid.UUID) -> int:
         stmt = (
             select(func.count())

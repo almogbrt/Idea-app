@@ -24,6 +24,7 @@ const els = {
   newProjectBtn: document.getElementById("new-project-btn"),
   newProjectModal: document.getElementById("new-project-modal"),
   newProjectName: document.getElementById("new-project-name"),
+  newProjectClient: document.getElementById("new-project-client"),
   newProjectSave: document.getElementById("new-project-save"),
   newProjectCancel: document.getElementById("new-project-cancel"),
   shell: document.getElementById("shell"),
@@ -394,9 +395,41 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   });
 });
 
-els.newProjectBtn.addEventListener("click", () => {
+async function fetchClients() {
+  try {
+    return await apiFetch("/clients");
+  } catch {
+    return [];
+  }
+}
+
+function populateClientSelect(select, clients, selectedId) {
+  select.innerHTML = "";
+  if (!selectedId) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "בחר לקוח...";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    select.appendChild(placeholder);
+  }
+  for (const c of clients) {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    if (c.id === selectedId) opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+els.newProjectBtn.addEventListener("click", async () => {
   els.newProjectModal.hidden = false;
   els.newProjectName.value = "";
+  const clients = await fetchClients();
+  populateClientSelect(els.newProjectClient, clients, null);
+  if (clients.length === 0) {
+    alert("צריך ליצור לקוח קודם — לכל פרויקט חייב להיות לקוח משויך.");
+  }
   els.newProjectName.focus();
 });
 els.newProjectCancel.addEventListener("click", () => {
@@ -404,9 +437,17 @@ els.newProjectCancel.addEventListener("click", () => {
 });
 els.newProjectSave.addEventListener("click", async () => {
   const name = els.newProjectName.value.trim();
+  const clientId = els.newProjectClient.value;
   if (!name) return;
+  if (!clientId) {
+    alert("צריך לבחור לקוח — לכל פרויקט חייב להיות לקוח משויך.");
+    return;
+  }
   try {
-    await apiFetch("/projects", { method: "POST", body: JSON.stringify({ name }) });
+    await apiFetch("/projects", {
+      method: "POST",
+      body: JSON.stringify({ name, client_id: clientId }),
+    });
     els.newProjectModal.hidden = true;
     refreshWorkspace();
   } catch (err) {
@@ -779,19 +820,38 @@ async function loadDashboardSummary() {
 
 async function loadProjects() {
   try {
-    const projects = await apiFetch("/projects");
+    const [projects, clients] = await Promise.all([apiFetch("/projects"), fetchClients()]);
     els.projectsTbody.innerHTML = "";
     els.projectsEmpty.hidden = projects.length > 0;
     for (const project of projects) {
       const tr = document.createElement("tr");
+      if (!project.client_id) tr.classList.add("project-row--needs-client");
       const updated = new Date(project.updated_at).toLocaleDateString("he-IL");
       tr.innerHTML = `
         <td>${escapeHtml(project.name)}</td>
-        <td>${project.client_name ? escapeHtml(project.client_name) : "—"}</td>
+        <td></td>
         <td><span class="status-badge status-badge--${project.status}">${STATUS_LABELS[project.status]}</span></td>
         <td>${project.last_task_title ? escapeHtml(project.last_task_title) : "—"}</td>
         <td>${updated}</td>
       `;
+      const clientCell = tr.children[1];
+      const select = document.createElement("select");
+      select.className = "project-client-select";
+      populateClientSelect(select, clients, project.client_id || null);
+      select.addEventListener("change", async () => {
+        if (!select.value) return;
+        try {
+          await apiFetch(`/projects/${project.id}/client`, {
+            method: "PATCH",
+            body: JSON.stringify({ client_id: select.value }),
+          });
+          loadProjects();
+          loadDashboardSummary();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      clientCell.appendChild(select);
       els.projectsTbody.appendChild(tr);
     }
   } catch {
