@@ -307,6 +307,36 @@ def test_assign_project_client_rejects_other_users_project(client: TestClient) -
     assert response.status_code == 403
 
 
+def test_delete_project_removes_it(client: TestClient) -> None:
+    _install_scope(client)
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    project = client.post(
+        "/api/v1/projects", json={"name": "Throwaway", "client_id": client_entity["id"]}
+    ).json()
+
+    response = client.delete(f"/api/v1/projects/{project['id']}")
+    assert response.status_code == 204
+
+    list_response = client.get("/api/v1/projects")
+    assert list_response.json() == []
+
+
+def test_delete_project_rejects_other_users_project(client: TestClient) -> None:
+    resources = _install_scope(client)
+    client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    other_user_project = client.post(
+        "/api/v1/projects", json={"name": "Not yours", "client_id": client_entity["id"]}
+    ).json()
+
+    projects_repo = resources["projects_repo"]
+    stored = projects_repo.projects[uuid.UUID(other_user_project["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.delete(f"/api/v1/projects/{other_user_project['id']}")
+
+    assert response.status_code == 403
+
+
 def test_update_project_status_rejects_other_users_project(client: TestClient) -> None:
     resources = _install_scope(client)
     client_entity = client.post("/api/v1/clients", json={"name": "Baron's"}).json()

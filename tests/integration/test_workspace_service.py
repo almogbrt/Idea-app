@@ -71,6 +71,39 @@ async def test_create_project_requires_client(
         await workspace_service.create_project(user.id, "Summer menu")
 
 
+async def test_delete_project_resolves_by_partial_name_and_unlinks_tasks(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-18", "owner-ws18@example.com", "Owner")
+    await db_session.commit()
+
+    project = await workspace_service.create_project(user.id, "Summer menu", "Baron's")
+    task = await workspace_service.create_task(
+        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+    )
+
+    await workspace_service.delete_project(user.id, "summer")
+
+    remaining_projects = await workspace_service.list_projects(user.id)
+    assert project.id not in [s.project.id for s in remaining_projects]
+
+    tasks = await workspace_service.list_tasks(user.id)
+    updated_task = next(t for t in tasks if t.id == task.id)
+    assert updated_task.project_id is None
+
+
+async def test_delete_project_raises_when_no_match(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-19", "owner-ws19@example.com", "Owner")
+    await db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        await workspace_service.delete_project(user.id, "nonexistent")
+
+
 async def test_assign_project_client_resolves_by_partial_name(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:

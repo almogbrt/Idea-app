@@ -833,6 +833,7 @@ async function loadProjects() {
         <td><span class="status-badge status-badge--${project.status}">${STATUS_LABELS[project.status]}</span></td>
         <td>${project.last_task_title ? escapeHtml(project.last_task_title) : "—"}</td>
         <td>${updated}</td>
+        <td></td>
       `;
       const clientCell = tr.children[1];
       const select = document.createElement("select");
@@ -852,6 +853,31 @@ async function loadProjects() {
         }
       });
       clientCell.appendChild(select);
+
+      const deleteCell = tr.children[5];
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "task-delete-btn";
+      deleteBtn.title = "מחיקת פרויקט";
+      deleteBtn.textContent = "✕";
+      deleteBtn.addEventListener("click", async () => {
+        if (
+          !confirm(
+            `למחוק את הפרויקט "${project.name}"? המשימות שלו יישארו, רק הקישור לפרויקט יוסר.`
+          )
+        ) {
+          return;
+        }
+        try {
+          await apiFetch(`/projects/${project.id}`, { method: "DELETE" });
+          loadProjects();
+          loadDashboardSummary();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+      deleteCell.appendChild(deleteBtn);
+
       els.projectsTbody.appendChild(tr);
     }
   } catch {

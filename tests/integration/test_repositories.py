@@ -316,6 +316,37 @@ async def test_project_repository_round_trip_with_client_and_task(
     assert reassigned.client_id == other_client.id
 
 
+async def test_project_repository_delete_unlinks_tasks_instead_of_deleting_them(
+    db_session: AsyncSession,
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-13", "owner13@example.com", "Owner Thirteen")
+
+    clients_repo = SqlAlchemyClientRepository(db_session)
+    client = await clients_repo.create(user.id, "Baron's")
+
+    projects_repo = SqlAlchemyProjectRepository(db_session)
+    project = await projects_repo.create(user.id, "Summer menu", client_id=client.id)
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    task = await tasks_repo.create(user.id, "Prep summer menu", project_id=project.id)
+
+    await projects_repo.delete(project.id)
+
+    assert await projects_repo.get(project.id) is None
+    surviving_task = await tasks_repo.get(task.id)
+    assert surviving_task is not None
+    assert surviving_task.project_id is None
+
+
+async def test_project_repository_delete_missing_project_raises(
+    db_session: AsyncSession,
+) -> None:
+    projects_repo = SqlAlchemyProjectRepository(db_session)
+    with pytest.raises(NotFoundError):
+        await projects_repo.delete(uuid.uuid4())
+
+
 async def test_task_repository_round_trip_and_count_open(db_session: AsyncSession) -> None:
     users = SqlAlchemyUserRepository(db_session)
     user = await users.create("google-sub-12", "owner12@example.com", "Owner Twelve")

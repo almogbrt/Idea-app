@@ -42,3 +42,7 @@ class ProjectRepositoryPort(ABC):
     @abstractmethod
     async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
         raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, project_id: uuid.UUID) -> None:
+        raise NotImplementedError

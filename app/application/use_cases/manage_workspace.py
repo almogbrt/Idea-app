@@ -130,6 +130,9 @@ class ManageProjectsUseCase:
     async def assign_client(self, project_id: uuid.UUID, client_id: uuid.UUID) -> Project:
         return await self._projects.assign_client(project_id, client_id)
 
+    async def delete(self, project_id: uuid.UUID) -> None:
+        await self._projects.delete(project_id)
+
     async def get_or_raise(self, project_id: uuid.UUID) -> Project:
         project = await self._projects.get(project_id)
         if project is None:

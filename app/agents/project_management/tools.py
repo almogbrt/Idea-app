@@ -215,6 +215,31 @@ class CreateProjectTool(Tool):
         )
 
 
+class DeleteProjectTool(Tool):
+    name = "workspace_delete_project"
+    description = (
+        "Permanently delete a project. Its tasks are kept but lose the project link. Match "
+        "the project by (partial) name."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "project_name": {"type": "string", "description": "Project name (or part of it)."},
+        },
+        "required": ["project_name"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        await self._service.delete_project(context.user_id, arguments["project_name"])
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps({"deleted": True})
+        )
+
+
 class UpdateProjectStatusTool(Tool):
     name = "workspace_update_project_status"
     description = "Change a project's status. Match the project by (partial) name."

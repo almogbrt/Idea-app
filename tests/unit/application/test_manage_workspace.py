@@ -174,6 +174,21 @@ async def test_manage_projects_get_summary_or_raise(
         await use_case.get_summary_or_raise(uuid.uuid4())
 
 
+async def test_manage_projects_delete(
+    fake_project_repository: FakeProjectRepository,
+    fake_client_repository: FakeClientRepository,
+) -> None:
+    use_case = ManageProjectsUseCase(fake_project_repository)
+    user_id = uuid.uuid4()
+    client = await fake_client_repository.create(user_id, "Baron's")
+    project = await use_case.create(user_id, "Rebrand", client.id)
+
+    await use_case.delete(project.id)
+
+    with pytest.raises(NotFoundError):
+        await use_case.get_or_raise(project.id)
+
+
 async def test_manage_projects_assign_client(
     fake_project_repository: FakeProjectRepository,
     fake_client_repository: FakeClientRepository,

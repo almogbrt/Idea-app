@@ -12,6 +12,7 @@ from app.agents.project_management.tools import (
     CreateProjectTool,
     CreateTaskTool,
     DeleteClientTool,
+    DeleteProjectTool,
     DeleteTaskTool,
     GetClientDetailTool,
     ListProjectsTool,
@@ -115,6 +116,9 @@ class _FakeWorkspaceService:
             created_at=now,
             updated_at=now,
         )
+
+    async def delete_project(self, user_id: uuid.UUID, project_name: str) -> None:
+        self.calls.append(("delete_project", (user_id, project_name)))
 
     async def list_projects(self, user_id: uuid.UUID) -> list[ProjectSummary]:
         self.calls.append(("list_projects", (user_id,)))
@@ -305,6 +309,17 @@ async def test_assign_project_to_client_tool() -> None:
         ("assign_project_client", (context.user_id, "Summer menu", "Baron's"))
     ]
     assert json.loads(result.content)["client_id"] is not None
+
+
+async def test_delete_project_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = DeleteProjectTool(service)
+    context = _context()
+
+    result = await tool.execute({"project_name": "Summer menu"}, context)
+
+    assert service.calls == [("delete_project", (context.user_id, "Summer menu"))]
+    assert json.loads(result.content) == {"deleted": True}
 
 
 async def test_update_project_status_tool_parses_enum() -> None:

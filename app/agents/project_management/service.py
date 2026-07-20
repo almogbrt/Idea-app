@@ -122,6 +122,12 @@ class WorkspaceService:
             await session.commit()
             return updated
 
+    async def delete_project(self, user_id: uuid.UUID, project_name: str) -> None:
+        async with self._session_factory() as session:
+            project = await self._find_project(session, user_id, project_name)
+            await SqlAlchemyProjectRepository(session).delete(project.id)
+            await session.commit()
+
     async def update_project_status(
         self, user_id: uuid.UUID, project_name: str, status: ProjectStatus
     ) -> Project:

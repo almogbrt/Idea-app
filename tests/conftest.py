@@ -237,6 +237,11 @@ class FakeProjectRepository(ProjectRepositoryPort):
         project.client_id = client_id
         return project
 
+    async def delete(self, project_id: uuid.UUID) -> None:
+        if project_id not in self.projects:
+            raise NotFoundError("Project not found", details={"project_id": str(project_id)})
+        del self.projects[project_id]
+
 
 class FakeTaskRepository(TaskRepositoryPort):
     def __init__(self) -> None:

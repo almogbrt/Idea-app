@@ -233,6 +233,17 @@ async def assign_project_client(
     return _project_view(summary)
 
 
+@router.delete("/projects/{project_id}", status_code=204)
+async def delete_project(
+    project_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    existing = await scope.manage_projects.get_or_raise(project_id)
+    _ensure_project_owned_by(existing, user)
+    await scope.manage_projects.delete(project_id)
+
+
 @router.get("/tasks", response_model=list[TaskView])
 async def list_tasks(
     user: User = Depends(get_current_user),
