@@ -11,6 +11,11 @@ const els = {
   chatInput: document.getElementById("chat-input"),
   voiceInputBtn: document.getElementById("voice-input-btn"),
   chatWindow: document.getElementById("chat-window"),
+  thoughtInput: document.getElementById("thought-input"),
+  thoughtVoiceBtn: document.getElementById("thought-voice-btn"),
+  thoughtSaveBtn: document.getElementById("thought-save-btn"),
+  thoughtsList: document.getElementById("thoughts-list"),
+  thoughtsEmpty: document.getElementById("thoughts-empty"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   navBadgeClients: document.getElementById("nav-badge-clients"),
   tasksList: document.getElementById("tasks-list"),
@@ -297,9 +302,12 @@ const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRec
 let voiceRecognition = null;
 let isRecording = false;
 let voiceFinalTranscript = "";
+let voiceTargetInput = null;
+let voiceTargetBtn = null;
 
 if (SpeechRecognitionCtor) {
   els.voiceInputBtn.hidden = false;
+  els.thoughtVoiceBtn.hidden = false;
 
   voiceRecognition = new SpeechRecognitionCtor();
   voiceRecognition.lang = "he-IL";
@@ -321,7 +329,7 @@ if (SpeechRecognitionCtor) {
         interimTranscript += result[0].transcript;
       }
     }
-    els.chatInput.value = voiceFinalTranscript + interimTranscript;
+    voiceTargetInput.value = voiceFinalTranscript + interimTranscript;
   });
 
   voiceRecognition.addEventListener("error", (event) => {
@@ -339,20 +347,29 @@ if (SpeechRecognitionCtor) {
       voiceRecognition.start();
       return;
     }
-    els.voiceInputBtn.classList.remove("recording");
+    voiceTargetBtn.classList.remove("recording");
   });
 
-  els.voiceInputBtn.addEventListener("click", () => {
+  const toggleVoiceCapture = (inputEl, btnEl) => {
     if (isRecording) {
       isRecording = false;
       voiceRecognition.stop();
       return;
     }
     voiceFinalTranscript = "";
-    els.chatInput.value = "";
+    inputEl.value = "";
+    voiceTargetInput = inputEl;
+    voiceTargetBtn = btnEl;
     isRecording = true;
-    els.voiceInputBtn.classList.add("recording");
+    btnEl.classList.add("recording");
     voiceRecognition.start();
+  };
+
+  els.voiceInputBtn.addEventListener("click", () => {
+    toggleVoiceCapture(els.chatInput, els.voiceInputBtn);
+  });
+  els.thoughtVoiceBtn.addEventListener("click", () => {
+    toggleVoiceCapture(els.thoughtInput, els.thoughtVoiceBtn);
   });
 }
 
@@ -395,6 +412,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       clients: "clients-section",
       calendar: "calendar-section",
       files: "files-section",
+      thoughts: "thoughts-section",
     };
     if (target === "overview") {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
@@ -944,6 +962,55 @@ async function loadTasks() {
   }
 }
 
+async function loadThoughts() {
+  try {
+    const thoughts = await apiFetch("/thoughts");
+    els.thoughtsList.innerHTML = "";
+    els.thoughtsEmpty.hidden = thoughts.length > 0;
+    for (const thought of thoughts) {
+      const row = document.createElement("div");
+      row.className = "thought-row";
+      const content = document.createElement("span");
+      content.className = "thought-content";
+      content.textContent = thought.content;
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "task-delete-btn";
+      deleteBtn.title = "מחיקת מחשבה";
+      deleteBtn.textContent = "✕";
+      deleteBtn.addEventListener("click", async () => {
+        if (!confirm("למחוק את המחשבה הזאת?")) return;
+        await apiFetch(`/thoughts/${thought.id}`, { method: "DELETE" });
+        loadThoughts();
+      });
+      row.appendChild(content);
+      row.appendChild(deleteBtn);
+      els.thoughtsList.appendChild(row);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
+els.thoughtSaveBtn.addEventListener("click", async () => {
+  const content = els.thoughtInput.value.trim();
+  if (!content) return;
+  try {
+    await apiFetch("/thoughts", { method: "POST", body: JSON.stringify({ content }) });
+    els.thoughtInput.value = "";
+    loadThoughts();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.thoughtInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    els.thoughtSaveBtn.click();
+  }
+});
+
 function toDatetimeLocalValue(isoString) {
   const date = new Date(isoString);
   const yyyy = date.getFullYear();
@@ -1424,6 +1491,7 @@ function refreshWorkspace() {
   loadFiles();
   loadActivity();
   loadNotifications();
+  loadThoughts();
 }
 
 if ("serviceWorker" in navigator) {

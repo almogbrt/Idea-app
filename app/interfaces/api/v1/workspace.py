@@ -23,6 +23,7 @@ from app.domain.entities import (
     Project,
     ProjectSummary,
     Task,
+    Thought,
     User,
 )
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
@@ -34,10 +35,12 @@ from app.interfaces.api.schemas.workspace import (
     CreateClientRequest,
     CreateProjectRequest,
     CreateTaskRequest,
+    CreateThoughtRequest,
     DashboardSummaryView,
     NotificationView,
     ProjectView,
     TaskView,
+    ThoughtView,
     UpdateClientRequest,
     UpdateProjectTypeRequest,
     UpdateTaskRequest,
@@ -60,6 +63,11 @@ def _ensure_project_owned_by(project: Project, user: User) -> None:
 def _ensure_task_owned_by(task: Task, user: User) -> None:
     if task.user_id != user.id:
         raise ForbiddenError("This task does not belong to you.")
+
+
+def _ensure_thought_owned_by(thought: Thought, user: User) -> None:
+    if thought.user_id != user.id:
+        raise ForbiddenError("This thought does not belong to you.")
 
 
 @router.get("/dashboard/summary", response_model=DashboardSummaryView)
@@ -351,6 +359,40 @@ async def delete_task(
     existing = await scope.manage_tasks.get_or_raise(task_id)
     _ensure_task_owned_by(existing, user)
     await scope.manage_tasks.delete(task_id)
+
+
+def _thought_view(thought: Thought) -> ThoughtView:
+    return ThoughtView(id=thought.id, content=thought.content, created_at=thought.created_at)
+
+
+@router.get("/thoughts", response_model=list[ThoughtView])
+async def list_thoughts(
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> list[ThoughtView]:
+    thoughts = await scope.manage_thoughts.list_all(user.id)
+    return [_thought_view(t) for t in thoughts]
+
+
+@router.post("/thoughts", response_model=ThoughtView)
+async def create_thought(
+    body: CreateThoughtRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ThoughtView:
+    thought = await scope.manage_thoughts.create(user.id, body.content)
+    return _thought_view(thought)
+
+
+@router.delete("/thoughts/{thought_id}", status_code=204)
+async def delete_thought(
+    thought_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    existing = await scope.manage_thoughts.get_or_raise(thought_id)
+    _ensure_thought_owned_by(existing, user)
+    await scope.manage_thoughts.delete(thought_id)
 
 
 def _notification_view(notification: Notification) -> NotificationView:

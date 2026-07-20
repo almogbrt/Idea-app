@@ -14,6 +14,7 @@ from app.domain.entities import (
     ProjectType,
     Task,
     TaskStatus,
+    Thought,
     ToolResult,
 )
 
@@ -68,6 +69,10 @@ def _client_detail_json(detail: ClientDetail) -> dict[str, Any]:
         "projects": [_project_summary_json(s) for s in detail.projects],
         "tasks": [_task_json(t) for t in detail.tasks],
     }
+
+
+def _thought_json(thought: Thought) -> dict[str, Any]:
+    return {"id": str(thought.id), "content": thought.content}
 
 
 class CreateClientTool(Tool):
@@ -503,4 +508,28 @@ class ListTasksTool(Tool):
         tasks = await self._service.list_tasks(context.user_id)
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps([_task_json(t) for t in tasks])
+        )
+
+
+class CreateThoughtTool(Tool):
+    name = "workspace_create_thought"
+    description = (
+        "Jot down a quick, freeform thought or idea — not tied to any client, project, "
+        "or task. Use this when the user just wants to get an idea down, not create "
+        "a task or a note about a specific client."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"content": {"type": "string", "description": "The thought's text."}},
+        "required": ["content"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        thought = await self._service.create_thought(context.user_id, arguments["content"])
+        return ToolResult(
+            tool_call_id="", tool_name=self.name, content=json.dumps(_thought_json(thought))
         )

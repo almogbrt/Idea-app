@@ -39,6 +39,7 @@ from app.infrastructure.db.repositories.oauth_token_repository import (
 )
 from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
+from app.infrastructure.db.repositories.thought_repository import SqlAlchemyThoughtRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from tests.integration.conftest import requires_postgres
 
@@ -369,3 +370,25 @@ async def test_task_repository_round_trip_and_count_open(db_session: AsyncSessio
     assert await tasks_repo.count_open(user.id) == 1
     tasks = await tasks_repo.list_by_user(user.id)
     assert {t.title for t in tasks} == {"Task A", "Task B"}
+
+
+async def test_thought_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-thoughts-1", "thoughts-owner@example.com", "Owner")
+
+    thoughts_repo = SqlAlchemyThoughtRepository(db_session)
+    thought = await thoughts_repo.create(user.id, "Call the accountant")
+    await thoughts_repo.create(user.id, "Buy more coffee")
+
+    thoughts = await thoughts_repo.list_by_user(user.id)
+    assert {t.content for t in thoughts} == {"Call the accountant", "Buy more coffee"}
+
+    fetched = await thoughts_repo.get(thought.id)
+    assert fetched is not None
+    assert fetched.content == "Call the accountant"
+
+    await thoughts_repo.delete(thought.id)
+    assert await thoughts_repo.get(thought.id) is None
+
+    with pytest.raises(NotFoundError):
+        await thoughts_repo.delete(thought.id)

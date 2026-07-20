@@ -27,10 +27,12 @@ from app.domain.entities import (
     ProjectType,
     Task,
     TaskStatus,
+    Thought,
 )
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
+from app.infrastructure.db.repositories.thought_repository import SqlAlchemyThoughtRepository
 
 
 class WorkspaceService:
@@ -235,6 +237,15 @@ class WorkspaceService:
             )
             await session.commit()
             return updated
+
+    async def create_thought(self, user_id: uuid.UUID, content: str) -> Thought:
+        stripped = content.strip()
+        if not stripped:
+            raise ValidationError("A thought needs some content.")
+        async with self._session_factory() as session:
+            thought = await SqlAlchemyThoughtRepository(session).create(user_id, stripped)
+            await session.commit()
+            return thought
 
     @staticmethod
     async def _find_client(session: AsyncSession, user_id: uuid.UUID, name: str) -> Client | None:

@@ -20,6 +20,7 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.project_repository import ProjectRepositoryPort
 from app.application.ports.schedule import SchedulePort
 from app.application.ports.task_repository import TaskRepositoryPort
+from app.application.ports.thought_repository import ThoughtRepositoryPort
 from app.core.exceptions import AuthError, ExternalServiceError, NotFoundError, ValidationError
 from app.core.logging import get_logger
 from app.domain.entities import (
@@ -31,6 +32,7 @@ from app.domain.entities import (
     ProjectType,
     Task,
     TaskStatus,
+    Thought,
 )
 
 logger = get_logger(__name__)
@@ -226,6 +228,29 @@ class ManageTasksUseCase:
         if task is None:
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         return task
+
+
+class ManageThoughtsUseCase:
+    def __init__(self, thought_repository: ThoughtRepositoryPort) -> None:
+        self._thoughts = thought_repository
+
+    async def create(self, user_id: uuid.UUID, content: str) -> Thought:
+        stripped = content.strip()
+        if not stripped:
+            raise ValidationError("A thought needs some content.")
+        return await self._thoughts.create(user_id, stripped)
+
+    async def list_all(self, user_id: uuid.UUID) -> list[Thought]:
+        return await self._thoughts.list_by_user(user_id)
+
+    async def get_or_raise(self, thought_id: uuid.UUID) -> Thought:
+        thought = await self._thoughts.get(thought_id)
+        if thought is None:
+            raise NotFoundError("Thought not found", details={"thought_id": str(thought_id)})
+        return thought
+
+    async def delete(self, thought_id: uuid.UUID) -> None:
+        await self._thoughts.delete(thought_id)
 
 
 @dataclass(frozen=True, slots=True)

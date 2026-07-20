@@ -13,6 +13,7 @@ from app.application.use_cases.manage_workspace import (
     ManageClientsUseCase,
     ManageProjectsUseCase,
     ManageTasksUseCase,
+    ManageThoughtsUseCase,
 )
 from app.core.exceptions import ExternalServiceError, NotFoundError, ValidationError
 from app.domain.entities import (
@@ -27,6 +28,7 @@ from tests.conftest import (
     FakeClientRepository,
     FakeProjectRepository,
     FakeTaskRepository,
+    FakeThoughtRepository,
 )
 
 
@@ -378,3 +380,45 @@ async def test_list_activity_returns_only_requesting_users_executions(
 
     assert len(results) == 1
     assert results[0].user_id == user_id
+
+
+async def test_manage_thoughts_create_and_list(
+    fake_thought_repository: FakeThoughtRepository,
+) -> None:
+    user_id = uuid.uuid4()
+    use_case = ManageThoughtsUseCase(fake_thought_repository)
+
+    thought = await use_case.create(user_id, "  call the accountant tomorrow  ")
+
+    assert thought.content == "call the accountant tomorrow"
+    results = await use_case.list_all(user_id)
+    assert results == [thought]
+
+
+async def test_manage_thoughts_create_rejects_blank_content(
+    fake_thought_repository: FakeThoughtRepository,
+) -> None:
+    use_case = ManageThoughtsUseCase(fake_thought_repository)
+
+    with pytest.raises(ValidationError):
+        await use_case.create(uuid.uuid4(), "   ")
+
+
+async def test_manage_thoughts_get_or_raise_not_found(
+    fake_thought_repository: FakeThoughtRepository,
+) -> None:
+    use_case = ManageThoughtsUseCase(fake_thought_repository)
+
+    with pytest.raises(NotFoundError):
+        await use_case.get_or_raise(uuid.uuid4())
+
+
+async def test_manage_thoughts_delete(
+    fake_thought_repository: FakeThoughtRepository,
+) -> None:
+    use_case = ManageThoughtsUseCase(fake_thought_repository)
+    thought = await use_case.create(uuid.uuid4(), "an idea")
+
+    await use_case.delete(thought.id)
+
+    assert await use_case.list_all(thought.user_id) == []

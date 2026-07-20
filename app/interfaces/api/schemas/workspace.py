@@ -94,6 +94,16 @@ class UpdateTaskRequest(BaseModel):
     start_at: datetime | None = None
 
 
+class ThoughtView(BaseModel):
+    id: uuid.UUID
+    content: str
+    created_at: datetime
+
+
+class CreateThoughtRequest(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
 class ClientDetailView(BaseModel):
     client: ClientView
     projects: list[ProjectView]

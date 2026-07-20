@@ -25,6 +25,7 @@ from app.application.ports.notification_repository import NotificationRepository
 from app.application.ports.oauth_token_repository import OAuthTokenRepositoryPort
 from app.application.ports.project_repository import ProjectRepositoryPort
 from app.application.ports.task_repository import TaskRepositoryPort
+from app.application.ports.thought_repository import ThoughtRepositoryPort
 from app.application.ports.user_repository import UserRepositoryPort
 from app.core.exceptions import NotFoundError
 from app.domain.entities import (
@@ -40,6 +41,7 @@ from app.domain.entities import (
     ProjectType,
     Task,
     TaskStatus,
+    Thought,
     ToolDefinition,
     User,
 )
@@ -338,6 +340,29 @@ class FakeTaskRepository(TaskRepositoryPort):
         )
 
 
+class FakeThoughtRepository(ThoughtRepositoryPort):
+    def __init__(self) -> None:
+        self.thoughts: dict[uuid.UUID, Thought] = {}
+
+    async def create(self, user_id: uuid.UUID, content: str) -> Thought:
+        thought = Thought(
+            id=uuid.uuid4(), user_id=user_id, content=content, created_at=datetime.now(UTC)
+        )
+        self.thoughts[thought.id] = thought
+        return thought
+
+    async def list_by_user(self, user_id: uuid.UUID) -> list[Thought]:
+        return [t for t in self.thoughts.values() if t.user_id == user_id]
+
+    async def get(self, thought_id: uuid.UUID) -> Thought | None:
+        return self.thoughts.get(thought_id)
+
+    async def delete(self, thought_id: uuid.UUID) -> None:
+        if thought_id not in self.thoughts:
+            raise NotFoundError("Thought not found", details={"thought_id": str(thought_id)})
+        del self.thoughts[thought_id]
+
+
 class FakeOAuthTokenRepository(OAuthTokenRepositoryPort):
     def __init__(self) -> None:
         self.tokens: dict[tuple[uuid.UUID, str], OAuthTokenSet] = {}
@@ -508,6 +533,11 @@ def fake_project_repository(
 @pytest.fixture
 def fake_task_repository() -> FakeTaskRepository:
     return FakeTaskRepository()
+
+
+@pytest.fixture
+def fake_thought_repository() -> FakeThoughtRepository:
+    return FakeThoughtRepository()
 
 
 @pytest.fixture

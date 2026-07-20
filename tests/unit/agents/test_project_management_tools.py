@@ -11,6 +11,7 @@ from app.agents.project_management.tools import (
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
+    CreateThoughtTool,
     DeleteClientTool,
     DeleteProjectTool,
     DeleteTaskTool,
@@ -23,6 +24,7 @@ from app.agents.project_management.tools import (
     UpdateTaskStatusTool,
 )
 from app.application.ports.agent_tool import ToolExecutionContext
+from app.core.exceptions import ValidationError
 from app.domain.entities import (
     Client,
     ClientDetail,
@@ -31,6 +33,7 @@ from app.domain.entities import (
     ProjectType,
     Task,
     TaskStatus,
+    Thought,
 )
 
 
@@ -228,6 +231,15 @@ class _FakeWorkspaceService:
                 updated_at=now,
             )
         ]
+
+    async def create_thought(self, user_id: uuid.UUID, content: str) -> Thought:
+        self.calls.append(("create_thought", (user_id, content)))
+        stripped = content.strip()
+        if not stripped:
+            raise ValidationError("A thought needs some content.")
+        return Thought(
+            id=uuid.uuid4(), user_id=user_id, content=stripped, created_at=datetime.now(UTC)
+        )
 
 
 def _context() -> ToolExecutionContext:
@@ -543,3 +555,14 @@ async def test_list_tasks_tool() -> None:
 
     tasks = json.loads(result.content)
     assert tasks[0]["title"] == "Prep summer menu"
+
+
+async def test_create_thought_tool() -> None:
+    service = _FakeWorkspaceService()
+    tool = CreateThoughtTool(service)
+    context = _context()
+
+    result = await tool.execute({"content": "call the accountant tomorrow"}, context)
+
+    assert service.calls == [("create_thought", (context.user_id, "call the accountant tomorrow"))]
+    assert json.loads(result.content)["content"] == "call the accountant tomorrow"

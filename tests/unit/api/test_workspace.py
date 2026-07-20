@@ -21,6 +21,7 @@ from app.application.use_cases.manage_workspace import (
     ManageClientsUseCase,
     ManageProjectsUseCase,
     ManageTasksUseCase,
+    ManageThoughtsUseCase,
 )
 from app.core import config as config_module
 from app.core.container import RequestScopedServices
@@ -33,6 +34,7 @@ from tests.conftest import (
     FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
+    FakeThoughtRepository,
     FakeUserRepository,
 )
 
@@ -139,6 +141,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     clients_repo = FakeClientRepository()
     projects_repo = FakeProjectRepository(clients_repo)
     tasks_repo = FakeTaskRepository()
+    thoughts_repo = FakeThoughtRepository()
     executions_repo = FakeAgentExecutionRepository()
     notifications_repo = FakeNotificationRepository()
     users_repo = FakeUserRepository()
@@ -153,6 +156,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo, logo_storage),
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
+        manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
         dashboard_summary=DashboardSummaryUseCase(
             projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),
@@ -170,6 +174,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "clients_repo": clients_repo,
         "projects_repo": projects_repo,
         "tasks_repo": tasks_repo,
+        "thoughts_repo": thoughts_repo,
         "executions_repo": executions_repo,
         "notifications_repo": notifications_repo,
         "calendar_port": calendar_port,
@@ -683,3 +688,46 @@ def test_create_list_and_share_file(client: TestClient) -> None:
     assert share_response.status_code == 204
     drive_port: _FakeDrive = resources["drive_port"]  # type: ignore[assignment]
     assert drive_port.shares == [(file_id, "friend@example.com", "writer")]
+
+
+def test_create_and_list_thoughts(client: TestClient) -> None:
+    _install_scope(client)
+
+    create_response = client.post("/api/v1/thoughts", json={"content": "call the accountant"})
+    assert create_response.status_code == 200
+    assert create_response.json()["content"] == "call the accountant"
+
+    list_response = client.get("/api/v1/thoughts")
+    assert [t["content"] for t in list_response.json()] == ["call the accountant"]
+
+
+def test_create_thought_rejects_blank_content(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.post("/api/v1/thoughts", json={"content": "   "})
+
+    assert response.status_code == 422
+
+
+def test_delete_thought_removes_it(client: TestClient) -> None:
+    _install_scope(client)
+    thought = client.post("/api/v1/thoughts", json={"content": "Throwaway"}).json()
+
+    response = client.delete(f"/api/v1/thoughts/{thought['id']}")
+    assert response.status_code == 204
+
+    list_response = client.get("/api/v1/thoughts")
+    assert list_response.json() == []
+
+
+def test_delete_thought_rejects_other_users_thought(client: TestClient) -> None:
+    resources = _install_scope(client)
+    thought = client.post("/api/v1/thoughts", json={"content": "Not yours"}).json()
+
+    thoughts_repo = resources["thoughts_repo"]
+    stored = thoughts_repo.thoughts[uuid.UUID(thought["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.delete(f"/api/v1/thoughts/{thought['id']}")
+
+    assert response.status_code == 403

@@ -216,6 +216,18 @@ class DriveFile:
 
 
 @dataclass(slots=True)
+class Thought:
+    """A quick, freeform jotted-down idea — typed or dictated, not tied to
+    any client/project/task. The in-house replacement for a third-party
+    handwriting-notes app, since we can't reliably deep-link into one."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    content: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
 class Notification:
     """A reminder surfaced in the dashboard bell (and mirrored by email).
     `related_id` points at the `Task` or `Client` that triggered it, depending

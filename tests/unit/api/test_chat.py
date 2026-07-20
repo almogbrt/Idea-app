@@ -21,6 +21,7 @@ from app.application.use_cases.manage_workspace import (
     ManageClientsUseCase,
     ManageProjectsUseCase,
     ManageTasksUseCase,
+    ManageThoughtsUseCase,
 )
 from app.core.container import RequestScopedServices
 from app.domain.entities import (
@@ -39,6 +40,7 @@ from tests.conftest import (
     FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
+    FakeThoughtRepository,
     FakeUserRepository,
 )
 
@@ -111,6 +113,7 @@ def _workspace_kwargs() -> dict[str, object]:
         ),
         "manage_projects": ManageProjectsUseCase(projects_repo),
         "manage_tasks": ManageTasksUseCase(tasks_repo),
+        "manage_thoughts": ManageThoughtsUseCase(FakeThoughtRepository()),
         "dashboard_summary": DashboardSummaryUseCase(
             projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
         ),

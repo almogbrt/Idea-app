@@ -173,6 +173,16 @@ class TaskModel(Base):
     start_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
 
 
+class ThoughtModel(Base):
+    __tablename__ = "thoughts"
+    __table_args__ = (Index("ix_thoughts_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    content: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
 class NotificationModel(Base):
     __tablename__ = "notifications"
     __table_args__ = (

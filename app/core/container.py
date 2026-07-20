@@ -37,6 +37,7 @@ from app.application.use_cases.manage_workspace import (
     ManageClientsUseCase,
     ManageProjectsUseCase,
     ManageTasksUseCase,
+    ManageThoughtsUseCase,
 )
 from app.application.use_cases.memory_use_cases import RetrieveMemoryUseCase, StoreMemoryUseCase
 from app.core.config import SecretManagerBackend, Settings
@@ -62,6 +63,7 @@ from app.infrastructure.db.repositories.oauth_token_repository import (
 )
 from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
+from app.infrastructure.db.repositories.thought_repository import SqlAlchemyThoughtRepository
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import create_engine, create_session_factory
 from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
@@ -85,6 +87,7 @@ class RequestScopedServices:
     manage_clients: ManageClientsUseCase
     manage_projects: ManageProjectsUseCase
     manage_tasks: ManageTasksUseCase
+    manage_thoughts: ManageThoughtsUseCase
     dashboard_summary: DashboardSummaryUseCase
     list_activity: ListActivityUseCase
     manage_notifications: ManageNotificationsUseCase
@@ -170,6 +173,7 @@ class Container:
         clients_repo = SqlAlchemyClientRepository(session)
         projects_repo = SqlAlchemyProjectRepository(session)
         tasks_repo = SqlAlchemyTaskRepository(session)
+        thoughts_repo = SqlAlchemyThoughtRepository(session)
         notifications_repo = SqlAlchemyNotificationRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
@@ -201,6 +205,7 @@ class Container:
             ),
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),
+            manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
             dashboard_summary=DashboardSummaryUseCase(
                 projects_repo, tasks_repo, clients_repo, self.inbox_port, self.schedule_port
             ),
