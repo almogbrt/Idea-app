@@ -44,7 +44,6 @@ const els = {
   clientEditName: document.getElementById("client-edit-name"),
   clientEditEmail: document.getElementById("client-edit-email"),
   clientEditPhone: document.getElementById("client-edit-phone"),
-  clientEditFollowup: document.getElementById("client-edit-followup"),
   clientEditNotes: document.getElementById("client-edit-notes"),
   clientModalProjects: document.getElementById("client-modal-projects"),
   clientModalSave: document.getElementById("client-modal-save"),
@@ -612,9 +611,6 @@ async function openClientModal(clientId) {
     els.clientEditName.value = detail.client.name;
     els.clientEditEmail.value = detail.client.email || "";
     els.clientEditPhone.value = detail.client.phone || "";
-    els.clientEditFollowup.value = detail.client.next_follow_up_at
-      ? detail.client.next_follow_up_at.slice(0, 10)
-      : "";
     els.clientEditNotes.value = detail.client.notes || "";
 
     renderClientModalProjectGroups(detail.projects, detail.tasks);
@@ -783,7 +779,6 @@ els.clientModalCancel.addEventListener("click", () => {
 els.clientModalSave.addEventListener("click", async () => {
   if (!currentClientId) return;
   try {
-    const followupValue = els.clientEditFollowup.value;
     await apiFetch(`/clients/${currentClientId}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -791,7 +786,6 @@ els.clientModalSave.addEventListener("click", async () => {
         email: els.clientEditEmail.value.trim() || null,
         phone: els.clientEditPhone.value.trim() || null,
         notes: els.clientEditNotes.value.trim() || null,
-        next_follow_up_at: followupValue ? new Date(followupValue).toISOString() : null,
       }),
     });
     els.clientModal.hidden = true;
@@ -1124,9 +1118,6 @@ async function loadClients() {
     for (const c of clientsList) {
       const tr = document.createElement("tr");
       tr.className = "clickable-row";
-      const followup = c.next_follow_up_at
-        ? new Date(c.next_follow_up_at).toLocaleDateString("he-IL")
-        : "—";
       const clientTasks = tasksByClient.get(c.id) || [];
       const tasksHtml = clientTasks.length
         ? `<div class="clients-table-tasks">${clientTasks
@@ -1140,7 +1131,6 @@ async function loadClients() {
         <td>${clientAvatarHtml(c)}${escapeHtml(c.name)}${tasksHtml}</td>
         <td>${c.email ? escapeHtml(c.email) : "—"}</td>
         <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
-        <td>${followup}</td>
       `;
       tr.addEventListener("click", () => openClientModal(c.id));
       els.clientsTbody.appendChild(tr);

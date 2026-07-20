@@ -161,7 +161,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         list_activity=ListActivityUseCase(executions_repo),
         manage_notifications=ManageNotificationsUseCase(notifications_repo),
         check_reminders=CheckRemindersUseCase(
-            users_repo, tasks_repo, clients_repo, notifications_repo, _NullEmailSender()
+            users_repo, tasks_repo, notifications_repo, _NullEmailSender()
         ),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER

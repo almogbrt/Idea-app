@@ -209,7 +209,6 @@ class Container:
             check_reminders=CheckRemindersUseCase(
                 user_repository=users,
                 task_repository=tasks_repo,
-                client_repository=clients_repo,
                 notification_repository=notifications_repo,
                 email_sender=self.email_sender_port,
             ),

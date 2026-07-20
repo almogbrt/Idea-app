@@ -42,7 +42,6 @@ class NotificationKind(StrEnum):
     TASK_DUE_SOON = "task_due_soon"
     TASK_OVERDUE = "task_overdue"
     TASK_ENDING_SOON = "task_ending_soon"
-    CLIENT_FOLLOW_UP_DUE = "client_follow_up_due"
 
 
 @dataclass(slots=True)
@@ -136,7 +135,6 @@ class Client:
     email: str | None = None
     phone: str | None = None
     notes: str | None = None
-    next_follow_up_at: datetime | None = None
     logo_file_id: str | None = None
     """Google Drive file id of the client's logo image, if one was uploaded."""
 

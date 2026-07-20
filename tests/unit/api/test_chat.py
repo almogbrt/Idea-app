@@ -119,7 +119,6 @@ def _workspace_kwargs() -> dict[str, object]:
         "check_reminders": CheckRemindersUseCase(
             FakeUserRepository(),
             tasks_repo,
-            clients_repo,
             notifications_repo,
             _NullEmailSender(),
         ),

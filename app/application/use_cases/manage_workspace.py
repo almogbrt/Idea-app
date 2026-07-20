@@ -77,7 +77,6 @@ class ManageClientsUseCase:
         email: str | None = None,
         phone: str | None = None,
         notes: str | None = None,
-        next_follow_up_at: datetime | None = None,
     ) -> Client:
         return await self._clients.update(
             client_id,
@@ -85,7 +84,6 @@ class ManageClientsUseCase:
             email=email,
             phone=phone,
             notes=notes,
-            next_follow_up_at=next_follow_up_at,
         )
 
     async def delete(self, client_id: uuid.UUID) -> None:

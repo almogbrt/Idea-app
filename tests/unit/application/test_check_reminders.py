@@ -9,7 +9,6 @@ from app.application.use_cases.manage_notifications import ManageNotificationsUs
 from app.core.exceptions import AppError, AuthError, ExternalServiceError
 from app.domain.entities import NotificationKind, TaskStatus
 from tests.conftest import (
-    FakeClientRepository,
     FakeNotificationRepository,
     FakeTaskRepository,
     FakeUserRepository,
@@ -30,17 +29,15 @@ class _FakeEmailSender(EmailSenderPort):
 async def _make_use_case(
     users: FakeUserRepository,
     tasks: FakeTaskRepository,
-    clients: FakeClientRepository,
     notifications: FakeNotificationRepository,
     email_sender: EmailSenderPort,
 ) -> CheckRemindersUseCase:
-    return CheckRemindersUseCase(users, tasks, clients, notifications, email_sender)
+    return CheckRemindersUseCase(users, tasks, notifications, email_sender)
 
 
 async def test_raises_overdue_notification_and_sends_email(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     user = await fake_user_repository.create("sub-1", "owner@example.com", "Owner")
@@ -51,7 +48,6 @@ async def test_raises_overdue_notification_and_sends_email(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=email_sender,
     )
@@ -69,7 +65,6 @@ async def test_raises_overdue_notification_and_sends_email(
 async def test_raises_due_soon_notification_for_task_due_within_24h(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     user = await fake_user_repository.create("sub-2", "owner2@example.com", "Owner")
@@ -79,7 +74,6 @@ async def test_raises_due_soon_notification_for_task_due_within_24h(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=_FakeEmailSender(),
     )
@@ -94,7 +88,6 @@ async def test_raises_due_soon_notification_for_task_due_within_24h(
 async def test_raises_ending_soon_notification_for_task_due_within_10_minutes(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     user = await fake_user_repository.create("sub-2b", "owner2b@example.com", "Owner")
@@ -104,7 +97,6 @@ async def test_raises_ending_soon_notification_for_task_due_within_10_minutes(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=_FakeEmailSender(),
     )
@@ -122,7 +114,6 @@ async def test_raises_ending_soon_notification_for_task_due_within_10_minutes(
 async def test_does_not_notify_for_done_task_or_far_future_task(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     user = await fake_user_repository.create("sub-3", "owner3@example.com", "Owner")
@@ -137,7 +128,6 @@ async def test_does_not_notify_for_done_task_or_far_future_task(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=_FakeEmailSender(),
     )
@@ -151,7 +141,6 @@ async def test_does_not_notify_for_done_task_or_far_future_task(
 async def test_is_idempotent_across_repeated_runs(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     user = await fake_user_repository.create("sub-4", "owner4@example.com", "Owner")
@@ -162,7 +151,6 @@ async def test_is_idempotent_across_repeated_runs(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=email_sender,
     )
@@ -175,37 +163,9 @@ async def test_is_idempotent_across_repeated_runs(
     assert len(email_sender.sent) == 1
 
 
-async def test_raises_client_follow_up_notification(
-    fake_user_repository: FakeUserRepository,
-    fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
-    fake_notification_repository: FakeNotificationRepository,
-) -> None:
-    user = await fake_user_repository.create("sub-5", "owner5@example.com", "Owner")
-    client = await fake_client_repository.create(user.id, "Baron's")
-    await fake_client_repository.update(
-        client.id, next_follow_up_at=datetime.now(UTC) - timedelta(hours=1)
-    )
-
-    use_case = await _make_use_case(
-        fake_user_repository,
-        fake_task_repository,
-        fake_client_repository,
-        notifications=fake_notification_repository,
-        email_sender=_FakeEmailSender(),
-    )
-
-    raised = await use_case.execute()
-
-    assert raised == 1
-    unread = await fake_notification_repository.list_unread(user.id)
-    assert unread[0].kind == NotificationKind.CLIENT_FOLLOW_UP_DUE
-
-
 async def test_survives_email_send_failure(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     """Email delivery is best-effort — a down Gmail connection must not stop
@@ -218,7 +178,6 @@ async def test_survives_email_send_failure(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=_FakeEmailSender(fail_with=ExternalServiceError),
     )
@@ -233,13 +192,12 @@ async def test_survives_email_send_failure(
 async def test_survives_email_send_failure_when_google_account_not_linked(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
-    fake_client_repository: FakeClientRepository,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
     """Regression test: an owner who hasn't linked Google yet (or whose token
     expired) makes `GmailClient.send_message` raise `AuthError`, not
     `ExternalServiceError` — that must not abort the rest of the sweep either,
-    or every other due task/client silently stops getting notified."""
+    or every other due task silently stops getting notified."""
     user = await fake_user_repository.create("sub-7", "owner7@example.com", "Owner")
     await fake_task_repository.create(
         user.id, "Overdue task", due_at=datetime.now(UTC) - timedelta(days=1)
@@ -250,7 +208,6 @@ async def test_survives_email_send_failure_when_google_account_not_linked(
     use_case = await _make_use_case(
         fake_user_repository,
         fake_task_repository,
-        fake_client_repository,
         notifications=fake_notification_repository,
         email_sender=_FakeEmailSender(fail_with=AuthError),
     )

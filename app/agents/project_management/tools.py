@@ -31,9 +31,6 @@ def _client_json(client: Client) -> dict[str, Any]:
         "email": client.email,
         "phone": client.phone,
         "notes": client.notes,
-        "next_follow_up_at": client.next_follow_up_at.isoformat()
-        if client.next_follow_up_at
-        else None,
     }
 
 

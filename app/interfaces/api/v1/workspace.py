@@ -103,7 +103,6 @@ def _client_view(client: Client) -> ClientView:
         email=client.email,
         phone=client.phone,
         notes=client.notes,
-        next_follow_up_at=client.next_follow_up_at,
         has_logo=client.logo_file_id is not None,
     )
 
@@ -158,7 +157,6 @@ async def update_client(
         email=body.email,
         phone=body.phone,
         notes=body.notes,
-        next_follow_up_at=body.next_follow_up_at,
     )
     return _client_view(updated)
 

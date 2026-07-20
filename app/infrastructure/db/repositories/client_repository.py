@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +43,6 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
         email: str | None = None,
         phone: str | None = None,
         notes: str | None = None,
-        next_follow_up_at: datetime | None = None,
         logo_file_id: str | None = None,
     ) -> Client:
         row = await self._session.get(ClientModel, client_id)
@@ -58,8 +56,6 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
             row.phone = phone
         if notes is not None:
             row.notes = notes
-        if next_follow_up_at is not None:
-            row.next_follow_up_at = next_follow_up_at
         if logo_file_id is not None:
             row.logo_file_id = logo_file_id
         await self._session.flush()
@@ -87,6 +83,5 @@ class SqlAlchemyClientRepository(ClientRepositoryPort):
             email=row.email,
             phone=row.phone,
             notes=row.notes,
-            next_follow_up_at=row.next_follow_up_at,
             logo_file_id=row.logo_file_id,
         )

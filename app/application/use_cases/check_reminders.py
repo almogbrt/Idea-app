@@ -9,7 +9,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.notification_repository import NotificationRepositoryPort
 from app.application.ports.task_repository import TaskRepositoryPort
@@ -33,13 +32,11 @@ class CheckRemindersUseCase:
         self,
         user_repository: UserRepositoryPort,
         task_repository: TaskRepositoryPort,
-        client_repository: ClientRepositoryPort,
         notification_repository: NotificationRepositoryPort,
         email_sender: EmailSenderPort,
     ) -> None:
         self._users = user_repository
         self._tasks = task_repository
-        self._clients = client_repository
         self._notifications = notification_repository
         self._email_sender = email_sender
 
@@ -51,7 +48,6 @@ class CheckRemindersUseCase:
         raised = 0
         for user in await self._users.list_all():
             raised += await self._check_tasks(user, now, due_soon_cutoff, ending_soon_cutoff)
-            raised += await self._check_client_follow_ups(user, now)
         return raised
 
     async def _check_tasks(
@@ -92,23 +88,6 @@ class CheckRemindersUseCase:
                     title=f"משימה מתקרבת: {task.title}",
                     body=f'המשימה "{task.title}" מתוכננת להסתיים ב-{task.due_at:%d/%m/%Y %H:%M}.',
                 )
-        return raised
-
-    async def _check_client_follow_ups(self, user: User, now: datetime) -> int:
-        raised = 0
-        for client in await self._clients.list_by_user(user.id):
-            if client.next_follow_up_at is None or client.next_follow_up_at > now:
-                continue
-            raised += await self._raise_once(
-                user,
-                NotificationKind.CLIENT_FOLLOW_UP_DUE,
-                client.id,
-                title=f"מעקב לקוח: {client.name}",
-                body=(
-                    f'הגיע הזמן ליצור קשר עם "{client.name}" '
-                    f"(תאריך מעקב: {client.next_follow_up_at:%d/%m/%Y})."
-                ),
-            )
         return raised
 
     async def _raise_once(

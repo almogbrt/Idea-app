@@ -135,7 +135,6 @@ class FakeClientRepository(ClientRepositoryPort):
         email: str | None = None,
         phone: str | None = None,
         notes: str | None = None,
-        next_follow_up_at: datetime | None = None,
         logo_file_id: str | None = None,
     ) -> Client:
         client = self.clients.get(client_id)
@@ -149,8 +148,6 @@ class FakeClientRepository(ClientRepositoryPort):
             client.phone = phone
         if notes is not None:
             client.notes = notes
-        if next_follow_up_at is not None:
-            client.next_follow_up_at = next_follow_up_at
         if logo_file_id is not None:
             client.logo_file_id = logo_file_id
         return client

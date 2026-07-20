@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 from app.domain.entities import Client
 
@@ -29,7 +28,6 @@ class ClientRepositoryPort(ABC):
         email: str | None = None,
         phone: str | None = None,
         notes: str | None = None,
-        next_follow_up_at: datetime | None = None,
         logo_file_id: str | None = None,
     ) -> Client:
         """Only fields explicitly passed are changed; omitted (`None`) fields

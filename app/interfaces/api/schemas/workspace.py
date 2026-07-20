@@ -15,7 +15,6 @@ class ClientView(BaseModel):
     email: str | None = None
     phone: str | None = None
     notes: str | None = None
-    next_follow_up_at: datetime | None = None
     has_logo: bool = False
 
 
@@ -28,7 +27,6 @@ class UpdateClientRequest(BaseModel):
     email: str | None = None
     phone: str | None = None
     notes: str | None = None
-    next_follow_up_at: datetime | None = None
 
 
 class ProjectView(BaseModel):
