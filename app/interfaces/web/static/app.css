@@ -1292,25 +1292,26 @@ input {
 .client-modal-new-task {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin-top: 8px;
 }
 
 .client-modal-new-task input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  border-radius: 8px;
+  flex: 2 1 180px;
+  min-width: 140px;
+  padding: 12px 16px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
   outline: none;
 }
 
 .client-modal-new-task input[type="datetime-local"] {
   flex: 1 1 170px;
+  min-width: 170px;
 }
 
 .client-modal-new-task input:focus {
@@ -1320,20 +1321,20 @@ input {
 .client-modal-new-project {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin-top: 8px;
 }
 
 .client-modal-new-project input,
 .client-modal-new-project select {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  border-radius: 8px;
+  flex: 2 1 160px;
+  min-width: 140px;
+  padding: 12px 16px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
 }
 
