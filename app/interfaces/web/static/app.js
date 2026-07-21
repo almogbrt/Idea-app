@@ -24,7 +24,7 @@ const els = {
   shell: document.getElementById("shell"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),
-  clientsTbody: document.getElementById("clients-tbody"),
+  clientsGrid: document.getElementById("clients-grid"),
   clientsEmpty: document.getElementById("clients-empty"),
   newClientBtn: document.getElementById("new-client-btn"),
   newClientModal: document.getElementById("new-client-modal"),
@@ -1146,37 +1146,34 @@ async function loadClients() {
       if (!projectsByClient.has(p.client_id)) projectsByClient.set(p.client_id, []);
       projectsByClient.get(p.client_id).push(p);
     }
-    els.clientsTbody.innerHTML = "";
+    els.clientsGrid.innerHTML = "";
     els.clientsEmpty.hidden = clientsList.length > 0;
     for (const c of clientsList) {
-      const tr = document.createElement("tr");
-      tr.className = "clickable-row";
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "client-card";
       const clientTasks = tasksByClient.get(c.id) || [];
-      const tasksHtml = clientTasks.length
-        ? `<div class="clients-table-tasks">${clientTasks
-            .map(
-              (t) =>
-                `<span class="clients-table-task-chip${t.status === "done" ? " done" : ""}">${escapeHtml(t.title)}</span>`
-            )
-            .join("")}</div>`
+      const openTaskCount = clientTasks.filter((t) => t.status !== "done").length;
+      const tasksHtml = openTaskCount
+        ? `<span class="client-card-tasks">${openTaskCount} משימות פתוחות</span>`
         : "";
       const clientProjects = projectsByClient.get(c.id) || [];
       const typesHtml = clientProjects.length
-        ? `<div class="clients-table-project-types">${clientProjects
+        ? `<div class="client-card-types">${clientProjects
             .map(
               (p) =>
                 `<span class="project-type-chip project-type-chip--${p.type}">${PROJECT_TYPE_LABELS[p.type]}</span>`
             )
             .join("")}</div>`
-        : "—";
-      tr.innerHTML = `
-        <td>${clientAvatarHtml(c)}${escapeHtml(c.name)}${tasksHtml}</td>
-        <td>${typesHtml}</td>
-        <td>${c.email ? escapeHtml(c.email) : "—"}</td>
-        <td>${c.phone ? escapeHtml(c.phone) : "—"}</td>
+        : "";
+      card.innerHTML = `
+        ${clientAvatarHtml(c, "client-card-logo")}
+        <div class="client-card-name">${escapeHtml(c.name)}</div>
+        ${typesHtml}
+        ${tasksHtml}
       `;
-      tr.addEventListener("click", () => openClientModal(c.id));
-      els.clientsTbody.appendChild(tr);
+      card.addEventListener("click", () => openClientModal(c.id));
+      els.clientsGrid.appendChild(card);
     }
   } catch {
     // not authenticated yet

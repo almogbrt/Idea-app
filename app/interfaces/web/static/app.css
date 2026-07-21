@@ -584,42 +584,54 @@ input {
   margin-bottom: 24px;
 }
 
-#clients-table-wrap {
+.clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.client-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 18px 12px;
+  background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-#clients-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13.5px;
-}
-
-#clients-table th {
-  text-align: right;
-  padding: 12px 16px;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-}
-
-#clients-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-#clients-table tr:last-child td {
-  border-bottom: none;
-}
-
-.clickable-row {
+  border-radius: 12px;
+  font-family: inherit;
   cursor: pointer;
 }
 
-.clickable-row:hover {
+.client-card:hover {
   background: var(--panel-bg-hover);
+  border-color: var(--purple);
+}
+
+.client-card-logo {
+  width: 56px;
+  height: 56px;
+  font-size: 20px;
+  margin-inline-end: 0;
+}
+
+.client-card-name {
+  font-weight: 700;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.client-card-types {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.client-card-tasks {
+  font-size: 11.5px;
+  color: var(--text-muted);
 }
 
 #calendar-list {
@@ -814,13 +826,6 @@ input {
   white-space: nowrap;
 }
 
-.clients-table-tasks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
 .thought-capture-row {
   display: flex;
   align-items: center;
@@ -866,20 +871,6 @@ input {
 .thought-content {
   flex: 1;
   white-space: pre-wrap;
-}
-
-.clients-table-task-chip {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--panel-bg-hover);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.clients-table-task-chip.done {
-  text-decoration: line-through;
-  color: var(--text-faint);
 }
 
 .client-avatar {
@@ -1384,12 +1375,6 @@ input {
   font-size: 12px;
 }
 
-.clients-table-project-types {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .btn--small {
   padding: 6px 12px;
   font-size: 12px;
@@ -1470,12 +1455,8 @@ input {
     row-gap: 8px;
   }
 
-  #clients-table-wrap {
-    overflow-x: auto;
-  }
-
-  #clients-table {
-    min-width: 480px;
+  .clients-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 
   #files-table-wrap {
