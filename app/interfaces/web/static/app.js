@@ -285,6 +285,7 @@ async function sendCommand(text) {
 
 els.chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  stopVoiceCaptureFor(els.chatInput);
   const text = els.chatInput.value.trim();
   if (!text) return;
   els.chatInput.value = "";
@@ -297,6 +298,21 @@ let isRecording = false;
 let voiceFinalTranscript = "";
 let voiceTargetInput = null;
 let voiceTargetBtn = null;
+
+// If the given input is actively being dictated into, stop the recognizer
+// and immediately forget the target — otherwise a speech result already in
+// flight can land just after the caller clears the input (e.g. on submit)
+// and silently refill it right back.
+function stopVoiceCaptureFor(inputEl) {
+  if (voiceTargetInput !== inputEl) return;
+  if (isRecording) {
+    isRecording = false;
+    voiceRecognition.stop();
+  }
+  // Null the target even if recording had just stopped on its own — a
+  // final "result" event can still be in flight for a moment after stop().
+  voiceTargetInput = null;
+}
 
 if (SpeechRecognitionCtor) {
   els.voiceInputBtn.hidden = false;
@@ -313,6 +329,7 @@ if (SpeechRecognitionCtor) {
   voiceRecognition.interimResults = true;
 
   voiceRecognition.addEventListener("result", (event) => {
+    if (!voiceTargetInput) return;
     let interimTranscript = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
@@ -1092,6 +1109,7 @@ async function loadThoughts() {
 }
 
 els.thoughtSaveBtn.addEventListener("click", async () => {
+  stopVoiceCaptureFor(els.thoughtInput);
   const content = els.thoughtInput.value.trim();
   if (!content) return;
   try {
