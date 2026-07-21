@@ -6,6 +6,7 @@ Run in Cloud Run: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -30,6 +31,12 @@ from app.interfaces.api.v1 import whatsapp_webhook as whatsapp_webhook_router
 from app.interfaces.api.v1 import workspace as workspace_router
 
 _WEB_DIR = Path(__file__).parent / "interfaces" / "web"
+
+# A fresh value every process start (i.e. every deploy, since Cloud Run
+# replaces the whole container) — appended to static asset URLs so browsers
+# can cache app.js/app.css aggressively without ever serving a stale build
+# after the next deploy.
+_BUILD_ID = uuid.uuid4().hex[:8]
 
 logger = get_logger(__name__)
 
@@ -74,7 +81,13 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def chat_ui(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(request, "index.html", {})
+        response = templates.TemplateResponse(
+            request, "index.html", {"build_id": _BUILD_ID}
+        )
+        # The shell HTML must always be re-fetched so it never keeps pointing
+        # at a previous deploy's (cache-busted) static asset URLs forever.
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.get("/sw.js", include_in_schema=False)
     async def service_worker() -> FileResponse:
