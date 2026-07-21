@@ -1303,8 +1303,8 @@ function addDays(date, days) {
 
 async function loadCalendar() {
   try {
-    const start = startOfDay(new Date());
-    const end = addDays(start, 1);
+    const start = new Date();
+    const end = new Date(start.getTime() + 5 * 3600000);
     const events = await apiFetch(
       `/calendar/events?time_min=${encodeURIComponent(start.toISOString())}&time_max=${encodeURIComponent(end.toISOString())}`
     );
