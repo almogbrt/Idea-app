@@ -978,6 +978,62 @@ function dueDateBadge(task) {
 
 let currentTasks = [];
 
+function sortTasksForDisplay(tasks) {
+  const dueTime = (task) => (task.due_at ? new Date(task.due_at).getTime() : Infinity);
+  const open = tasks.filter((t) => t.status !== "done").sort((a, b) => dueTime(a) - dueTime(b));
+  const done = tasks
+    .filter((t) => t.status === "done")
+    .sort((a, b) => dueTime(b) - dueTime(a));
+  return { open, done };
+}
+
+function buildTaskRow(task, clientNameById) {
+  const row = document.createElement("div");
+  row.className = `task-row${task.status === "done" ? " done" : ""}`;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = task.status === "done";
+  checkbox.addEventListener("change", async () => {
+    await apiFetch(`/tasks/${task.id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: checkbox.checked ? "done" : "open" }),
+    });
+    loadTasks();
+    loadDashboardSummary();
+  });
+  const title = document.createElement("span");
+  title.className = "task-title";
+  title.textContent = task.title;
+  title.addEventListener("click", () => openEditTaskModal(task.id));
+  row.appendChild(checkbox);
+  row.appendChild(title);
+  if (task.client_id && clientNameById.has(task.client_id)) {
+    const clientBadge = document.createElement("span");
+    clientBadge.className = "task-client-badge";
+    clientBadge.textContent = clientNameById.get(task.client_id);
+    row.appendChild(clientBadge);
+  }
+  const badge = dueDateBadge(task);
+  row.appendChild(badge || Object.assign(document.createElement("span"), {
+    className: "task-due task-due--none",
+    textContent: "ללא תאריך",
+  }));
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "task-delete-btn";
+  deleteBtn.title = "מחיקת משימה";
+  deleteBtn.textContent = "✕";
+  deleteBtn.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
+    await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
+    loadTasks();
+    loadDashboardSummary();
+  });
+  row.appendChild(deleteBtn);
+  return row;
+}
+
 async function loadTasks() {
   try {
     const [tasks, clientsList] = await Promise.all([apiFetch("/tasks"), apiFetch("/clients")]);
@@ -985,48 +1041,19 @@ async function loadTasks() {
     const clientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
     els.tasksList.innerHTML = "";
     els.tasksEmpty.hidden = tasks.length > 0;
-    for (const task of tasks) {
-      const row = document.createElement("div");
-      row.className = `task-row${task.status === "done" ? " done" : ""}`;
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = task.status === "done";
-      checkbox.addEventListener("change", async () => {
-        await apiFetch(`/tasks/${task.id}/status`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: checkbox.checked ? "done" : "open" }),
-        });
-        loadTasks();
-        loadDashboardSummary();
-      });
-      const title = document.createElement("span");
-      title.className = "task-title";
-      title.textContent = task.title;
-      title.addEventListener("click", () => openEditTaskModal(task.id));
-      row.appendChild(checkbox);
-      row.appendChild(title);
-      if (task.client_id && clientNameById.has(task.client_id)) {
-        const clientBadge = document.createElement("span");
-        clientBadge.className = "task-client-badge";
-        clientBadge.textContent = clientNameById.get(task.client_id);
-        row.appendChild(clientBadge);
-      }
-      const badge = dueDateBadge(task);
-      if (badge) row.appendChild(badge);
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "task-delete-btn";
-      deleteBtn.title = "מחיקת משימה";
-      deleteBtn.textContent = "✕";
-      deleteBtn.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        if (!confirm(`למחוק את המשימה "${task.title}"?`)) return;
-        await apiFetch(`/tasks/${task.id}`, { method: "DELETE" });
-        loadTasks();
-        loadDashboardSummary();
-      });
-      row.appendChild(deleteBtn);
-      els.tasksList.appendChild(row);
+
+    const { open, done } = sortTasksForDisplay(tasks);
+    for (const task of open) {
+      els.tasksList.appendChild(buildTaskRow(task, clientNameById));
+    }
+    if (open.length > 0 && done.length > 0) {
+      const divider = document.createElement("div");
+      divider.className = "task-list-divider";
+      divider.textContent = "הושלמו";
+      els.tasksList.appendChild(divider);
+    }
+    for (const task of done) {
+      els.tasksList.appendChild(buildTaskRow(task, clientNameById));
     }
   } catch {
     // not authenticated yet
