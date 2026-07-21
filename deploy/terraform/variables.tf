@@ -76,11 +76,13 @@ variable "whatsapp_access_token" {
   description = <<-EOT
     Permanent access token for the WhatsApp Business Platform (Meta Cloud
     API), generated from a System User in Meta Business Settings. Leave
-    empty until you've finished Meta-side setup — the feature stays inert.
+    at the default placeholder until you've finished Meta-side setup — the
+    feature stays inert (Secret Manager rejects a truly empty payload, so
+    "unset" — not "" — is what keeps this harmless until configured).
   EOT
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "unset"
 }
 
 variable "whatsapp_phone_number_id" {
@@ -89,14 +91,14 @@ variable "whatsapp_phone_number_id" {
     WhatsApp > API Setup page for your registered business number.
   EOT
   type        = string
-  default     = ""
+  default     = "unset"
 }
 
 variable "whatsapp_app_secret" {
   description = "App Secret from the Meta app's Settings > Basic page, used to verify inbound webhook signatures."
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "unset"
 }
 
 variable "whatsapp_verify_token" {
@@ -107,7 +109,7 @@ variable "whatsapp_verify_token" {
   EOT
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "unset"
 }
 
 variable "whatsapp_owner_phone_number" {
@@ -117,7 +119,7 @@ variable "whatsapp_owner_phone_number" {
     as chat commands instead of being logged as a client conversation.
   EOT
   type        = string
-  default     = ""
+  default     = "unset"
 }
 
 variable "cloud_run_service_url" {
