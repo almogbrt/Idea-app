@@ -18,6 +18,13 @@ class ClientView(BaseModel):
     has_logo: bool = False
 
 
+class ClientAttachmentView(BaseModel):
+    id: uuid.UUID
+    filename: str
+    mime_type: str
+    created_at: datetime
+
+
 class CreateClientRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
 
@@ -108,6 +115,7 @@ class ClientDetailView(BaseModel):
     client: ClientView
     projects: list[ProjectView]
     tasks: list[TaskView]
+    attachments: list[ClientAttachmentView]
 
 
 class DashboardSummaryView(BaseModel):

@@ -52,6 +52,9 @@ from app.infrastructure.db.repositories.agent_execution_repository import (
 from app.infrastructure.db.repositories.background_memory_repository import (
     BackgroundMemoryRepository,
 )
+from app.infrastructure.db.repositories.client_attachment_repository import (
+    SqlAlchemyClientAttachmentRepository,
+)
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
@@ -186,6 +189,7 @@ class Container:
         users = SqlAlchemyUserRepository(session)
         oauth_tokens = SqlAlchemyOAuthTokenRepository(session, self.token_cipher)
         clients_repo = SqlAlchemyClientRepository(session)
+        client_attachments_repo = SqlAlchemyClientAttachmentRepository(session)
         projects_repo = SqlAlchemyProjectRepository(session)
         tasks_repo = SqlAlchemyTaskRepository(session)
         thoughts_repo = SqlAlchemyThoughtRepository(session)
@@ -217,7 +221,11 @@ class Container:
             manage_conversation=ManageConversationUseCase(conversations),
             authenticate_user=authenticate_user,
             manage_clients=ManageClientsUseCase(
-                clients_repo, projects_repo, tasks_repo, self.client_logo_storage
+                clients_repo,
+                projects_repo,
+                tasks_repo,
+                self.client_logo_storage,
+                client_attachments_repo,
             ),
             manage_projects=ManageProjectsUseCase(projects_repo),
             manage_tasks=ManageTasksUseCase(tasks_repo),

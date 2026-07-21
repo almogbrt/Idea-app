@@ -18,6 +18,7 @@ from app.core.container import RequestScopedServices
 from app.core.exceptions import ForbiddenError, ValidationError
 from app.domain.entities import (
     Client,
+    ClientAttachment,
     ClientDetail,
     Notification,
     Project,
@@ -30,6 +31,7 @@ from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.workspace import (
     ActivityItemView,
     AssignProjectClientRequest,
+    ClientAttachmentView,
     ClientDetailView,
     ClientView,
     CreateClientRequest,
@@ -147,6 +149,7 @@ async def get_client(
         client=_client_view(detail.client),
         projects=[_project_view(s) for s in detail.projects],
         tasks=[_task_view(t) for t in detail.tasks],
+        attachments=[_attachment_view(a) for a in detail.attachments],
     )
 
 
@@ -213,6 +216,71 @@ async def get_client_logo(
     _ensure_client_owned_by(existing, user)
     content, mime_type = await scope.manage_clients.get_logo(user.id, client_id)
     return Response(content=content, media_type=mime_type)
+
+
+_MAX_ATTACHMENT_SIZE_BYTES = 20 * 1024 * 1024
+
+
+def _attachment_view(attachment: ClientAttachment) -> ClientAttachmentView:
+    return ClientAttachmentView(
+        id=attachment.id,
+        filename=attachment.filename,
+        mime_type=attachment.mime_type,
+        created_at=attachment.created_at,
+    )
+
+
+@router.post("/clients/{client_id}/attachments", response_model=ClientAttachmentView)
+async def upload_client_attachment(
+    client_id: uuid.UUID,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> ClientAttachmentView:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    content = await file.read()
+    if len(content) > _MAX_ATTACHMENT_SIZE_BYTES:
+        raise ValidationError("The file is too large (max 20MB).")
+    attachment = await scope.manage_clients.upload_attachment(
+        user.id,
+        client_id,
+        file.filename or "attachment",
+        content,
+        file.content_type or "application/octet-stream",
+    )
+    return _attachment_view(attachment)
+
+
+@router.get("/clients/{client_id}/attachments/{attachment_id}")
+async def get_client_attachment(
+    client_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> Response:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    content, mime_type, filename = await scope.manage_clients.download_attachment(
+        user.id, client_id, attachment_id
+    )
+    return Response(
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.delete("/clients/{client_id}/attachments/{attachment_id}", status_code=204)
+async def delete_client_attachment(
+    client_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    existing = await scope.manage_clients.get_or_raise(client_id)
+    _ensure_client_owned_by(existing, user)
+    await scope.manage_clients.delete_attachment(user.id, client_id, attachment_id)
 
 
 def _project_view(summary: ProjectSummary) -> ProjectView:

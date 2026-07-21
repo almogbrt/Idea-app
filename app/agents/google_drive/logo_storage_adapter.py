@@ -18,3 +18,6 @@ class GoogleDriveLogoStorageAdapter(ClientLogoStoragePort):
 
     async def download(self, user_id: uuid.UUID, file_id: str) -> tuple[bytes, str]:
         return await self._client.download_binary_file(user_id, file_id)
+
+    async def delete(self, user_id: uuid.UUID, file_id: str) -> None:
+        await self._client.delete_file(user_id, file_id)

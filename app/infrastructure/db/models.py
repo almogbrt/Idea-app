@@ -130,6 +130,19 @@ class ClientModel(Base):
     logo_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
+class ClientAttachmentModel(Base):
+    __tablename__ = "client_attachments"
+    __table_args__ = (Index("ix_client_attachments_client_id", "client_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    client_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"))
+    file_id: Mapped[str] = mapped_column(String(255))
+    filename: Mapped[str] = mapped_column(String(500))
+    mime_type: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
 class ProjectModel(Base):
     __tablename__ = "projects"
     __table_args__ = (Index("ix_projects_user_id", "user_id"),)

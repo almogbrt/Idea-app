@@ -30,6 +30,7 @@ from app.domain.entities import CalendarEvent, DriveFile, NotificationKind, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
+    FakeClientAttachmentRepository,
     FakeClientLogoStorage,
     FakeClientRepository,
     FakeNotificationRepository,
@@ -151,12 +152,15 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     calendar_port = _FakeCalendar()
     drive_port = _FakeDrive()
     logo_storage = FakeClientLogoStorage()
+    attachments_repo = FakeClientAttachmentRepository()
 
     scope = RequestScopedServices(
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
         manage_conversation=None,  # type: ignore[arg-type]
         authenticate_user=None,  # type: ignore[arg-type]
-        manage_clients=ManageClientsUseCase(clients_repo, projects_repo, tasks_repo, logo_storage),
+        manage_clients=ManageClientsUseCase(
+            clients_repo, projects_repo, tasks_repo, logo_storage, attachments_repo
+        ),
         manage_projects=ManageProjectsUseCase(projects_repo),
         manage_tasks=ManageTasksUseCase(tasks_repo),
         manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
@@ -185,6 +189,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "calendar_port": calendar_port,
         "drive_port": drive_port,
         "logo_storage": logo_storage,
+        "attachments_repo": attachments_repo,
     }
 
 
@@ -285,6 +290,60 @@ def test_upload_client_logo_rejects_other_users_client(client: TestClient) -> No
     response = client.post(
         f"/api/v1/clients/{created['id']}/logo",
         files={"logo": ("logo.png", b"fake-image-bytes", "image/png")},
+    )
+
+    assert response.status_code == 403
+
+
+def test_upload_list_and_download_client_attachment(client: TestClient) -> None:
+    _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    upload_response = client.post(
+        f"/api/v1/clients/{created['id']}/attachments",
+        files={"file": ("contract.pdf", b"fake-pdf-bytes", "application/pdf")},
+    )
+    assert upload_response.status_code == 200
+    attachment = upload_response.json()
+    assert attachment["filename"] == "contract.pdf"
+
+    detail_response = client.get(f"/api/v1/clients/{created['id']}")
+    assert [a["id"] for a in detail_response.json()["attachments"]] == [attachment["id"]]
+
+    download_response = client.get(
+        f"/api/v1/clients/{created['id']}/attachments/{attachment['id']}"
+    )
+    assert download_response.status_code == 200
+    assert download_response.content == b"fake-pdf-bytes"
+    assert download_response.headers["content-type"] == "application/pdf"
+
+
+def test_delete_client_attachment_removes_it(client: TestClient) -> None:
+    _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+    attachment = client.post(
+        f"/api/v1/clients/{created['id']}/attachments",
+        files={"file": ("contract.pdf", b"fake-pdf-bytes", "application/pdf")},
+    ).json()
+
+    response = client.delete(f"/api/v1/clients/{created['id']}/attachments/{attachment['id']}")
+    assert response.status_code == 204
+
+    detail_response = client.get(f"/api/v1/clients/{created['id']}")
+    assert detail_response.json()["attachments"] == []
+
+
+def test_upload_client_attachment_rejects_other_users_client(client: TestClient) -> None:
+    resources = _install_scope(client)
+    created = client.post("/api/v1/clients", json={"name": "Baron's"}).json()
+
+    clients_repo = resources["clients_repo"]
+    stored = clients_repo.clients[uuid.UUID(created["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.post(
+        f"/api/v1/clients/{created['id']}/attachments",
+        files={"file": ("contract.pdf", b"fake-pdf-bytes", "application/pdf")},
     )
 
     assert response.status_code == 403

@@ -145,6 +145,21 @@ class Client:
 
 
 @dataclass(slots=True)
+class ClientAttachment:
+    """A document or image uploaded for a client — stored in the user's own
+    Google Drive (via `file_id`), tracked here just so it can be listed and
+    fetched per-client rather than searched for in Drive."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    client_id: uuid.UUID
+    file_id: str
+    filename: str
+    mime_type: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
 class Project:
     id: uuid.UUID
     user_id: uuid.UUID
@@ -192,6 +207,7 @@ class ClientDetail:
     client: Client
     projects: list[ProjectSummary]
     tasks: list[Task]
+    attachments: list[ClientAttachment]
 
 
 @dataclass(slots=True)

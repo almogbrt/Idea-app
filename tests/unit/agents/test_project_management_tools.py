@@ -73,7 +73,7 @@ class _FakeWorkspaceService:
         client = Client(
             id=uuid.uuid4(), user_id=user_id, name=client_name, created_at=datetime.now(UTC)
         )
-        return ClientDetail(client=client, projects=[], tasks=[])
+        return ClientDetail(client=client, projects=[], tasks=[], attachments=[])
 
     async def create_project(
         self,

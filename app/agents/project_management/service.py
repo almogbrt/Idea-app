@@ -29,6 +29,9 @@ from app.domain.entities import (
     TaskStatus,
     Thought,
 )
+from app.infrastructure.db.repositories.client_attachment_repository import (
+    SqlAlchemyClientAttachmentRepository,
+)
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.project_repository import SqlAlchemyProjectRepository
 from app.infrastructure.db.repositories.task_repository import SqlAlchemyTaskRepository
@@ -91,7 +94,13 @@ class WorkspaceService:
             project_ids = {s.project.id for s in client_projects}
             all_tasks = await SqlAlchemyTaskRepository(session).list_by_user(user_id)
             client_tasks = [t for t in all_tasks if t.project_id in project_ids]
-            return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
+            attachments = await SqlAlchemyClientAttachmentRepository(session).list_by_client(
+                client.id
+            )
+            return ClientDetail(
+                client=client, projects=client_projects, tasks=client_tasks,
+                attachments=attachments,
+            )
 
     async def create_project(
         self,

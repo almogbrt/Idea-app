@@ -30,6 +30,9 @@ from app.domain.value_objects import OAuthTokenSet
 from app.infrastructure.db.repositories.agent_execution_repository import (
     SqlAlchemyAgentExecutionRepository,
 )
+from app.infrastructure.db.repositories.client_attachment_repository import (
+    SqlAlchemyClientAttachmentRepository,
+)
 from app.infrastructure.db.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
@@ -287,6 +290,38 @@ async def test_client_repository_update_missing_client_raises(db_session: AsyncS
     repo = SqlAlchemyClientRepository(db_session)
     with pytest.raises(NotFoundError):
         await repo.update(uuid.uuid4(), email="x@example.com")
+
+
+async def test_client_attachment_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-attach", "owner-attach@example.com", "Owner Attach")
+    clients_repo = SqlAlchemyClientRepository(db_session)
+    client = await clients_repo.create(user.id, "Baron's")
+    other_client = await clients_repo.create(user.id, "Other Co")
+
+    repo = SqlAlchemyClientAttachmentRepository(db_session)
+    attachment = await repo.create(
+        user.id, client.id, "drive-file-1", "contract.pdf", "application/pdf"
+    )
+    await repo.create(user.id, other_client.id, "drive-file-2", "unrelated.pdf", "application/pdf")
+
+    fetched = await repo.get(attachment.id)
+    assert fetched is not None
+    assert fetched.filename == "contract.pdf"
+
+    listed = await repo.list_by_client(client.id)
+    assert [a.id for a in listed] == [attachment.id]
+
+    await repo.delete(attachment.id)
+    assert await repo.get(attachment.id) is None
+
+
+async def test_client_attachment_repository_delete_missing_raises(
+    db_session: AsyncSession,
+) -> None:
+    repo = SqlAlchemyClientAttachmentRepository(db_session)
+    with pytest.raises(NotFoundError):
+        await repo.delete(uuid.uuid4())
 
 
 async def test_project_repository_round_trip_with_client_and_task(

@@ -128,6 +128,13 @@ class DriveClient:
         )
         return cast(bytes, content), cast(str, metadata["mimeType"])
 
+    async def delete_file(self, user_id: uuid.UUID, file_id: str) -> None:
+        service = await self._google_clients.drive(user_id)
+        await call_google_api(
+            lambda: service.files().delete(fileId=file_id).execute(),
+            action="drive.files.delete",
+        )
+
     async def share_file(
         self, user_id: uuid.UUID, file_id: str, email: str, role: str
     ) -> dict[str, Any]:

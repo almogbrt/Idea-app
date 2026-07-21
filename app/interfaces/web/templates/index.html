@@ -347,6 +347,21 @@
       </div>
       <div class="client-modal-history">
         <div class="client-modal-section-heading">
+          <h4>מסמכים ותמונות</h4>
+          <label class="btn btn--ghost btn--small">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            העלאת קובץ
+            <input id="client-modal-attachment-input" type="file" multiple hidden />
+          </label>
+        </div>
+        <div id="client-modal-attachments" class="client-modal-list"></div>
+        <div id="client-modal-attachments-empty" class="client-modal-list-empty">
+          עדיין אין קבצים.
+        </div>
+      </div>
+
+      <div class="client-modal-history">
+        <div class="client-modal-section-heading">
           <h4>פרויקטים ומשימות</h4>
           <button id="client-modal-new-meeting-btn" class="btn btn--ghost btn--small">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>

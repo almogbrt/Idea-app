@@ -39,6 +39,9 @@ const els = {
   clientEditEmail: document.getElementById("client-edit-email"),
   clientEditPhone: document.getElementById("client-edit-phone"),
   clientEditNotes: document.getElementById("client-edit-notes"),
+  clientModalAttachments: document.getElementById("client-modal-attachments"),
+  clientModalAttachmentsEmpty: document.getElementById("client-modal-attachments-empty"),
+  clientModalAttachmentInput: document.getElementById("client-modal-attachment-input"),
   clientModalProjects: document.getElementById("client-modal-projects"),
   clientModalSave: document.getElementById("client-modal-save"),
   clientModalCancel: document.getElementById("client-modal-cancel"),
@@ -574,6 +577,7 @@ async function openClientModal(clientId) {
     els.clientEditNotes.value = detail.client.notes || "";
 
     renderClientModalProjectGroups(detail.projects, detail.tasks);
+    renderClientModalAttachments(detail.attachments);
 
     els.clientModal.hidden = false;
   } catch (err) {
@@ -847,6 +851,83 @@ els.clientModalLogoInput.addEventListener("change", async () => {
     alert(err.message);
   } finally {
     els.clientModalLogoInput.value = "";
+  }
+});
+
+function renderClientModalAttachments(attachments) {
+  els.clientModalAttachments.innerHTML = "";
+  els.clientModalAttachmentsEmpty.hidden = attachments.length > 0;
+  for (const attachment of attachments) {
+    const row = document.createElement("div");
+    row.className = "client-modal-list-item client-modal-attachment-item";
+
+    const icon = document.createElement("span");
+    icon.className = "client-modal-attachment-icon";
+    icon.textContent = attachment.mime_type.startsWith("image/") ? "🖼️" : "📄";
+    row.appendChild(icon);
+
+    const link = document.createElement("a");
+    link.className = "client-modal-attachment-name";
+    link.href = `${API_BASE}/clients/${currentClientId}/attachments/${attachment.id}`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = attachment.filename;
+    row.appendChild(link);
+
+    const time = document.createElement("span");
+    time.className = "client-modal-attachment-time";
+    time.textContent = relativeTime(attachment.created_at);
+    row.appendChild(time);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "task-delete-btn";
+    deleteBtn.title = "מחיקת קובץ";
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm(`למחוק את "${attachment.filename}"?`)) return;
+      try {
+        await apiFetch(`/clients/${currentClientId}/attachments/${attachment.id}`, {
+          method: "DELETE",
+        });
+        openClientModal(currentClientId);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    row.appendChild(deleteBtn);
+
+    els.clientModalAttachments.appendChild(row);
+  }
+}
+
+async function uploadClientAttachment(clientId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_BASE}/clients/${clientId}/attachments`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(error.message || "העלאת הקובץ נכשלה");
+  }
+  return response.json();
+}
+
+els.clientModalAttachmentInput.addEventListener("change", async () => {
+  const files = Array.from(els.clientModalAttachmentInput.files);
+  if (!files.length || !currentClientId) return;
+  try {
+    for (const file of files) {
+      await uploadClientAttachment(currentClientId, file);
+    }
+    openClientModal(currentClientId);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    els.clientModalAttachmentInput.value = "";
   }
 });
 

@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.conversation_repository import ConversationRepositoryPort
@@ -32,6 +33,7 @@ from app.core.exceptions import NotFoundError
 from app.domain.entities import (
     AgentExecution,
     Client,
+    ClientAttachment,
     Conversation,
     MemoryRecord,
     Message,
@@ -194,6 +196,47 @@ class FakeClientLogoStorage(ClientLogoStoragePort):
 
     async def download(self, user_id: uuid.UUID, file_id: str) -> tuple[bytes, str]:
         return self.files[file_id]
+
+    async def delete(self, user_id: uuid.UUID, file_id: str) -> None:
+        self.files.pop(file_id, None)
+
+
+class FakeClientAttachmentRepository(ClientAttachmentRepositoryPort):
+    def __init__(self) -> None:
+        self.attachments: dict[uuid.UUID, ClientAttachment] = {}
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        client_id: uuid.UUID,
+        file_id: str,
+        filename: str,
+        mime_type: str,
+    ) -> ClientAttachment:
+        attachment = ClientAttachment(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            client_id=client_id,
+            file_id=file_id,
+            filename=filename,
+            mime_type=mime_type,
+            created_at=datetime.now(UTC),
+        )
+        self.attachments[attachment.id] = attachment
+        return attachment
+
+    async def list_by_client(self, client_id: uuid.UUID) -> list[ClientAttachment]:
+        return [a for a in self.attachments.values() if a.client_id == client_id]
+
+    async def get(self, attachment_id: uuid.UUID) -> ClientAttachment | None:
+        return self.attachments.get(attachment_id)
+
+    async def delete(self, attachment_id: uuid.UUID) -> None:
+        if attachment_id not in self.attachments:
+            raise NotFoundError(
+                "Attachment not found", details={"attachment_id": str(attachment_id)}
+            )
+        del self.attachments[attachment_id]
 
 
 class FakeProjectRepository(ProjectRepositoryPort):
@@ -570,6 +613,11 @@ def fake_client_repository() -> FakeClientRepository:
 @pytest.fixture
 def fake_client_logo_storage() -> FakeClientLogoStorage:
     return FakeClientLogoStorage()
+
+
+@pytest.fixture
+def fake_client_attachment_repository() -> FakeClientAttachmentRepository:
+    return FakeClientAttachmentRepository()
 
 
 @pytest.fixture

@@ -24,6 +24,7 @@ from app.domain.entities import (
 )
 from tests.conftest import (
     FakeAgentExecutionRepository,
+    FakeClientAttachmentRepository,
     FakeClientLogoStorage,
     FakeClientRepository,
     FakeProjectRepository,
@@ -62,6 +63,7 @@ async def test_manage_clients_create_and_list(
         fake_project_repository,
         fake_task_repository,
         FakeClientLogoStorage(),
+        FakeClientAttachmentRepository(),
     )
     user_id = uuid.uuid4()
 
@@ -82,6 +84,7 @@ async def test_manage_clients_update_sets_only_provided_fields(
         fake_project_repository,
         fake_task_repository,
         FakeClientLogoStorage(),
+        FakeClientAttachmentRepository(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
@@ -106,6 +109,7 @@ async def test_manage_clients_get_or_raise_missing_client_raises(
         fake_project_repository,
         fake_task_repository,
         FakeClientLogoStorage(),
+        FakeClientAttachmentRepository(),
     )
 
     with pytest.raises(NotFoundError):
@@ -122,6 +126,7 @@ async def test_manage_clients_get_detail_returns_linked_projects_and_tasks(
         fake_project_repository,
         fake_task_repository,
         FakeClientLogoStorage(),
+        FakeClientAttachmentRepository(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
@@ -148,6 +153,7 @@ async def test_manage_clients_upload_and_get_logo(
     use_case = ManageClientsUseCase(
         fake_client_repository, fake_project_repository, fake_task_repository,
         fake_client_logo_storage,
+        FakeClientAttachmentRepository(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
@@ -171,12 +177,99 @@ async def test_manage_clients_get_logo_raises_when_none_set(
     use_case = ManageClientsUseCase(
         fake_client_repository, fake_project_repository, fake_task_repository,
         fake_client_logo_storage,
+        FakeClientAttachmentRepository(),
     )
     user_id = uuid.uuid4()
     client = await use_case.create(user_id, "Baron's")
 
     with pytest.raises(NotFoundError):
         await use_case.get_logo(user_id, client.id)
+
+
+async def test_manage_clients_upload_list_and_download_attachment(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_logo_storage: FakeClientLogoStorage,
+    fake_client_attachment_repository: FakeClientAttachmentRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        fake_client_logo_storage,
+        fake_client_attachment_repository,
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+
+    attachment = await use_case.upload_attachment(
+        user_id, client.id, "contract.pdf", b"fake-pdf-bytes", "application/pdf"
+    )
+    assert attachment.filename == "contract.pdf"
+
+    detail = await use_case.get_detail(user_id, client.id)
+    assert [a.id for a in detail.attachments] == [attachment.id]
+
+    content, mime_type, filename = await use_case.download_attachment(
+        user_id, client.id, attachment.id
+    )
+    assert content == b"fake-pdf-bytes"
+    assert mime_type == "application/pdf"
+    assert filename == "contract.pdf"
+
+
+async def test_manage_clients_delete_attachment_removes_it(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_logo_storage: FakeClientLogoStorage,
+    fake_client_attachment_repository: FakeClientAttachmentRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        fake_client_logo_storage,
+        fake_client_attachment_repository,
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+    attachment = await use_case.upload_attachment(
+        user_id, client.id, "contract.pdf", b"fake-pdf-bytes", "application/pdf"
+    )
+
+    await use_case.delete_attachment(user_id, client.id, attachment.id)
+
+    detail = await use_case.get_detail(user_id, client.id)
+    assert detail.attachments == []
+    with pytest.raises(KeyError):
+        await fake_client_logo_storage.download(user_id, attachment.file_id)
+
+
+async def test_manage_clients_download_attachment_from_wrong_client_raises(
+    fake_client_repository: FakeClientRepository,
+    fake_project_repository: FakeProjectRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_client_logo_storage: FakeClientLogoStorage,
+    fake_client_attachment_repository: FakeClientAttachmentRepository,
+) -> None:
+    use_case = ManageClientsUseCase(
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
+        fake_client_logo_storage,
+        fake_client_attachment_repository,
+    )
+    user_id = uuid.uuid4()
+    client = await use_case.create(user_id, "Baron's")
+    other_client = await use_case.create(user_id, "Other Co")
+    attachment = await use_case.upload_attachment(
+        user_id, client.id, "contract.pdf", b"fake-pdf-bytes", "application/pdf"
+    )
+
+    with pytest.raises(NotFoundError):
+        await use_case.download_attachment(user_id, other_client.id, attachment.id)
 
 
 async def test_manage_projects_create_list_and_update_type(

@@ -1249,6 +1249,33 @@ input {
   color: var(--text-faint);
 }
 
+.client-modal-attachment-item {
+  justify-content: flex-start;
+}
+
+.client-modal-attachment-icon {
+  flex-shrink: 0;
+}
+
+.client-modal-attachment-name {
+  flex: 1;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-modal-attachment-name:hover {
+  text-decoration: underline;
+}
+
+.client-modal-attachment-time {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
 .client-modal-project-groups {
   display: flex;
   flex-direction: column;

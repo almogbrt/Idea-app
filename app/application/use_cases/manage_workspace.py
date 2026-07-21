@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.inbox import InboxPort
@@ -26,6 +27,7 @@ from app.core.logging import get_logger
 from app.domain.entities import (
     AgentExecution,
     Client,
+    ClientAttachment,
     ClientDetail,
     Project,
     ProjectSummary,
@@ -53,11 +55,13 @@ class ManageClientsUseCase:
         project_repository: ProjectRepositoryPort,
         task_repository: TaskRepositoryPort,
         logo_storage: ClientLogoStoragePort,
+        attachment_repository: ClientAttachmentRepositoryPort,
     ) -> None:
         self._clients = client_repository
         self._projects = project_repository
         self._tasks = task_repository
         self._logo_storage = logo_storage
+        self._attachments = attachment_repository
 
     async def create(self, user_id: uuid.UUID, name: str) -> Client:
         return await self._clients.create(user_id, name)
@@ -110,9 +114,10 @@ class ManageClientsUseCase:
         return await self._logo_storage.download(user_id, client.logo_file_id)
 
     async def get_detail(self, user_id: uuid.UUID, client_id: uuid.UUID) -> ClientDetail:
-        """The "full history" view: the client plus every project and task
-        linked to it, however many hops that takes today (task -> project ->
-        client) since neither repository can filter by client_id directly."""
+        """The "full history" view: the client plus every project, task, and
+        attachment linked to it, however many hops that takes today (task ->
+        project -> client) since neither repository can filter by client_id
+        directly."""
         client = await self.get_or_raise(client_id)
 
         all_projects = await self._projects.list_by_user(user_id)
@@ -128,7 +133,47 @@ class ManageClientsUseCase:
             if task.project_id in project_ids or task.client_id == client_id
         ]
 
-        return ClientDetail(client=client, projects=client_projects, tasks=client_tasks)
+        attachments = await self._attachments.list_by_client(client_id)
+
+        return ClientDetail(
+            client=client, projects=client_projects, tasks=client_tasks, attachments=attachments
+        )
+
+    async def upload_attachment(
+        self,
+        user_id: uuid.UUID,
+        client_id: uuid.UUID,
+        filename: str,
+        content: bytes,
+        mime_type: str,
+    ) -> ClientAttachment:
+        await self.get_or_raise(client_id)
+        file_id = await self._logo_storage.upload(user_id, filename, content, mime_type)
+        return await self._attachments.create(user_id, client_id, file_id, filename, mime_type)
+
+    async def download_attachment(
+        self, user_id: uuid.UUID, client_id: uuid.UUID, attachment_id: uuid.UUID
+    ) -> tuple[bytes, str, str]:
+        attachment = await self._get_attachment_or_raise(client_id, attachment_id)
+        content, mime_type = await self._logo_storage.download(user_id, attachment.file_id)
+        return content, mime_type, attachment.filename
+
+    async def delete_attachment(
+        self, user_id: uuid.UUID, client_id: uuid.UUID, attachment_id: uuid.UUID
+    ) -> None:
+        attachment = await self._get_attachment_or_raise(client_id, attachment_id)
+        await self._logo_storage.delete(user_id, attachment.file_id)
+        await self._attachments.delete(attachment_id)
+
+    async def _get_attachment_or_raise(
+        self, client_id: uuid.UUID, attachment_id: uuid.UUID
+    ) -> ClientAttachment:
+        attachment = await self._attachments.get(attachment_id)
+        if attachment is None or attachment.client_id != client_id:
+            raise NotFoundError(
+                "Attachment not found", details={"attachment_id": str(attachment_id)}
+            )
+        return attachment
 
 
 class ManageProjectsUseCase:
