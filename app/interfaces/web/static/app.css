@@ -260,6 +260,9 @@ input {
 #main {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 920px;
+  margin-inline: auto;
   padding: 20px 32px 48px;
   display: flex;
   flex-direction: column;
@@ -549,20 +552,23 @@ input {
   margin: 0;
 }
 
-#tasks-section {
-  margin-bottom: 32px;
-}
-
-#clients-section {
-  margin-bottom: 32px;
-}
-
-#clients-table-wrap {
+#thoughts-section,
+#tasks-section,
+#clients-section,
+#calendar-section,
+#files-section {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
   box-shadow: var(--shadow);
+  padding: 20px 22px 22px;
+  margin-bottom: 24px;
+}
+
+#clients-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 #clients-table {
@@ -595,11 +601,6 @@ input {
 
 .clickable-row:hover {
   background: var(--panel-bg-hover);
-}
-
-#calendar-section,
-#files-section {
-  margin-bottom: 32px;
 }
 
 #calendar-list {
@@ -640,11 +641,9 @@ input {
 }
 
 #files-table-wrap {
-  background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: var(--shadow);
 }
 
 #files-table {
@@ -1433,6 +1432,14 @@ input {
 
   #main {
     padding: 16px;
+  }
+
+  #thoughts-section,
+  #tasks-section,
+  #clients-section,
+  #calendar-section,
+  #files-section {
+    padding: 16px 16px 18px;
   }
 
   #greeting h1 {
