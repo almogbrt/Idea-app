@@ -93,6 +93,7 @@ input {
 
 #sidebar {
   width: 250px;
+  flex-shrink: 0;
   background: var(--sidebar-bg);
   border-inline-end: 1px solid var(--border);
   display: flex;
@@ -107,6 +108,24 @@ input {
   transform: translateX(-100%);
   transition: transform 0.22s ease;
   box-shadow: 4px 0 28px rgba(43, 31, 61, 0.18);
+}
+
+/* On desktop the nav is a fellow flex child that's always visible — only
+   below this width does it become the slide-out overlay (fixed + hamburger). */
+@media (min-width: 1100px) {
+  #sidebar {
+    position: static;
+    transform: none;
+    box-shadow: none;
+  }
+
+  #sidebar-backdrop {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: none;
+  }
 }
 
 #shell.sidebar-open #sidebar {
@@ -1446,12 +1465,25 @@ input {
     font-size: 21px;
   }
 
+  .section-heading {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
   #clients-table-wrap {
     overflow-x: auto;
   }
 
+  #clients-table {
+    min-width: 480px;
+  }
+
   #files-table-wrap {
     overflow-x: auto;
+  }
+
+  #files-table {
+    min-width: 420px;
   }
 
   .client-modal-fields {
