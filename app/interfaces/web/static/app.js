@@ -987,9 +987,12 @@ function sortTasksForDisplay(tasks) {
   return { open, done };
 }
 
-function buildTaskRow(task, clientNameById) {
-  const row = document.createElement("div");
-  row.className = `task-row${task.status === "done" ? " done" : ""}`;
+function buildTaskCard(task, clientNameById) {
+  const card = document.createElement("div");
+  card.className = `task-card${task.status === "done" ? " done" : ""}`;
+
+  const top = document.createElement("div");
+  top.className = "task-card-top";
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.checked = task.status === "done";
@@ -1001,23 +1004,7 @@ function buildTaskRow(task, clientNameById) {
     loadTasks();
     loadDashboardSummary();
   });
-  const title = document.createElement("span");
-  title.className = "task-title";
-  title.textContent = task.title;
-  title.addEventListener("click", () => openEditTaskModal(task.id));
-  row.appendChild(checkbox);
-  row.appendChild(title);
-  if (task.client_id && clientNameById.has(task.client_id)) {
-    const clientBadge = document.createElement("span");
-    clientBadge.className = "task-client-badge";
-    clientBadge.textContent = clientNameById.get(task.client_id);
-    row.appendChild(clientBadge);
-  }
-  const badge = dueDateBadge(task);
-  row.appendChild(badge || Object.assign(document.createElement("span"), {
-    className: "task-due task-due--none",
-    textContent: "ללא תאריך",
-  }));
+  top.appendChild(checkbox);
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "task-delete-btn";
@@ -1030,8 +1017,31 @@ function buildTaskRow(task, clientNameById) {
     loadTasks();
     loadDashboardSummary();
   });
-  row.appendChild(deleteBtn);
-  return row;
+  top.appendChild(deleteBtn);
+  card.appendChild(top);
+
+  const title = document.createElement("span");
+  title.className = "task-title";
+  title.textContent = task.title;
+  title.addEventListener("click", () => openEditTaskModal(task.id));
+  card.appendChild(title);
+
+  const footer = document.createElement("div");
+  footer.className = "task-card-footer";
+  if (task.client_id && clientNameById.has(task.client_id)) {
+    const clientBadge = document.createElement("span");
+    clientBadge.className = "task-client-badge";
+    clientBadge.textContent = clientNameById.get(task.client_id);
+    footer.appendChild(clientBadge);
+  }
+  const badge = dueDateBadge(task);
+  footer.appendChild(badge || Object.assign(document.createElement("span"), {
+    className: "task-due task-due--none",
+    textContent: "ללא תאריך",
+  }));
+  card.appendChild(footer);
+
+  return card;
 }
 
 async function loadTasks() {
@@ -1043,17 +1053,8 @@ async function loadTasks() {
     els.tasksEmpty.hidden = tasks.length > 0;
 
     const { open, done } = sortTasksForDisplay(tasks);
-    for (const task of open) {
-      els.tasksList.appendChild(buildTaskRow(task, clientNameById));
-    }
-    if (open.length > 0 && done.length > 0) {
-      const divider = document.createElement("div");
-      divider.className = "task-list-divider";
-      divider.textContent = "הושלמו";
-      els.tasksList.appendChild(divider);
-    }
-    for (const task of done) {
-      els.tasksList.appendChild(buildTaskRow(task, clientNameById));
+    for (const task of [...open, ...done]) {
+      els.tasksList.appendChild(buildTaskCard(task, clientNameById));
     }
   } catch {
     // not authenticated yet
