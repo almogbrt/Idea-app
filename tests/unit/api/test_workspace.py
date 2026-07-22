@@ -13,6 +13,7 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
@@ -26,7 +27,7 @@ from app.application.use_cases.manage_workspace import (
 )
 from app.core import config as config_module
 from app.core.container import RequestScopedServices
-from app.domain.entities import CalendarEvent, DriveFile, NotificationKind, User
+from app.domain.entities import CalendarEvent, DriveFile, EmailSummary, NotificationKind, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from tests.conftest import (
     FakeAgentExecutionRepository,
@@ -67,6 +68,19 @@ _USER = User(
 class _NullInbox(InboxPort):
     async def count_unread(self, user_id: uuid.UUID) -> int:
         return 3
+
+    async def list_recent(self, user_id: uuid.UUID, max_results: int) -> list[EmailSummary]:
+        emails = [
+            EmailSummary(
+                id=f"msg-{i}",
+                sender=f"sender{i}@example.com",
+                subject=f"Subject {i}",
+                snippet=f"Snippet {i}",
+                date="Mon, 1 Aug 2026 09:00:00 +0000",
+            )
+            for i in range(6)
+        ]
+        return emails[:max_results]
 
 
 class _NullSchedule(SchedulePort):
@@ -151,6 +165,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     users_repo = FakeUserRepository()
     calendar_port = _FakeCalendar()
     drive_port = _FakeDrive()
+    inbox_port = _NullInbox()
     logo_storage = FakeClientLogoStorage()
     attachments_repo = FakeClientAttachmentRepository()
 
@@ -166,9 +181,10 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_thoughts=ManageThoughtsUseCase(thoughts_repo),
         manage_whatsapp_messages=ManageWhatsAppMessagesUseCase(whatsapp_messages_repo),
         dashboard_summary=DashboardSummaryUseCase(
-            projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
+            projects_repo, tasks_repo, clients_repo, inbox_port, _NullSchedule()
         ),
         manage_calendar=ManageCalendarUseCase(calendar_port),
+        manage_email=ManageEmailUseCase(inbox_port),
         manage_files=ManageFilesUseCase(drive_port),
         list_activity=ListActivityUseCase(executions_repo),
         manage_notifications=ManageNotificationsUseCase(notifications_repo),
@@ -752,6 +768,27 @@ def test_create_list_and_share_file(client: TestClient) -> None:
     assert share_response.status_code == 204
     drive_port: _FakeDrive = resources["drive_port"]  # type: ignore[assignment]
     assert drive_port.shares == [(file_id, "friend@example.com", "writer")]
+
+
+def test_list_emails_defaults_to_four(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.get("/api/v1/emails")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 4
+    assert body[0]["sender"] == "sender0@example.com"
+    assert body[0]["subject"] == "Subject 0"
+
+
+def test_list_emails_respects_max_results(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.get("/api/v1/emails?max_results=2")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
 
 
 def test_create_and_list_thoughts(client: TestClient) -> None:

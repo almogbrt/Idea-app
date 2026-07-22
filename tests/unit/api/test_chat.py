@@ -13,6 +13,7 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
@@ -29,6 +30,7 @@ from app.domain.entities import (
     CalendarEvent,
     Conversation,
     DriveFile,
+    EmailSummary,
     OrchestrationResult,
     ToolCall,
     User,
@@ -51,6 +53,9 @@ from tests.conftest import (
 class _NullInbox(InboxPort):
     async def count_unread(self, user_id: uuid.UUID) -> int:
         return 0
+
+    async def list_recent(self, user_id: uuid.UUID, max_results: int) -> list[EmailSummary]:
+        return []
 
 
 class _NullSchedule(SchedulePort):
@@ -110,6 +115,7 @@ def _workspace_kwargs() -> dict[str, object]:
     projects_repo = FakeProjectRepository(clients_repo)
     tasks_repo = FakeTaskRepository()
     notifications_repo = FakeNotificationRepository()
+    inbox_port = _NullInbox()
     return {
         "manage_clients": ManageClientsUseCase(
             clients_repo,
@@ -123,7 +129,7 @@ def _workspace_kwargs() -> dict[str, object]:
         "manage_thoughts": ManageThoughtsUseCase(FakeThoughtRepository()),
         "manage_whatsapp_messages": ManageWhatsAppMessagesUseCase(FakeWhatsAppMessageRepository()),
         "dashboard_summary": DashboardSummaryUseCase(
-            projects_repo, tasks_repo, clients_repo, _NullInbox(), _NullSchedule()
+            projects_repo, tasks_repo, clients_repo, inbox_port, _NullSchedule()
         ),
         "list_activity": ListActivityUseCase(FakeAgentExecutionRepository()),
         "manage_notifications": ManageNotificationsUseCase(notifications_repo),
@@ -134,6 +140,7 @@ def _workspace_kwargs() -> dict[str, object]:
             _NullEmailSender(),
         ),
         "manage_calendar": ManageCalendarUseCase(_NullCalendar()),
+        "manage_email": ManageEmailUseCase(inbox_port),
         "manage_files": ManageFilesUseCase(_NullDrive()),
     }
 

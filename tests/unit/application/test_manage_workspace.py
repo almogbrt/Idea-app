@@ -18,6 +18,7 @@ from app.application.use_cases.manage_workspace import (
 from app.core.exceptions import ExternalServiceError, NotFoundError, ValidationError
 from app.domain.entities import (
     AgentExecution,
+    EmailSummary,
     ExecutionStatus,
     ProjectType,
     TaskStatus,
@@ -37,6 +38,9 @@ class _FailingInbox(InboxPort):
     async def count_unread(self, user_id: uuid.UUID) -> int:
         raise ExternalServiceError("Gmail is down")
 
+    async def list_recent(self, user_id: uuid.UUID, max_results: int) -> list[EmailSummary]:
+        raise ExternalServiceError("Gmail is down")
+
 
 class _FailingSchedule(SchedulePort):
     async def count_meetings_today(self, user_id: uuid.UUID) -> int:
@@ -46,6 +50,9 @@ class _FailingSchedule(SchedulePort):
 class _WorkingInbox(InboxPort):
     async def count_unread(self, user_id: uuid.UUID) -> int:
         return 7
+
+    async def list_recent(self, user_id: uuid.UUID, max_results: int) -> list[EmailSummary]:
+        return []
 
 
 class _WorkingSchedule(SchedulePort):

@@ -30,6 +30,7 @@ from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.application.use_cases.manage_whatsapp_messages import ManageWhatsAppMessagesUseCase
@@ -103,6 +104,7 @@ class RequestScopedServices:
     manage_notifications: ManageNotificationsUseCase
     check_reminders: CheckRemindersUseCase
     manage_calendar: ManageCalendarUseCase
+    manage_email: ManageEmailUseCase
     manage_files: ManageFilesUseCase
 
 
@@ -243,6 +245,7 @@ class Container:
                 email_sender=self.email_sender_port,
             ),
             manage_calendar=ManageCalendarUseCase(self.calendar_port),
+            manage_email=ManageEmailUseCase(self.inbox_port),
             manage_files=ManageFilesUseCase(self.drive_port),
         )
 

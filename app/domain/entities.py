@@ -237,6 +237,18 @@ class DriveFile:
 
 
 @dataclass(slots=True)
+class EmailSummary:
+    """A Gmail message summary, for the dashboard inbox view — not persisted
+    locally, Gmail is the source of truth."""
+
+    id: str
+    sender: str
+    subject: str
+    snippet: str
+    date: str
+
+
+@dataclass(slots=True)
 class Thought:
     """A quick, freeform jotted-down idea — typed or dictated, not tied to
     any client/project/task. The in-house replacement for a third-party

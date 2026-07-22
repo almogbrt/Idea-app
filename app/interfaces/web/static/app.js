@@ -88,6 +88,8 @@ const els = {
   newEventDescription: document.getElementById("new-event-description"),
   newEventSave: document.getElementById("new-event-save"),
   newEventCancel: document.getElementById("new-event-cancel"),
+  gmailList: document.getElementById("gmail-list"),
+  gmailEmpty: document.getElementById("gmail-empty"),
   filesTbody: document.getElementById("files-tbody"),
   filesEmpty: document.getElementById("files-empty"),
   newFileBtn: document.getElementById("new-file-btn"),
@@ -1479,9 +1481,54 @@ els.monthNextBtn.addEventListener("click", () => {
   renderMonthView();
 });
 
+function formatEmailSender(sender) {
+  // Gmail's "From" header is usually `"Display Name" <addr@example.com>` —
+  // show just the name (or the raw address if there isn't one).
+  const match = sender.match(/^"?([^"<]*)"?\s*<.*>$/);
+  const name = match ? match[1].trim() : "";
+  return name || sender;
+}
+
+async function loadEmails() {
+  try {
+    const emails = await apiFetch("/emails?max_results=4");
+    els.gmailList.innerHTML = "";
+    els.gmailEmpty.hidden = emails.length > 0;
+    for (const email of emails) {
+      const row = document.createElement("div");
+      row.className = "email-item";
+
+      const main = document.createElement("div");
+      main.className = "email-item-main";
+      const sender = document.createElement("span");
+      sender.className = "email-item-sender";
+      sender.textContent = formatEmailSender(email.sender);
+      const subject = document.createElement("span");
+      subject.className = "email-item-subject";
+      subject.textContent = email.subject || "(ללא נושא)";
+      const snippet = document.createElement("span");
+      snippet.className = "email-item-snippet";
+      snippet.textContent = email.snippet;
+      main.appendChild(sender);
+      main.appendChild(subject);
+      main.appendChild(snippet);
+
+      const date = document.createElement("span");
+      date.className = "email-item-date";
+      date.textContent = email.date ? new Date(email.date).toLocaleDateString("he-IL") : "";
+
+      row.appendChild(main);
+      row.appendChild(date);
+      els.gmailList.appendChild(row);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
 async function loadFiles() {
   try {
-    const files = await apiFetch("/files?max_results=8&order_by=viewedByMeTime%20desc");
+    const files = await apiFetch("/files?max_results=5&order_by=viewedByMeTime%20desc");
     els.filesTbody.innerHTML = "";
     els.filesEmpty.hidden = files.length > 0;
     for (const file of files) {
@@ -1580,6 +1627,7 @@ function refreshWorkspace() {
   loadTasks();
   loadClients();
   loadCalendar();
+  loadEmails();
   loadFiles();
   loadNotifications();
   loadThoughts();
