@@ -114,6 +114,7 @@ const els = {
 };
 
 let isAuthenticated = false;
+let currentUserEmail = "";
 
 const PROJECT_TYPE_LABELS = { consulting: "ייעוץ", mentoring: "ליווי", setup: "הקמה" };
 
@@ -228,6 +229,7 @@ async function checkAuth() {
   try {
     const user = await apiFetch("/auth/google/me");
     isAuthenticated = true;
+    currentUserEmail = user.email || "";
     els.authStatus.innerHTML = `מחובר כ-${user.name}`;
     const greeting = timeOfDayGreeting();
     els.greetingPhrase.textContent = greeting;
@@ -1534,8 +1536,13 @@ async function loadEmails() {
     els.gmailList.innerHTML = "";
     els.gmailEmpty.hidden = emails.length > 0;
     for (const email of emails) {
-      const row = document.createElement("div");
+      const row = document.createElement("a");
       row.className = "email-item";
+      row.href = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
+        currentUserEmail
+      )}#all/${encodeURIComponent(email.id)}`;
+      row.target = "_blank";
+      row.rel = "noopener";
 
       const main = document.createElement("div");
       main.className = "email-item-main";
