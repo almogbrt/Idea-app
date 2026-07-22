@@ -1256,6 +1256,23 @@ function clientAvatarHtml(client, sizeClass) {
   return `<span class="client-avatar client-avatar--placeholder${sizeCls}">${escapeHtml(initial)}</span>`;
 }
 
+function clientHealthStatus(clientTasks) {
+  // Same overdue/soon/fine convention already used for individual task due
+  // badges — just aggregated across a client's open tasks instead of one.
+  const now = Date.now();
+  let hasOverdue = false;
+  let hasSoon = false;
+  for (const t of clientTasks) {
+    if (t.status === "done" || !t.due_at) continue;
+    const diffHours = (new Date(t.due_at).getTime() - now) / 3600000;
+    if (diffHours < 0) hasOverdue = true;
+    else if (diffHours <= 24) hasSoon = true;
+  }
+  if (hasOverdue) return "red";
+  if (hasSoon) return "yellow";
+  return "green";
+}
+
 async function loadClients() {
   try {
     const [clientsList, tasks, projects] = await Promise.all([
@@ -1295,12 +1312,34 @@ async function loadClients() {
             )
             .join("")}</div>`
         : "";
-      card.innerHTML = `
+      // Health considers tasks linked directly to the client AND tasks
+      // linked via one of the client's projects, same set the client modal
+      // itself uses — a task filed under a project shouldn't be invisible
+      // to the client's status just because it isn't tagged with client_id.
+      const clientProjectIds = new Set(clientProjects.map((p) => p.id));
+      const allClientTasks = tasks.filter(
+        (t) => t.client_id === c.id || clientProjectIds.has(t.project_id)
+      );
+      const health = clientHealthStatus(allClientTasks);
+      const healthTitles = {
+        green: "בשליטה — אין משימות באיחור או קרובות מאוד",
+        yellow: "יש משימה שמתקרבת לתאריך היעד",
+        red: "יש משימה באיחור",
+      };
+      const healthDot = document.createElement("span");
+      healthDot.className = `client-card-health client-card-health--${health}`;
+      healthDot.title = healthTitles[health];
+      card.appendChild(healthDot);
+
+      const rest = document.createElement("div");
+      rest.className = "client-card-body";
+      rest.innerHTML = `
         ${clientAvatarHtml(c, "client-card-logo")}
         <div class="client-card-name">${escapeHtml(c.name)}</div>
         ${typesHtml}
         ${tasksHtml}
       `;
+      card.appendChild(rest);
       card.addEventListener("click", () => openClientModal(c.id));
       els.clientsGrid.appendChild(card);
     }
