@@ -13,6 +13,12 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_daily_plan import (
+    DailyPlanMetricsUseCase,
+    ManageDailyPlanUseCase,
+    ManageFocusSessionUseCase,
+    ManageGoalsUseCase,
+)
 from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
@@ -42,6 +48,10 @@ from tests.conftest import (
     FakeClientAttachmentRepository,
     FakeClientLogoStorage,
     FakeClientRepository,
+    FakeDailyPlanRepository,
+    FakeDailyPlanSwapRepository,
+    FakeFocusSessionRepository,
+    FakeGoalRepository,
     FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
@@ -151,6 +161,19 @@ def _workspace_kwargs() -> dict[str, object]:
         "manage_calendar": ManageCalendarUseCase(_NullCalendar()),
         "manage_email": ManageEmailUseCase(inbox_port),
         "manage_files": ManageFilesUseCase(_NullDrive()),
+        "manage_goals": ManageGoalsUseCase(FakeGoalRepository()),
+        "manage_daily_plan": ManageDailyPlanUseCase(
+            FakeDailyPlanRepository(), FakeDailyPlanSwapRepository(), tasks_repo
+        ),
+        "manage_focus_sessions": ManageFocusSessionUseCase(
+            FakeFocusSessionRepository(), FakeDailyPlanRepository()
+        ),
+        "daily_plan_metrics": DailyPlanMetricsUseCase(
+            FakeDailyPlanRepository(),
+            FakeFocusSessionRepository(),
+            FakeDailyPlanSwapRepository(),
+            tasks_repo,
+        ),
     }
 
 _USER = User(

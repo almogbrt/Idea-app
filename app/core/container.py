@@ -30,6 +30,12 @@ from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
+from app.application.use_cases.manage_daily_plan import (
+    DailyPlanMetricsUseCase,
+    ManageDailyPlanUseCase,
+    ManageFocusSessionUseCase,
+    ManageGoalsUseCase,
+)
 from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
@@ -61,6 +67,14 @@ from app.infrastructure.db.repositories.client_repository import SqlAlchemyClien
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
 )
+from app.infrastructure.db.repositories.daily_plan_repository import SqlAlchemyDailyPlanRepository
+from app.infrastructure.db.repositories.daily_plan_swap_repository import (
+    SqlAlchemyDailyPlanSwapRepository,
+)
+from app.infrastructure.db.repositories.focus_session_repository import (
+    SqlAlchemyFocusSessionRepository,
+)
+from app.infrastructure.db.repositories.goal_repository import SqlAlchemyGoalRepository
 from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemoryRepository
 from app.infrastructure.db.repositories.notification_repository import (
     SqlAlchemyNotificationRepository,
@@ -108,6 +122,10 @@ class RequestScopedServices:
     manage_calendar: ManageCalendarUseCase
     manage_email: ManageEmailUseCase
     manage_files: ManageFilesUseCase
+    manage_goals: ManageGoalsUseCase
+    manage_daily_plan: ManageDailyPlanUseCase
+    manage_focus_sessions: ManageFocusSessionUseCase
+    daily_plan_metrics: DailyPlanMetricsUseCase
 
 
 class Container:
@@ -199,6 +217,10 @@ class Container:
         thoughts_repo = SqlAlchemyThoughtRepository(session)
         whatsapp_messages_repo = SqlAlchemyWhatsAppMessageRepository(session)
         notifications_repo = SqlAlchemyNotificationRepository(session)
+        goals_repo = SqlAlchemyGoalRepository(session)
+        daily_plans_repo = SqlAlchemyDailyPlanRepository(session)
+        focus_sessions_repo = SqlAlchemyFocusSessionRepository(session)
+        daily_plan_swaps_repo = SqlAlchemyDailyPlanSwapRepository(session)
 
         retrieve_memory = RetrieveMemoryUseCase(self.embedding_gateway, memory_repo)
 
@@ -257,6 +279,14 @@ class Container:
             manage_calendar=ManageCalendarUseCase(self.calendar_port),
             manage_email=ManageEmailUseCase(self.inbox_port),
             manage_files=ManageFilesUseCase(self.drive_port),
+            manage_goals=ManageGoalsUseCase(goals_repo),
+            manage_daily_plan=ManageDailyPlanUseCase(
+                daily_plans_repo, daily_plan_swaps_repo, tasks_repo
+            ),
+            manage_focus_sessions=ManageFocusSessionUseCase(focus_sessions_repo, daily_plans_repo),
+            daily_plan_metrics=DailyPlanMetricsUseCase(
+                daily_plans_repo, focus_sessions_repo, daily_plan_swaps_repo, tasks_repo
+            ),
         )
 
     def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:

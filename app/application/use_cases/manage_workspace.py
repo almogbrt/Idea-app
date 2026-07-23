@@ -241,6 +241,16 @@ class ManageTasksUseCase:
             )
         return await self._tasks.create(user_id, title, project_id, due_at, client_id, start_at)
 
+    async def quick_capture(self, user_id: uuid.UUID, title: str) -> Task:
+        """Fast Inbox capture: title only, no schedule required — unlike
+        `create`, which enforces the normal dashboard flow's start/end time
+        requirement. Calls the repository directly, which never had that
+        requirement in the first place."""
+        stripped = title.strip()
+        if not stripped:
+            raise ValidationError("A task needs a title.")
+        return await self._tasks.create(user_id, stripped)
+
     async def list_all(self, user_id: uuid.UUID) -> list[Task]:
         return await self._tasks.list_by_user(user_id)
 
@@ -249,6 +259,9 @@ class ManageTasksUseCase:
 
     async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
         return await self._tasks.set_due_at(task_id, due_at)
+
+    async def set_next_step(self, task_id: uuid.UUID, next_step: str | None) -> Task:
+        return await self._tasks.set_next_step(task_id, next_step)
 
     async def start_timer(self, task_id: uuid.UUID) -> Task:
         return await self._tasks.start_timer(task_id)

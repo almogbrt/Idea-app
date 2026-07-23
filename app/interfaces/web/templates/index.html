@@ -36,6 +36,10 @@
       </button>
 
       <nav class="nav-list">
+        <button class="nav-item" data-nav="my-day">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>היום שלי</span>
+        </button>
         <button class="nav-item" data-nav="overview">
           <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
           <span>סקירה מהירה</span>
@@ -122,6 +126,7 @@
         </div>
       </header>
 
+      <div id="dashboard-view">
       <section id="greeting">
         <h1 id="greeting-text"><span id="greeting-phrase">בוקר טוב</span>, <span id="greeting-name">אורח</span></h1>
         <p class="greeting-sub" id="greeting-sub">אני כאן כדי להוציא דברים מהכוח אל הפועל.</p>
@@ -245,6 +250,77 @@
           </div>
         </div>
       </section>
+      </div>
+
+      <div id="my-day-view" hidden>
+        <section id="my-day-header">
+          <h1>היום שלי</h1>
+        </section>
+
+        <section id="my-day-inbox-section">
+          <div class="section-heading">
+            <h2>הוספה מהירה</h2>
+          </div>
+          <div class="my-day-inbox-row">
+            <input id="my-day-inbox-input" type="text" placeholder="רעיון למשימה..." autocomplete="off" />
+            <label class="my-day-urgent-check">
+              <input id="my-day-inbox-urgent" type="checkbox" />
+              דחוף להיום
+            </label>
+            <button id="my-day-inbox-add" type="button" class="btn btn--primary">הוספה</button>
+          </div>
+        </section>
+
+        <section id="my-day-goals-section">
+          <div class="section-heading">
+            <h2>יעדים עסקיים</h2>
+          </div>
+          <div class="my-day-inbox-row">
+            <input id="my-day-goal-input" type="text" placeholder="יעד חדש..." autocomplete="off" />
+            <button id="my-day-goal-add" type="button" class="btn btn--ghost">הוספה</button>
+          </div>
+          <div id="my-day-goals-list"></div>
+        </section>
+
+        <section id="my-day-picker-section">
+          <div class="section-heading">
+            <h2>שלוש התוצאות של היום</h2>
+          </div>
+          <div id="my-day-picker"></div>
+          <button id="my-day-lock-btn" type="button" class="btn btn--primary">נעל את היום</button>
+        </section>
+
+        <section id="my-day-locked-section" hidden>
+          <div class="section-heading">
+            <h2>היום נעול</h2>
+          </div>
+          <div id="my-day-locked-tasks"></div>
+        </section>
+
+        <section id="my-day-summary-section">
+          <div class="section-heading">
+            <h2>סיכום סוף יום</h2>
+            <button id="my-day-summary-btn" type="button" class="btn btn--ghost">הצג סיכום</button>
+          </div>
+          <div id="my-day-summary-content" hidden></div>
+        </section>
+      </div>
+
+      <div id="focus-view" hidden>
+        <div class="focus-screen">
+          <div class="focus-task-title" id="focus-task-title"></div>
+          <div class="focus-deliverable" id="focus-deliverable"></div>
+          <div class="focus-timer" id="focus-timer">--:--</div>
+          <label class="focus-next-step-label">הצעד הבא
+            <input id="focus-next-step-input" type="text" autocomplete="off" placeholder="מה הצעד הבא הקטן?" />
+          </label>
+          <div class="focus-actions">
+            <button id="focus-done-btn" type="button" class="btn btn--primary">סיימתי</button>
+            <button id="focus-stuck-btn" type="button" class="btn btn--ghost">נתקעתי</button>
+            <button id="focus-break-btn" type="button" class="btn btn--ghost">הפסקה</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <aside id="side-panel">
@@ -469,6 +545,49 @@
         <button id="month-view-close" class="btn btn--ghost">סגור</button>
       </div>
       <div id="month-grid" class="month-grid"></div>
+    </div>
+  </div>
+
+  <div id="urgent-swap-modal" class="modal" hidden>
+    <div class="modal-card">
+      <h3>המשימה דחופה — מה נדחה במקומה?</h3>
+      <p class="modal-help-text">בחר איזו משימה מתוך שלוש התוצאות של היום תרד כדי לפנות מקום למשימה הדחופה.</p>
+      <select id="urgent-swap-bumped-select"></select>
+      <label class="modal-field-label">תוצר סופי
+        <textarea id="urgent-swap-deliverable" rows="2"></textarea>
+      </label>
+      <label class="modal-field-label">משך משוער (דקות)
+        <input id="urgent-swap-minutes" type="number" min="1" value="30" />
+      </label>
+      <label class="modal-field-label">רמת חשיבות
+        <select id="urgent-swap-importance">
+          <option value="high">גבוהה</option>
+          <option value="medium" selected>בינונית</option>
+          <option value="low">נמוכה</option>
+        </select>
+      </label>
+      <label class="modal-field-label">יעד עסקי (לא חובה)
+        <select id="urgent-swap-goal"><option value="">ללא יעד</option></select>
+      </label>
+      <div class="modal-actions">
+        <button id="urgent-swap-cancel" type="button" class="btn btn--ghost">ביטול</button>
+        <button id="urgent-swap-save" type="button" class="btn btn--primary">החלפה</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stuck-reason-modal" class="modal" hidden>
+    <div class="modal-card">
+      <h3>מה תקוע?</h3>
+      <div class="stuck-reason-options">
+        <button type="button" class="btn btn--ghost stuck-reason-btn" data-reason="unclear">לא ברור מה לעשות</button>
+        <button type="button" class="btn btn--ghost stuck-reason-btn" data-reason="too_big">המשימה גדולה מדי</button>
+        <button type="button" class="btn btn--ghost stuck-reason-btn" data-reason="blocked">חסר מידע או אדם אחר</button>
+        <button type="button" class="btn btn--ghost stuck-reason-btn" data-reason="distracted">הוסחתי</button>
+      </div>
+      <div class="modal-actions">
+        <button id="stuck-reason-cancel" type="button" class="btn btn--ghost">ביטול</button>
+      </div>
     </div>
   </div>
 

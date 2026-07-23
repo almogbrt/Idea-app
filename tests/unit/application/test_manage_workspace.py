@@ -388,6 +388,40 @@ async def test_manage_tasks_create_list_and_update_status(
     assert updated.status == TaskStatus.DONE
 
 
+async def test_quick_capture_creates_task_without_schedule(
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    """The whole point of quick_capture: unlike create(), it must NOT
+    require start_at/due_at — that's what makes it a fast Inbox capture."""
+    use_case = ManageTasksUseCase(fake_task_repository)
+    user_id = uuid.uuid4()
+
+    task = await use_case.quick_capture(user_id, "  Call the accountant  ")
+
+    assert task.title == "Call the accountant"
+    assert task.start_at is None
+    assert task.due_at is None
+    assert task.status == TaskStatus.OPEN
+
+
+async def test_quick_capture_rejects_blank_title(
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageTasksUseCase(fake_task_repository)
+
+    with pytest.raises(ValidationError):
+        await use_case.quick_capture(uuid.uuid4(), "   ")
+
+
+async def test_set_next_step(fake_task_repository: FakeTaskRepository) -> None:
+    use_case = ManageTasksUseCase(fake_task_repository)
+    task = await fake_task_repository.create(uuid.uuid4(), "Write proposal")
+
+    updated = await use_case.set_next_step(task.id, "Send the draft")
+
+    assert updated.next_step == "Send the draft"
+
+
 async def test_dashboard_summary_aggregates_counts(
     fake_project_repository: FakeProjectRepository,
     fake_task_repository: FakeTaskRepository,

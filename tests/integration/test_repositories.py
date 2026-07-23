@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
@@ -20,9 +21,12 @@ from app.core.security import TokenCipher
 from app.domain.entities import (
     AgentExecution,
     ExecutionStatus,
+    FocusExitReason,
+    FocusStuckReason,
     Message,
     MessageRole,
     ProjectType,
+    TaskImportance,
     TaskStatus,
     WhatsAppDirection,
 )
@@ -37,6 +41,14 @@ from app.infrastructure.db.repositories.client_repository import SqlAlchemyClien
 from app.infrastructure.db.repositories.conversation_repository import (
     SqlAlchemyConversationRepository,
 )
+from app.infrastructure.db.repositories.daily_plan_repository import SqlAlchemyDailyPlanRepository
+from app.infrastructure.db.repositories.daily_plan_swap_repository import (
+    SqlAlchemyDailyPlanSwapRepository,
+)
+from app.infrastructure.db.repositories.focus_session_repository import (
+    SqlAlchemyFocusSessionRepository,
+)
+from app.infrastructure.db.repositories.goal_repository import SqlAlchemyGoalRepository
 from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemoryRepository
 from app.infrastructure.db.repositories.oauth_token_repository import (
     SqlAlchemyOAuthTokenRepository,
@@ -432,6 +444,155 @@ async def test_task_repository_start_and_stop_timer(db_session: AsyncSession) ->
 
     with pytest.raises(NotFoundError):
         await tasks_repo.start_timer(uuid.uuid4())
+
+
+async def test_goal_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-14", "owner14@example.com", "Owner Fourteen")
+
+    goals_repo = SqlAlchemyGoalRepository(db_session)
+    goal = await goals_repo.create(user.id, "Grow the consulting business")
+    await goals_repo.create(user.id, "Launch the new product")
+
+    goals = await goals_repo.list_by_user(user.id)
+    assert {g.name for g in goals} == {"Grow the consulting business", "Launch the new product"}
+
+    updated = await goals_repo.update(goal.id, "Grow the consulting business 2x")
+    assert updated.name == "Grow the consulting business 2x"
+
+    await goals_repo.delete(goal.id)
+    assert await goals_repo.get(goal.id) is None
+
+    with pytest.raises(NotFoundError):
+        await goals_repo.delete(goal.id)
+
+
+async def test_task_repository_set_daily_attributes_and_next_step(
+    db_session: AsyncSession,
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-15", "owner15@example.com", "Owner Fifteen")
+
+    goals_repo = SqlAlchemyGoalRepository(db_session)
+    goal = await goals_repo.create(user.id, "Grow the business")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    task = await tasks_repo.create(user.id, "Write proposal")
+
+    updated = await tasks_repo.set_daily_attributes(
+        task.id,
+        deliverable="A signed proposal PDF",
+        estimated_minutes=90,
+        importance=TaskImportance.HIGH,
+        goal_id=goal.id,
+    )
+    assert updated.deliverable == "A signed proposal PDF"
+    assert updated.estimated_minutes == 90
+    assert updated.importance == TaskImportance.HIGH
+    assert updated.goal_id == goal.id
+
+    with_next_step = await tasks_repo.set_next_step(task.id, "Send the draft to the client")
+    assert with_next_step.next_step == "Send the draft to the client"
+
+
+async def test_daily_plan_repository_round_trip_and_unique_constraint(
+    db_session: AsyncSession,
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-16", "owner16@example.com", "Owner Sixteen")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    main_task = await tasks_repo.create(user.id, "Main task")
+    secondary_task = await tasks_repo.create(user.id, "Secondary task")
+
+    plans_repo = SqlAlchemyDailyPlanRepository(db_session)
+    today = datetime.now(UTC).date()
+    plan = await plans_repo.create(user.id, today)
+    assert plan.is_locked is False
+
+    plan = await plans_repo.set_main_task(plan.id, main_task.id)
+    plan = await plans_repo.set_secondary_task(plan.id, 1, secondary_task.id)
+    assert plan.main_task_id == main_task.id
+    assert plan.secondary_task_id_1 == secondary_task.id
+
+    locked = await plans_repo.lock(plan.id)
+    assert locked.is_locked is True
+    assert locked.locked_at is not None
+
+    fetched = await plans_repo.get_by_date(user.id, today)
+    assert fetched is not None
+    assert fetched.id == plan.id
+
+    with_carry_over = await plans_repo.set_carry_over(plan.id, secondary_task.id)
+    assert with_carry_over.carry_over_task_id == secondary_task.id
+
+    plans_in_range = await plans_repo.list_by_user_between(
+        user.id, today, today + timedelta(days=1)
+    )
+    assert [p.id for p in plans_in_range] == [plan.id]
+
+    with pytest.raises(IntegrityError):
+        await plans_repo.create(user.id, today)
+    await db_session.rollback()
+
+
+async def test_focus_session_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-17", "owner17@example.com", "Owner Seventeen")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    task = await tasks_repo.create(user.id, "Write proposal")
+
+    plans_repo = SqlAlchemyDailyPlanRepository(db_session)
+    plan = await plans_repo.create(user.id, datetime.now(UTC).date())
+
+    sessions_repo = SqlAlchemyFocusSessionRepository(db_session)
+    session = await sessions_repo.start(user.id, task.id, plan.id)
+    assert session.ended_at is None
+
+    active = await sessions_repo.get_active_by_user(user.id)
+    assert active is not None
+    assert active.id == session.id
+
+    ended = await sessions_repo.end(session.id, FocusExitReason.STUCK, FocusStuckReason.TOO_BIG)
+    assert ended.ended_at is not None
+    assert ended.exit_reason == FocusExitReason.STUCK
+    assert ended.stuck_reason == FocusStuckReason.TOO_BIG
+
+    assert await sessions_repo.get_active_by_user(user.id) is None
+
+    by_plan = await sessions_repo.list_by_daily_plan(plan.id)
+    assert [s.id for s in by_plan] == [session.id]
+
+    today = datetime.now(UTC).date()
+    by_range = await sessions_repo.list_by_user_between(
+        user.id, today, today + timedelta(days=1)
+    )
+    assert [s.id for s in by_range] == [session.id]
+
+
+async def test_daily_plan_swap_repository_round_trip(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-18", "owner18@example.com", "Owner Eighteen")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    bumped_task = await tasks_repo.create(user.id, "Bumped task")
+    new_task = await tasks_repo.create(user.id, "Urgent task")
+
+    plans_repo = SqlAlchemyDailyPlanRepository(db_session)
+    plan = await plans_repo.create(user.id, datetime.now(UTC).date())
+
+    swaps_repo = SqlAlchemyDailyPlanSwapRepository(db_session)
+    swap = await swaps_repo.create(user.id, plan.id, bumped_task.id, new_task.id)
+    assert swap.bumped_task_id == bumped_task.id
+    assert swap.new_task_id == new_task.id
+
+    by_plan = await swaps_repo.list_by_daily_plan(plan.id)
+    assert [s.id for s in by_plan] == [swap.id]
+
+    today = datetime.now(UTC).date()
+    by_range = await swaps_repo.list_by_user_between(user.id, today, today + timedelta(days=1))
+    assert [s.id for s in by_range] == [swap.id]
 
 
 async def test_thought_repository_round_trip(db_session: AsyncSession) -> None:

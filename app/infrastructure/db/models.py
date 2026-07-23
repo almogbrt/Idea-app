@@ -8,11 +8,22 @@ dataclasses at the boundary.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Index, String, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -185,6 +196,13 @@ class TaskModel(Base):
     )
     start_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
     timer_started_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    deliverable: Mapped[str | None] = mapped_column(nullable=True)
+    estimated_minutes: Mapped[int | None] = mapped_column(nullable=True)
+    importance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    goal_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("goals.id", ondelete="SET NULL"), nullable=True
+    )
+    next_step: Mapped[str | None] = mapped_column(nullable=True)
 
 
 class ThoughtModel(Base):
@@ -233,3 +251,80 @@ class NotificationModel(Base):
     body: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
     read_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+
+
+class GoalModel(Base):
+    __tablename__ = "goals"
+    __table_args__ = (Index("ix_goals_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+
+
+class DailyPlanModel(Base):
+    __tablename__ = "daily_plans"
+    __table_args__ = (
+        Index("ix_daily_plans_user_id", "user_id"),
+        UniqueConstraint("user_id", "plan_date", name="uq_daily_plans_user_id_plan_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    plan_date: Mapped[date] = mapped_column(Date)
+    main_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    secondary_task_id_1: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    secondary_task_id_2: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    is_locked: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    locked_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    carry_over_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        _TIMESTAMPTZ, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class FocusSessionModel(Base):
+    __tablename__ = "focus_sessions"
+    __table_args__ = (
+        Index("ix_focus_sessions_user_id", "user_id"),
+        Index("ix_focus_sessions_daily_plan_id", "daily_plan_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    task_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"))
+    daily_plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("daily_plans.id", ondelete="CASCADE")
+    )
+    started_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())
+    ended_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    exit_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    stuck_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+
+class DailyPlanSwapModel(Base):
+    __tablename__ = "daily_plan_swaps"
+    __table_args__ = (Index("ix_daily_plan_swaps_daily_plan_id", "daily_plan_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    daily_plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("daily_plans.id", ondelete="CASCADE")
+    )
+    bumped_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    new_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(_TIMESTAMPTZ, server_default=func.now())

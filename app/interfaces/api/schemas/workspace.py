@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain.entities import NotificationKind, ProjectType, TaskStatus
+from app.domain.entities import NotificationKind, ProjectType, TaskImportance, TaskStatus
 
 
 class ClientView(BaseModel):
@@ -72,6 +72,11 @@ class TaskView(BaseModel):
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
     timer_started_at: datetime | None = None
+    deliverable: str | None = None
+    estimated_minutes: int | None = None
+    importance: TaskImportance | None = None
+    goal_id: uuid.UUID | None = None
+    next_step: str | None = None
 
 
 class CreateTaskRequest(BaseModel):

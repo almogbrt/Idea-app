@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -36,6 +36,25 @@ class TaskStatus(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     DONE = "done"
+
+
+class TaskImportance(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class FocusExitReason(StrEnum):
+    DONE = "done"
+    STUCK = "stuck"
+    BREAK = "break"
+
+
+class FocusStuckReason(StrEnum):
+    UNCLEAR = "unclear"
+    TOO_BIG = "too_big"
+    BLOCKED = "blocked"
+    DISTRACTED = "distracted"
 
 
 class NotificationKind(StrEnum):
@@ -196,6 +215,65 @@ class Task:
     as `start_at`, the originally planned start time). The timer's duration
     is `due_at - start_at`; `timer_started_at + that duration` is the
     countdown deadline, timed from when work actually began."""
+    deliverable: str | None = None
+    """What "done" looks like for this task — set when picked as one of a
+    day's 3 outcomes in the My Day flow."""
+    estimated_minutes: int | None = None
+    """Estimated effort in minutes, set alongside `deliverable` — drives the
+    Focus-mode timer, independent of `start_at`/`due_at`/`timer_started_at`
+    (those remain the general task-list's own scheduling/timer feature)."""
+    importance: TaskImportance | None = None
+    goal_id: uuid.UUID | None = None
+    next_step: str | None = None
+    """Free-text note on what to do next — shown/edited in Focus mode."""
+
+
+@dataclass(slots=True)
+class Goal:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class DailyPlan:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    plan_date: date
+    main_task_id: uuid.UUID | None
+    secondary_task_id_1: uuid.UUID | None
+    secondary_task_id_2: uuid.UUID | None
+    is_locked: bool
+    locked_at: datetime | None
+    carry_over_task_id: uuid.UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(slots=True)
+class FocusSession:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    task_id: uuid.UUID
+    daily_plan_id: uuid.UUID
+    started_at: datetime
+    ended_at: datetime | None = None
+    exit_reason: FocusExitReason | None = None
+    stuck_reason: FocusStuckReason | None = None
+
+
+@dataclass(slots=True)
+class DailyPlanSwap:
+    id: uuid.UUID
+    user_id: uuid.UUID
+    daily_plan_id: uuid.UUID
+    bumped_task_id: uuid.UUID | None
+    """Nullable so the audit log survives the referenced task being deleted
+    later (`ON DELETE SET NULL`) — the swap count itself is what matters for
+    metrics, not a live reference."""
+    new_task_id: uuid.UUID | None
+    created_at: datetime
 
 
 @dataclass(slots=True)

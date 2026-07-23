@@ -4,7 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from app.domain.entities import Task, TaskStatus
+from app.domain.entities import Task, TaskImportance, TaskStatus
 
 
 class TaskRepositoryPort(ABC):
@@ -69,4 +69,20 @@ class TaskRepositoryPort(ABC):
 
     @abstractmethod
     async def count_open(self, user_id: uuid.UUID) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_daily_attributes(
+        self,
+        task_id: uuid.UUID,
+        deliverable: str,
+        estimated_minutes: int,
+        importance: TaskImportance,
+        goal_id: uuid.UUID | None,
+    ) -> Task:
+        """Set when a task is picked as one of a day's 3 My Day outcomes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_next_step(self, task_id: uuid.UUID, next_step: str | None) -> Task:
         raise NotImplementedError

@@ -111,6 +111,39 @@ const els = {
   monthViewClose: document.getElementById("month-view-close"),
   monthGrid: document.getElementById("month-grid"),
   installAppBtn: document.getElementById("install-app-btn"),
+  dashboardView: document.getElementById("dashboard-view"),
+  myDayView: document.getElementById("my-day-view"),
+  focusView: document.getElementById("focus-view"),
+  myDayInboxInput: document.getElementById("my-day-inbox-input"),
+  myDayInboxUrgent: document.getElementById("my-day-inbox-urgent"),
+  myDayInboxAdd: document.getElementById("my-day-inbox-add"),
+  myDayGoalInput: document.getElementById("my-day-goal-input"),
+  myDayGoalAdd: document.getElementById("my-day-goal-add"),
+  myDayGoalsList: document.getElementById("my-day-goals-list"),
+  myDayPicker: document.getElementById("my-day-picker"),
+  myDayLockBtn: document.getElementById("my-day-lock-btn"),
+  myDayPickerSection: document.getElementById("my-day-picker-section"),
+  myDayLockedSection: document.getElementById("my-day-locked-section"),
+  myDayLockedTasks: document.getElementById("my-day-locked-tasks"),
+  myDaySummaryBtn: document.getElementById("my-day-summary-btn"),
+  myDaySummaryContent: document.getElementById("my-day-summary-content"),
+  urgentSwapModal: document.getElementById("urgent-swap-modal"),
+  urgentSwapBumpedSelect: document.getElementById("urgent-swap-bumped-select"),
+  urgentSwapDeliverable: document.getElementById("urgent-swap-deliverable"),
+  urgentSwapMinutes: document.getElementById("urgent-swap-minutes"),
+  urgentSwapImportance: document.getElementById("urgent-swap-importance"),
+  urgentSwapGoal: document.getElementById("urgent-swap-goal"),
+  urgentSwapSave: document.getElementById("urgent-swap-save"),
+  urgentSwapCancel: document.getElementById("urgent-swap-cancel"),
+  focusTaskTitle: document.getElementById("focus-task-title"),
+  focusDeliverable: document.getElementById("focus-deliverable"),
+  focusTimer: document.getElementById("focus-timer"),
+  focusNextStepInput: document.getElementById("focus-next-step-input"),
+  focusDoneBtn: document.getElementById("focus-done-btn"),
+  focusStuckBtn: document.getElementById("focus-stuck-btn"),
+  focusBreakBtn: document.getElementById("focus-break-btn"),
+  stuckReasonModal: document.getElementById("stuck-reason-modal"),
+  stuckReasonCancel: document.getElementById("stuck-reason-cancel"),
 };
 
 let isAuthenticated = false;
@@ -174,6 +207,13 @@ function setNavActive(name) {
   document.querySelectorAll(".nav-item").forEach((el) => {
     el.classList.toggle("active", el.dataset.nav === name);
   });
+}
+
+function setAppMode(mode) {
+  document.body.dataset.appMode = mode;
+  els.dashboardView.hidden = mode !== "dashboard";
+  els.myDayView.hidden = mode !== "my-day";
+  els.focusView.hidden = mode !== "focus";
 }
 
 function closeSidebar() {
@@ -419,6 +459,12 @@ document.querySelectorAll(".nav-item").forEach((item) => {
     const target = item.dataset.nav;
     setNavActive(target);
     closeSidebar();
+    if (target === "my-day") {
+      setAppMode("my-day");
+      refreshMyDay();
+      return;
+    }
+    setAppMode("dashboard");
     const sectionMap = {
       chat: "chat-form",
       overview: "greeting",
@@ -1777,6 +1823,472 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+let myDayGoalsCache = [];
+let myDayPlanCache = null;
+let myDayPickerSlots = null;
+let pendingUrgentTaskId = null;
+let activeFocusSession = null;
+let focusCurrentTask = null;
+let focusDeadlineMs = null;
+let focusTickInterval = null;
+
+async function loadGoals() {
+  try {
+    myDayGoalsCache = await apiFetch("/my-day/goals");
+  } catch {
+    myDayGoalsCache = [];
+  }
+  renderGoalsList();
+}
+
+function renderGoalsList() {
+  els.myDayGoalsList.innerHTML = "";
+  for (const goal of myDayGoalsCache) {
+    const row = document.createElement("div");
+    row.className = "my-day-goal-row";
+    const name = document.createElement("span");
+    name.textContent = goal.name;
+    row.appendChild(name);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "task-delete-btn";
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm(`למחוק את היעד "${goal.name}"?`)) return;
+      try {
+        await apiFetch(`/my-day/goals/${goal.id}`, { method: "DELETE" });
+        await loadGoals();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    row.appendChild(deleteBtn);
+    els.myDayGoalsList.appendChild(row);
+  }
+}
+
+els.myDayGoalAdd.addEventListener("click", async () => {
+  const name = els.myDayGoalInput.value.trim();
+  if (!name) return;
+  try {
+    await apiFetch("/my-day/goals", { method: "POST", body: JSON.stringify({ name }) });
+    els.myDayGoalInput.value = "";
+    await loadGoals();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+function buildTaskPickSlot(label, selectedTaskId) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "my-day-slot-card";
+
+  const heading = document.createElement("div");
+  heading.className = "my-day-slot-heading";
+  heading.textContent = label;
+  wrapper.appendChild(heading);
+
+  const openTasks = currentTasks.filter((t) => t.status !== "done");
+  const taskSelect = document.createElement("select");
+  taskSelect.className = "my-day-slot-field";
+  taskSelect.innerHTML =
+    '<option value="">בחר משימה...</option>' +
+    openTasks
+      .map(
+        (t) =>
+          `<option value="${t.id}" ${t.id === selectedTaskId ? "selected" : ""}>${escapeHtml(t.title)}</option>`
+      )
+      .join("");
+  wrapper.appendChild(taskSelect);
+
+  const deliverable = document.createElement("textarea");
+  deliverable.className = "my-day-slot-field";
+  deliverable.rows = 2;
+  deliverable.placeholder = "תוצר סופי — איך ייראה שהמשימה בוצעה?";
+  wrapper.appendChild(deliverable);
+
+  const minutes = document.createElement("input");
+  minutes.type = "number";
+  minutes.min = "1";
+  minutes.className = "my-day-slot-field";
+  minutes.placeholder = "משך משוער (דקות)";
+  minutes.value = "30";
+  wrapper.appendChild(minutes);
+
+  const importance = document.createElement("select");
+  importance.className = "my-day-slot-field";
+  importance.innerHTML = `
+    <option value="high">חשיבות גבוהה</option>
+    <option value="medium">חשיבות בינונית</option>
+    <option value="low">חשיבות נמוכה</option>
+  `;
+  wrapper.appendChild(importance);
+
+  const goalSelect = document.createElement("select");
+  goalSelect.className = "my-day-slot-field";
+  goalSelect.innerHTML =
+    '<option value="">ללא יעד עסקי</option>' +
+    myDayGoalsCache.map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join("");
+  wrapper.appendChild(goalSelect);
+
+  return { wrapper, taskSelect, deliverable, minutes, importance, goalSelect };
+}
+
+function renderDailyTaskPicker(plan) {
+  els.myDayPicker.innerHTML = "";
+  const main = buildTaskPickSlot("המשימה המרכזית (חובה לסיים)", plan.main_task_id);
+  const secondary1 = buildTaskPickSlot("משימה נוספת 1", plan.secondary_task_id_1);
+  const secondary2 = buildTaskPickSlot("משימה נוספת 2", plan.secondary_task_id_2);
+  els.myDayPicker.appendChild(main.wrapper);
+  els.myDayPicker.appendChild(secondary1.wrapper);
+  els.myDayPicker.appendChild(secondary2.wrapper);
+  myDayPickerSlots = { main, secondary: [secondary1, secondary2] };
+}
+
+function buildDailyPickPayload(slot) {
+  return {
+    task_id: slot.taskSelect.value,
+    deliverable: slot.deliverable.value.trim() || "בוצע",
+    estimated_minutes: Number(slot.minutes.value) || 30,
+    importance: slot.importance.value,
+    goal_id: slot.goalSelect.value || null,
+  };
+}
+
+async function saveDailyTaskSelection() {
+  if (!myDayPickerSlots) throw new Error("אין בחירה להצגה.");
+  const { main, secondary } = myDayPickerSlots;
+  if (!main.taskSelect.value) {
+    throw new Error("צריך לבחור משימה מרכזית.");
+  }
+  const mainPick = buildDailyPickPayload(main);
+  const secondaryPicks = secondary.filter((s) => s.taskSelect.value).map(buildDailyPickPayload);
+  return apiFetch("/my-day/plan/today/select", {
+    method: "POST",
+    body: JSON.stringify({ main: mainPick, secondary: secondaryPicks }),
+  });
+}
+
+els.myDayLockBtn.addEventListener("click", async () => {
+  try {
+    await saveDailyTaskSelection();
+    const locked = await apiFetch("/my-day/plan/today/lock", { method: "POST" });
+    await loadTasks(); // picks were just saved server-side — refresh the stale local cache
+    renderMyDayPlanView(locked);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+function renderMyDayPlanView(plan) {
+  myDayPlanCache = plan;
+  if (plan.is_locked) {
+    els.myDayPickerSection.hidden = true;
+    els.myDayLockedSection.hidden = false;
+    renderLockedTasks(plan);
+  } else {
+    els.myDayPickerSection.hidden = false;
+    els.myDayLockedSection.hidden = true;
+    renderDailyTaskPicker(plan);
+  }
+}
+
+function renderLockedTasks(plan) {
+  els.myDayLockedTasks.innerHTML = "";
+  const taskById = new Map(currentTasks.map((t) => [t.id, t]));
+  const slots = [
+    { id: plan.main_task_id, label: "משימה מרכזית" },
+    { id: plan.secondary_task_id_1, label: "משימה נוספת" },
+    { id: plan.secondary_task_id_2, label: "משימה נוספת" },
+  ].filter((s) => s.id);
+
+  for (const slot of slots) {
+    const task = taskById.get(slot.id);
+    if (!task) continue;
+    const card = document.createElement("div");
+    card.className = "my-day-slot-card";
+    const heading = document.createElement("div");
+    heading.className = "my-day-slot-heading";
+    heading.textContent = `${slot.label}${task.status === "done" ? " — הושלם ✔" : ""}`;
+    card.appendChild(heading);
+    const title = document.createElement("div");
+    title.className = "my-day-locked-task-title";
+    title.textContent = task.title;
+    card.appendChild(title);
+    if (task.deliverable) {
+      const deliverable = document.createElement("div");
+      deliverable.className = "my-day-locked-task-deliverable";
+      deliverable.textContent = task.deliverable;
+      card.appendChild(deliverable);
+    }
+    if (task.status !== "done") {
+      const focusBtn = document.createElement("button");
+      focusBtn.type = "button";
+      focusBtn.className = "btn btn--primary";
+      focusBtn.textContent = "כניסה ל-Focus";
+      focusBtn.addEventListener("click", () => enterFocusMode(task.id));
+      card.appendChild(focusBtn);
+    }
+    els.myDayLockedTasks.appendChild(card);
+  }
+}
+
+els.myDayInboxAdd.addEventListener("click", async () => {
+  const title = els.myDayInboxInput.value.trim();
+  if (!title) return;
+  try {
+    const task = await apiFetch("/my-day/inbox", {
+      method: "POST",
+      body: JSON.stringify({ title }),
+    });
+    els.myDayInboxInput.value = "";
+    const isUrgent = els.myDayInboxUrgent.checked;
+    els.myDayInboxUrgent.checked = false;
+    await loadTasks();
+    if (isUrgent && myDayPlanCache && myDayPlanCache.is_locked) {
+      openUrgentSwapModal(task.id);
+    } else {
+      await refreshMyDay();
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+function openUrgentSwapModal(newTaskId) {
+  pendingUrgentTaskId = newTaskId;
+  const slots = [
+    { id: myDayPlanCache.main_task_id, label: "משימה מרכזית" },
+    { id: myDayPlanCache.secondary_task_id_1, label: "משימה נוספת 1" },
+    { id: myDayPlanCache.secondary_task_id_2, label: "משימה נוספת 2" },
+  ].filter((s) => s.id);
+  const taskNameById = new Map(currentTasks.map((t) => [t.id, t.title]));
+  els.urgentSwapBumpedSelect.innerHTML = slots
+    .map(
+      (s) =>
+        `<option value="${s.id}">${escapeHtml(s.label)}: ${escapeHtml(taskNameById.get(s.id) || "")}</option>`
+    )
+    .join("");
+  els.urgentSwapDeliverable.value = "";
+  els.urgentSwapMinutes.value = "30";
+  els.urgentSwapImportance.value = "high";
+  els.urgentSwapGoal.innerHTML =
+    '<option value="">ללא יעד</option>' +
+    myDayGoalsCache.map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join("");
+  els.urgentSwapModal.hidden = false;
+}
+
+els.urgentSwapCancel.addEventListener("click", () => {
+  els.urgentSwapModal.hidden = true;
+  pendingUrgentTaskId = null;
+});
+
+els.urgentSwapSave.addEventListener("click", async () => {
+  if (!pendingUrgentTaskId) return;
+  const bumpedTaskId = els.urgentSwapBumpedSelect.value;
+  if (!bumpedTaskId) {
+    alert("צריך לבחור משימה לדחות.");
+    return;
+  }
+  try {
+    const plan = await apiFetch("/my-day/plan/today/swap", {
+      method: "POST",
+      body: JSON.stringify({
+        bumped_task_id: bumpedTaskId,
+        pick: {
+          task_id: pendingUrgentTaskId,
+          deliverable: els.urgentSwapDeliverable.value.trim() || "בוצע",
+          estimated_minutes: Number(els.urgentSwapMinutes.value) || 30,
+          importance: els.urgentSwapImportance.value,
+          goal_id: els.urgentSwapGoal.value || null,
+        },
+      }),
+    });
+    els.urgentSwapModal.hidden = true;
+    pendingUrgentTaskId = null;
+    await loadTasks();
+    renderMyDayPlanView(plan);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+async function refreshMyDay() {
+  await loadTasks();
+  await loadGoals();
+  try {
+    const plan = await apiFetch("/my-day/plan/today");
+    renderMyDayPlanView(plan);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function enterFocusMode(taskId) {
+  try {
+    const session = await apiFetch("/my-day/focus/start", {
+      method: "POST",
+      body: JSON.stringify({ task_id: taskId }),
+    });
+    startFocusUI(session);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function startFocusUI(session) {
+  activeFocusSession = session;
+  focusCurrentTask = currentTasks.find((t) => t.id === session.task_id) || null;
+  setAppMode("focus");
+  renderFocusScreen(session, focusCurrentTask);
+}
+
+function renderFocusScreen(session, task) {
+  els.focusTaskTitle.textContent = task ? task.title : "";
+  els.focusDeliverable.textContent = task && task.deliverable ? task.deliverable : "";
+  els.focusNextStepInput.value = (task && task.next_step) || "";
+  els.focusTimer.classList.remove("focus-timer--expired");
+
+  const durationMinutes = (task && task.estimated_minutes) || 30;
+  focusDeadlineMs = new Date(session.started_at).getTime() + durationMinutes * 60000;
+  tickFocusTimer();
+  if (focusTickInterval) clearInterval(focusTickInterval);
+  focusTickInterval = setInterval(tickFocusTimer, 1000);
+}
+
+function tickFocusTimer() {
+  if (focusDeadlineMs === null) return;
+  const remaining = focusDeadlineMs - Date.now();
+  els.focusTimer.textContent = formatCountdown(remaining);
+  if (remaining <= 0 && !els.focusTimer.classList.contains("focus-timer--expired")) {
+    els.focusTimer.classList.add("focus-timer--expired");
+    playTimerExpiredSound();
+    showTimerExpiredNotification(focusCurrentTask ? focusCurrentTask.title : "");
+  }
+}
+
+function stopFocusTimerLoop() {
+  if (focusTickInterval) {
+    clearInterval(focusTickInterval);
+    focusTickInterval = null;
+  }
+  focusDeadlineMs = null;
+}
+
+els.focusNextStepInput.addEventListener("change", async () => {
+  if (!focusCurrentTask) return;
+  try {
+    await apiFetch(`/my-day/tasks/${focusCurrentTask.id}/next-step`, {
+      method: "PATCH",
+      body: JSON.stringify({ next_step: els.focusNextStepInput.value.trim() || null }),
+    });
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+async function endFocusSession(exitReason, stuckReason) {
+  if (!activeFocusSession) return;
+  try {
+    await apiFetch(`/my-day/focus/${activeFocusSession.id}/end`, {
+      method: "POST",
+      body: JSON.stringify({ exit_reason: exitReason, stuck_reason: stuckReason || null }),
+    });
+    stopFocusTimerLoop();
+    activeFocusSession = null;
+    focusCurrentTask = null;
+    setAppMode("my-day");
+    await refreshMyDay();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+els.focusDoneBtn.addEventListener("click", () => endFocusSession("done", null));
+els.focusBreakBtn.addEventListener("click", () => endFocusSession("break", null));
+
+els.focusStuckBtn.addEventListener("click", () => {
+  els.stuckReasonModal.hidden = false;
+});
+
+els.stuckReasonCancel.addEventListener("click", () => {
+  els.stuckReasonModal.hidden = true;
+});
+
+document.querySelectorAll(".stuck-reason-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    els.stuckReasonModal.hidden = true;
+    endFocusSession("stuck", btn.dataset.reason);
+  });
+});
+
+async function checkForActiveFocusSessionOnLoad() {
+  try {
+    const session = await apiFetch("/my-day/focus/active");
+    if (session) {
+      await loadTasks();
+      startFocusUI(session);
+    }
+  } catch {
+    // not authenticated yet
+  }
+}
+
+els.myDaySummaryBtn.addEventListener("click", async () => {
+  try {
+    const summary = await apiFetch("/my-day/plan/today/summary");
+    renderMyDaySummary(summary);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+function renderMyDaySummary(summary) {
+  const el = els.myDaySummaryContent;
+  el.hidden = false;
+  const stuckLabels = {
+    unclear: "לא ברור מה לעשות",
+    too_big: "המשימה גדולה מדי",
+    blocked: "חסר מידע או אדם אחר",
+    distracted: "הוסחתי",
+  };
+  const stuckEntries = Object.entries(summary.stuck_reason_counts || {});
+  el.innerHTML = `
+    <div class="eod-summary-card">
+      <div class="eod-stat-row"><strong>המשימה המרכזית הושלמה:</strong> ${summary.main_task_completed ? "כן ✔" : "לא"}</div>
+      <div class="eod-stat-row"><strong>הושלם:</strong> ${summary.completed_tasks.length ? summary.completed_tasks.map(escapeHtml).join(", ") : "—"}</div>
+      <div class="eod-stat-row"><strong>לא הושלם:</strong> ${summary.incomplete_tasks.length ? summary.incomplete_tasks.map(escapeHtml).join(", ") : "—"}</div>
+      <div class="eod-stat-row"><strong>מה הפריע:</strong> ${stuckEntries.length ? stuckEntries.map(([k, v]) => `${escapeHtml(stuckLabels[k] || k)} (${v})`).join(", ") : "—"}</div>
+      <div class="eod-stat-row"><strong>משימות דחופות שנכנסו:</strong> ${summary.swap_count}</div>
+      <div class="eod-stat-row eod-carry-over-row">
+        <strong>המשימה הראשונה למחר:</strong>
+        <select id="eod-carry-over-select" class="my-day-slot-field">
+          <option value="">בחר משימה...</option>
+          ${currentTasks
+            .filter((t) => t.status !== "done")
+            .map(
+              (t) =>
+                `<option value="${t.id}" ${t.id === summary.carry_over_task_id ? "selected" : ""}>${escapeHtml(t.title)}</option>`
+            )
+            .join("")}
+        </select>
+        <button type="button" id="eod-carry-over-save" class="btn btn--ghost btn--small">שמירה</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("eod-carry-over-save").addEventListener("click", async () => {
+    const taskId = document.getElementById("eod-carry-over-select").value || null;
+    try {
+      await apiFetch("/my-day/plan/today/carry-over", {
+        method: "POST",
+        body: JSON.stringify({ task_id: taskId }),
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 function refreshWorkspace() {
   loadDashboardSummary();
   loadTasks();
@@ -1818,7 +2330,9 @@ window.addEventListener("appinstalled", () => {
 });
 
 (async function init() {
+  setAppMode("dashboard");
   await checkAuth();
   refreshWorkspace();
   setInterval(tickTaskTimers, 1000);
+  await checkForActiveFocusSessionOnLoad();
 })();

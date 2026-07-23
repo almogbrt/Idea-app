@@ -376,6 +376,11 @@ def _task_view(task: Task) -> TaskView:
         client_id=task.client_id,
         start_at=task.start_at,
         timer_started_at=task.timer_started_at,
+        deliverable=task.deliverable,
+        estimated_minutes=task.estimated_minutes,
+        importance=task.importance,
+        goal_id=task.goal_id,
+        next_step=task.next_step,
     )
 
 

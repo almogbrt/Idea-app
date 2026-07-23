@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import pytest
@@ -20,7 +20,11 @@ from app.application.ports.client_attachment_repository import ClientAttachmentR
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
 from app.application.ports.conversation_repository import ConversationRepositoryPort
+from app.application.ports.daily_plan_repository import DailyPlanRepositoryPort
+from app.application.ports.daily_plan_swap_repository import DailyPlanSwapRepositoryPort
 from app.application.ports.embedding import EmbeddingPort
+from app.application.ports.focus_session_repository import FocusSessionRepositoryPort
+from app.application.ports.goal_repository import GoalRepositoryPort
 from app.application.ports.llm_gateway import LLMGatewayPort, LLMMessage, LLMResponse, LLMStopReason
 from app.application.ports.memory_repository import MemoryRepositoryPort
 from app.application.ports.notification_repository import NotificationRepositoryPort
@@ -37,6 +41,12 @@ from app.domain.entities import (
     Client,
     ClientAttachment,
     Conversation,
+    DailyPlan,
+    DailyPlanSwap,
+    FocusExitReason,
+    FocusSession,
+    FocusStuckReason,
+    Goal,
     MemoryRecord,
     Message,
     Notification,
@@ -45,6 +55,7 @@ from app.domain.entities import (
     ProjectSummary,
     ProjectType,
     Task,
+    TaskImportance,
     TaskStatus,
     Thought,
     ToolDefinition,
@@ -416,6 +427,229 @@ class FakeTaskRepository(TaskRepositoryPort):
             if t.user_id == user_id and t.status != TaskStatus.DONE
         )
 
+    async def set_daily_attributes(
+        self,
+        task_id: uuid.UUID,
+        deliverable: str,
+        estimated_minutes: int,
+        importance: TaskImportance,
+        goal_id: uuid.UUID | None,
+    ) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.deliverable = deliverable
+        task.estimated_minutes = estimated_minutes
+        task.importance = importance
+        task.goal_id = goal_id
+        return task
+
+    async def set_next_step(self, task_id: uuid.UUID, next_step: str | None) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.next_step = next_step
+        return task
+
+
+class FakeGoalRepository(GoalRepositoryPort):
+    def __init__(self) -> None:
+        self.goals: dict[uuid.UUID, Goal] = {}
+
+    async def create(self, user_id: uuid.UUID, name: str) -> Goal:
+        goal = Goal(id=uuid.uuid4(), user_id=user_id, name=name, created_at=datetime.now(UTC))
+        self.goals[goal.id] = goal
+        return goal
+
+    async def list_by_user(self, user_id: uuid.UUID) -> list[Goal]:
+        return [g for g in self.goals.values() if g.user_id == user_id]
+
+    async def get(self, goal_id: uuid.UUID) -> Goal | None:
+        return self.goals.get(goal_id)
+
+    async def update(self, goal_id: uuid.UUID, name: str) -> Goal:
+        goal = self.goals.get(goal_id)
+        if goal is None:
+            raise NotFoundError("Goal not found", details={"goal_id": str(goal_id)})
+        goal.name = name
+        return goal
+
+    async def delete(self, goal_id: uuid.UUID) -> None:
+        if goal_id not in self.goals:
+            raise NotFoundError("Goal not found", details={"goal_id": str(goal_id)})
+        del self.goals[goal_id]
+
+
+class FakeDailyPlanRepository(DailyPlanRepositoryPort):
+    def __init__(self) -> None:
+        self.plans: dict[uuid.UUID, DailyPlan] = {}
+
+    async def get_by_date(self, user_id: uuid.UUID, plan_date: date) -> DailyPlan | None:
+        for plan in self.plans.values():
+            if plan.user_id == user_id and plan.plan_date == plan_date:
+                return plan
+        return None
+
+    async def create(self, user_id: uuid.UUID, plan_date: date) -> DailyPlan:
+        now = datetime.now(UTC)
+        plan = DailyPlan(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            plan_date=plan_date,
+            main_task_id=None,
+            secondary_task_id_1=None,
+            secondary_task_id_2=None,
+            is_locked=False,
+            locked_at=None,
+            carry_over_task_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        self.plans[plan.id] = plan
+        return plan
+
+    async def get(self, daily_plan_id: uuid.UUID) -> DailyPlan | None:
+        return self.plans.get(daily_plan_id)
+
+    async def set_main_task(
+        self, daily_plan_id: uuid.UUID, task_id: uuid.UUID | None
+    ) -> DailyPlan:
+        plan = self._get_or_raise(daily_plan_id)
+        plan.main_task_id = task_id
+        return plan
+
+    async def set_secondary_task(
+        self, daily_plan_id: uuid.UUID, slot: int, task_id: uuid.UUID | None
+    ) -> DailyPlan:
+        plan = self._get_or_raise(daily_plan_id)
+        if slot == 1:
+            plan.secondary_task_id_1 = task_id
+        elif slot == 2:
+            plan.secondary_task_id_2 = task_id
+        else:
+            raise ValueError("slot must be 1 or 2")
+        return plan
+
+    async def lock(self, daily_plan_id: uuid.UUID) -> DailyPlan:
+        plan = self._get_or_raise(daily_plan_id)
+        plan.is_locked = True
+        plan.locked_at = datetime.now(UTC)
+        return plan
+
+    async def set_carry_over(
+        self, daily_plan_id: uuid.UUID, task_id: uuid.UUID | None
+    ) -> DailyPlan:
+        plan = self._get_or_raise(daily_plan_id)
+        plan.carry_over_task_id = task_id
+        return plan
+
+    async def list_by_user_between(
+        self, user_id: uuid.UUID, start_date: date, end_date: date
+    ) -> list[DailyPlan]:
+        return [
+            p
+            for p in self.plans.values()
+            if p.user_id == user_id and start_date <= p.plan_date < end_date
+        ]
+
+    def _get_or_raise(self, daily_plan_id: uuid.UUID) -> DailyPlan:
+        plan = self.plans.get(daily_plan_id)
+        if plan is None:
+            raise NotFoundError(
+                "Daily plan not found", details={"daily_plan_id": str(daily_plan_id)}
+            )
+        return plan
+
+
+class FakeFocusSessionRepository(FocusSessionRepositoryPort):
+    def __init__(self) -> None:
+        self.sessions: dict[uuid.UUID, FocusSession] = {}
+
+    async def start(
+        self, user_id: uuid.UUID, task_id: uuid.UUID, daily_plan_id: uuid.UUID
+    ) -> FocusSession:
+        session = FocusSession(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            task_id=task_id,
+            daily_plan_id=daily_plan_id,
+            started_at=datetime.now(UTC),
+        )
+        self.sessions[session.id] = session
+        return session
+
+    async def end(
+        self,
+        session_id: uuid.UUID,
+        exit_reason: FocusExitReason,
+        stuck_reason: FocusStuckReason | None,
+    ) -> FocusSession:
+        session = self.sessions.get(session_id)
+        if session is None:
+            raise NotFoundError(
+                "Focus session not found", details={"session_id": str(session_id)}
+            )
+        session.ended_at = datetime.now(UTC)
+        session.exit_reason = exit_reason
+        session.stuck_reason = stuck_reason
+        return session
+
+    async def get(self, session_id: uuid.UUID) -> FocusSession | None:
+        return self.sessions.get(session_id)
+
+    async def get_active_by_user(self, user_id: uuid.UUID) -> FocusSession | None:
+        for session in self.sessions.values():
+            if session.user_id == user_id and session.ended_at is None:
+                return session
+        return None
+
+    async def list_by_daily_plan(self, daily_plan_id: uuid.UUID) -> list[FocusSession]:
+        return [s for s in self.sessions.values() if s.daily_plan_id == daily_plan_id]
+
+    async def list_by_user_between(
+        self, user_id: uuid.UUID, start_date: date, end_date: date
+    ) -> list[FocusSession]:
+        return [
+            s
+            for s in self.sessions.values()
+            if s.user_id == user_id and start_date <= s.started_at.date() < end_date
+        ]
+
+
+class FakeDailyPlanSwapRepository(DailyPlanSwapRepositoryPort):
+    def __init__(self) -> None:
+        self.swaps: dict[uuid.UUID, DailyPlanSwap] = {}
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        daily_plan_id: uuid.UUID,
+        bumped_task_id: uuid.UUID,
+        new_task_id: uuid.UUID,
+    ) -> DailyPlanSwap:
+        swap = DailyPlanSwap(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            daily_plan_id=daily_plan_id,
+            bumped_task_id=bumped_task_id,
+            new_task_id=new_task_id,
+            created_at=datetime.now(UTC),
+        )
+        self.swaps[swap.id] = swap
+        return swap
+
+    async def list_by_daily_plan(self, daily_plan_id: uuid.UUID) -> list[DailyPlanSwap]:
+        return [s for s in self.swaps.values() if s.daily_plan_id == daily_plan_id]
+
+    async def list_by_user_between(
+        self, user_id: uuid.UUID, start_date: date, end_date: date
+    ) -> list[DailyPlanSwap]:
+        return [
+            s
+            for s in self.swaps.values()
+            if s.user_id == user_id and start_date <= s.created_at.date() < end_date
+        ]
+
 
 class FakeThoughtRepository(ThoughtRepositoryPort):
     def __init__(self) -> None:
@@ -699,3 +933,23 @@ def fake_notification_repository() -> FakeNotificationRepository:
 @pytest.fixture
 def fake_calendar_port() -> FakeCalendarPort:
     return FakeCalendarPort()
+
+
+@pytest.fixture
+def fake_goal_repository() -> FakeGoalRepository:
+    return FakeGoalRepository()
+
+
+@pytest.fixture
+def fake_daily_plan_repository() -> FakeDailyPlanRepository:
+    return FakeDailyPlanRepository()
+
+
+@pytest.fixture
+def fake_focus_session_repository() -> FakeFocusSessionRepository:
+    return FakeFocusSessionRepository()
+
+
+@pytest.fixture
+def fake_daily_plan_swap_repository() -> FakeDailyPlanSwapRepository:
+    return FakeDailyPlanSwapRepository()

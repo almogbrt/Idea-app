@@ -13,6 +13,12 @@ from app.application.ports.inbox import InboxPort
 from app.application.ports.schedule import SchedulePort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
+from app.application.use_cases.manage_daily_plan import (
+    DailyPlanMetricsUseCase,
+    ManageDailyPlanUseCase,
+    ManageFocusSessionUseCase,
+    ManageGoalsUseCase,
+)
 from app.application.use_cases.manage_email import ManageEmailUseCase
 from app.application.use_cases.manage_files import ManageFilesUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
@@ -35,6 +41,10 @@ from tests.conftest import (
     FakeClientAttachmentRepository,
     FakeClientLogoStorage,
     FakeClientRepository,
+    FakeDailyPlanRepository,
+    FakeDailyPlanSwapRepository,
+    FakeFocusSessionRepository,
+    FakeGoalRepository,
     FakeNotificationRepository,
     FakeProjectRepository,
     FakeTaskRepository,
@@ -169,6 +179,10 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     inbox_port = _NullInbox()
     logo_storage = FakeClientLogoStorage()
     attachments_repo = FakeClientAttachmentRepository()
+    goals_repo = FakeGoalRepository()
+    daily_plans_repo = FakeDailyPlanRepository()
+    daily_plan_swaps_repo = FakeDailyPlanSwapRepository()
+    focus_sessions_repo = FakeFocusSessionRepository()
 
     scope = RequestScopedServices(
         orchestrator=_NullOrchestrator(),  # type: ignore[arg-type]
@@ -194,6 +208,14 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         ),
         send_daily_review=SendDailyReviewUseCase(
             users_repo, tasks_repo, calendar_port, notifications_repo, _NullEmailSender()
+        ),
+        manage_goals=ManageGoalsUseCase(goals_repo),
+        manage_daily_plan=ManageDailyPlanUseCase(
+            daily_plans_repo, daily_plan_swaps_repo, tasks_repo
+        ),
+        manage_focus_sessions=ManageFocusSessionUseCase(focus_sessions_repo, daily_plans_repo),
+        daily_plan_metrics=DailyPlanMetricsUseCase(
+            daily_plans_repo, focus_sessions_repo, daily_plan_swaps_repo, tasks_repo
         ),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER

@@ -576,7 +576,12 @@ input {
 #clients-section,
 #calendar-section,
 #gmail-section,
-#files-section {
+#files-section,
+#my-day-inbox-section,
+#my-day-goals-section,
+#my-day-picker-section,
+#my-day-locked-section,
+#my-day-summary-section {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1634,7 +1639,12 @@ input {
   #clients-section,
   #calendar-section,
   #gmail-section,
-  #files-section {
+  #files-section,
+  #my-day-inbox-section,
+  #my-day-goals-section,
+  #my-day-picker-section,
+  #my-day-locked-section,
+  #my-day-summary-section {
     padding: 16px 16px 18px;
   }
 
@@ -1677,4 +1687,211 @@ input {
   .chat-box {
     padding: 8px 10px;
   }
+}
+
+/* ---------- My Day ---------- */
+
+#my-day-header h1 {
+  font-size: 22px;
+  margin: 0 0 20px;
+}
+
+.my-day-inbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.my-day-inbox-row input[type="text"] {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.my-day-urgent-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.my-day-goal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+
+.my-day-goal-row:last-child {
+  border-bottom: none;
+}
+
+#my-day-goals-list:not(:empty) {
+  margin-top: 12px;
+}
+
+.my-day-slot-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.my-day-slot-heading {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--purple-dark);
+}
+
+.my-day-slot-field {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.my-day-locked-task-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.my-day-locked-task-deliverable {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+#my-day-lock-btn {
+  margin-top: 4px;
+}
+
+.modal-help-text {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: -8px 0 4px;
+}
+
+.stuck-reason-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.eod-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eod-stat-row {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.eod-carry-over-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.eod-carry-over-row select {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* ---------- Focus mode ---------- */
+
+#focus-view:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.focus-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 40px 32px;
+}
+
+.focus-task-title {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.focus-deliverable {
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+.focus-timer {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-timer--expired {
+  color: var(--danger);
+  animation: pulse-danger 1.2s infinite;
+}
+
+.focus-next-step-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.focus-next-step-label input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.focus-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+body[data-app-mode="focus"] #sidebar,
+body[data-app-mode="focus"] #topbar,
+body[data-app-mode="focus"] #side-panel {
+  display: none;
 }

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.task_repository import TaskRepositoryPort
 from app.core.exceptions import NotFoundError
-from app.domain.entities import Task, TaskStatus
+from app.domain.entities import Task, TaskImportance, TaskStatus
 from app.infrastructure.db.models import TaskModel
 
 
@@ -126,6 +126,34 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         )
         return (await self._session.execute(stmt)).scalar_one()
 
+    async def set_daily_attributes(
+        self,
+        task_id: uuid.UUID,
+        deliverable: str,
+        estimated_minutes: int,
+        importance: TaskImportance,
+        goal_id: uuid.UUID | None,
+    ) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.deliverable = deliverable
+        row.estimated_minutes = estimated_minutes
+        row.importance = importance.value
+        row.goal_id = goal_id
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
+    async def set_next_step(self, task_id: uuid.UUID, next_step: str | None) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.next_step = next_step
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
     @staticmethod
     def _to_entity(row: TaskModel) -> Task:
         return Task(
@@ -140,4 +168,9 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             client_id=row.client_id,
             start_at=row.start_at,
             timer_started_at=row.timer_started_at,
+            deliverable=row.deliverable,
+            estimated_minutes=row.estimated_minutes,
+            importance=TaskImportance(row.importance) if row.importance else None,
+            goal_id=row.goal_id,
+            next_step=row.next_step,
         )
