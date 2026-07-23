@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.calendar_port import CalendarPort
 from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
@@ -29,9 +30,10 @@ from app.application.ports.task_repository import TaskRepositoryPort
 from app.application.ports.thought_repository import ThoughtRepositoryPort
 from app.application.ports.user_repository import UserRepositoryPort
 from app.application.ports.whatsapp_message_repository import WhatsAppMessageRepositoryPort
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.domain.entities import (
     AgentExecution,
+    CalendarEvent,
     Client,
     ClientAttachment,
     Conversation,
@@ -367,6 +369,22 @@ class FakeTaskRepository(TaskRepositoryPort):
         task.due_at = due_at
         return task
 
+    async def start_timer(self, task_id: uuid.UUID) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.timer_started_at = datetime.now(UTC)
+        task.status = TaskStatus.IN_PROGRESS
+        return task
+
+    async def stop_timer(self, task_id: uuid.UUID) -> Task:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        task.timer_started_at = None
+        task.status = TaskStatus.OPEN
+        return task
+
     async def update_details(
         self,
         task_id: uuid.UUID,
@@ -547,6 +565,37 @@ class FakeNotificationRepository(NotificationRepositoryPort):
                 n.read_at = now
 
 
+class FakeCalendarPort(CalendarPort):
+    def __init__(self, *, fail_with: type[AppError] | None = None) -> None:
+        self.events: dict[str, CalendarEvent] = {}
+        self._fail_with = fail_with
+
+    async def list_between(
+        self, user_id: uuid.UUID, time_min: str, time_max: str
+    ) -> list[CalendarEvent]:
+        if self._fail_with is not None:
+            raise self._fail_with("Calendar is unavailable")
+        return list(self.events.values())
+
+    async def create(
+        self,
+        user_id: uuid.UUID,
+        summary: str,
+        start_time: str,
+        end_time: str,
+        description: str | None = None,
+    ) -> CalendarEvent:
+        event = CalendarEvent(
+            id=str(uuid.uuid4()), summary=summary, start=start_time, end=end_time,
+            description=description,
+        )
+        self.events[event.id] = event
+        return event
+
+    async def delete(self, user_id: uuid.UUID, event_id: str) -> None:
+        self.events.pop(event_id, None)
+
+
 class FakeEmbeddingGateway(EmbeddingPort):
     """Deterministic fake: embeds text as a hash-derived vector."""
 
@@ -645,3 +694,8 @@ def fake_whatsapp_message_repository() -> FakeWhatsAppMessageRepository:
 @pytest.fixture
 def fake_notification_repository() -> FakeNotificationRepository:
     return FakeNotificationRepository()
+
+
+@pytest.fixture
+def fake_calendar_port() -> FakeCalendarPort:
+    return FakeCalendarPort()

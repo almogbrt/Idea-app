@@ -29,3 +29,30 @@ resource "google_cloud_scheduler_job" "check_reminders" {
 
   depends_on = [google_project_service.apis]
 }
+
+# Once-daily accountability review at 21:00 Israel Daylight Time (UTC+3, the
+# current offset) — reports which of today's Tasks actually got done vs not,
+# plus today's calendar events as a plain FYI list. Fixed UTC cron, same as
+# the reminders job above: it will drift by an hour across DST changes
+# (roughly late March / late October) rather than tracking Israel time
+# exactly — acceptable for a nudge email, not worth a timezone-aware
+# scheduler for a single-user app.
+resource "google_cloud_scheduler_job" "send_daily_review" {
+  count = var.cloud_run_service_url != "" ? 1 : 0
+
+  name      = "${var.service_name}-send-daily-review"
+  project   = var.project_id
+  region    = var.region
+  schedule  = "0 18 * * *"
+  time_zone = "Etc/UTC"
+
+  http_target {
+    uri         = "${var.cloud_run_service_url}/api/v1/internal/daily-review/run"
+    http_method = "POST"
+    headers = {
+      "X-Scheduler-Secret" = random_password.scheduler_shared_secret.result
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+}

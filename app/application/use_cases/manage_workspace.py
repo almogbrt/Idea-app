@@ -250,6 +250,12 @@ class ManageTasksUseCase:
     async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:
         return await self._tasks.set_due_at(task_id, due_at)
 
+    async def start_timer(self, task_id: uuid.UUID) -> Task:
+        return await self._tasks.start_timer(task_id)
+
+    async def stop_timer(self, task_id: uuid.UUID) -> Task:
+        return await self._tasks.stop_timer(task_id)
+
     async def update_details(
         self,
         task_id: uuid.UUID,

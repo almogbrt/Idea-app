@@ -37,6 +37,18 @@ class TaskRepositoryPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def start_timer(self, task_id: uuid.UUID) -> Task:
+        """Marks work as actually begun now: sets `timer_started_at` to the
+        current time and `status` to `IN_PROGRESS`."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def stop_timer(self, task_id: uuid.UUID) -> Task:
+        """Cancels a running timer: clears `timer_started_at` and reverts
+        `status` to `OPEN`."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def update_details(
         self,
         task_id: uuid.UUID,

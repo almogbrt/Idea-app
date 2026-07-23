@@ -411,6 +411,29 @@ async def test_task_repository_round_trip_and_count_open(db_session: AsyncSessio
     assert {t.title for t in tasks} == {"Task A", "Task B"}
 
 
+async def test_task_repository_start_and_stop_timer(db_session: AsyncSession) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-13", "owner13@example.com", "Owner Thirteen")
+
+    tasks_repo = SqlAlchemyTaskRepository(db_session)
+    now = datetime.now(UTC)
+    task = await tasks_repo.create(
+        user.id, "Write proposal", due_at=now + timedelta(hours=1), start_at=now
+    )
+    assert task.timer_started_at is None
+
+    started = await tasks_repo.start_timer(task.id)
+    assert started.status == TaskStatus.IN_PROGRESS
+    assert started.timer_started_at is not None
+
+    stopped = await tasks_repo.stop_timer(task.id)
+    assert stopped.status == TaskStatus.OPEN
+    assert stopped.timer_started_at is None
+
+    with pytest.raises(NotFoundError):
+        await tasks_repo.start_timer(uuid.uuid4())
+
+
 async def test_thought_repository_round_trip(db_session: AsyncSession) -> None:
     users = SqlAlchemyUserRepository(db_session)
     user = await users.create("google-sub-thoughts-1", "thoughts-owner@example.com", "Owner")

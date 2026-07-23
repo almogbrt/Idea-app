@@ -891,6 +891,61 @@ input {
   margin-top: auto;
 }
 
+.task-card--timing {
+  border-color: var(--purple);
+}
+
+.task-card--timer-expired {
+  border-color: var(--danger);
+  animation: pulse-danger 1.2s infinite;
+}
+
+@keyframes pulse-danger {
+  0%,
+  100% {
+    box-shadow: var(--shadow);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--danger-bg);
+  }
+}
+
+.task-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-timer {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-card--timer-expired .task-timer {
+  color: var(--danger);
+}
+
+.task-timer-btn {
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.task-timer-btn--start {
+  color: var(--purple);
+  border-color: var(--purple);
+}
+
+.task-timer-btn--stop {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
 .task-delete-btn {
   border: none;
   background: transparent;

@@ -25,6 +25,7 @@ from app.application.use_cases.manage_workspace import (
     ManageTasksUseCase,
     ManageThoughtsUseCase,
 )
+from app.application.use_cases.send_daily_review import SendDailyReviewUseCase
 from app.core import config as config_module
 from app.core.container import RequestScopedServices
 from app.domain.entities import CalendarEvent, DriveFile, EmailSummary, NotificationKind, User
@@ -189,7 +190,10 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         list_activity=ListActivityUseCase(executions_repo),
         manage_notifications=ManageNotificationsUseCase(notifications_repo),
         check_reminders=CheckRemindersUseCase(
-            users_repo, tasks_repo, notifications_repo, _NullEmailSender()
+            users_repo, tasks_repo, notifications_repo, _NullEmailSender(), calendar_port
+        ),
+        send_daily_review=SendDailyReviewUseCase(
+            users_repo, tasks_repo, calendar_port, notifications_repo, _NullEmailSender()
         ),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
@@ -530,6 +534,37 @@ def test_update_task_status_rejects_other_users_task(client: TestClient) -> None
     stored.user_id = uuid.uuid4()
 
     response = client.patch(f"/api/v1/tasks/{task['id']}/status", json={"status": "done"})
+
+    assert response.status_code == 403
+
+
+def test_start_and_stop_task_timer(client: TestClient) -> None:
+    _install_scope(client)
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Write proposal")).json()
+    assert task["timer_started_at"] is None
+
+    start_response = client.post(f"/api/v1/tasks/{task['id']}/timer/start")
+    assert start_response.status_code == 200
+    started = start_response.json()
+    assert started["status"] == "in_progress"
+    assert started["timer_started_at"] is not None
+
+    stop_response = client.post(f"/api/v1/tasks/{task['id']}/timer/stop")
+    assert stop_response.status_code == 200
+    stopped = stop_response.json()
+    assert stopped["status"] == "open"
+    assert stopped["timer_started_at"] is None
+
+
+def test_start_task_timer_rejects_other_users_task(client: TestClient) -> None:
+    resources = _install_scope(client)
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Not yours")).json()
+
+    tasks_repo = resources["tasks_repo"]
+    stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
+    stored.user_id = uuid.uuid4()
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/timer/start")
 
     assert response.status_code == 403
 

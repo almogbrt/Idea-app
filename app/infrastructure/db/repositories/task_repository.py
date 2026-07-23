@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,6 +70,26 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         await self._session.refresh(row)
         return self._to_entity(row)
 
+    async def start_timer(self, task_id: uuid.UUID) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.timer_started_at = datetime.now(UTC)
+        row.status = TaskStatus.IN_PROGRESS.value
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
+    async def stop_timer(self, task_id: uuid.UUID) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.timer_started_at = None
+        row.status = TaskStatus.OPEN.value
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
     async def update_details(
         self,
         task_id: uuid.UUID,
@@ -119,4 +139,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             due_at=row.due_at,
             client_id=row.client_id,
             start_at=row.start_at,
+            timer_started_at=row.timer_started_at,
         )

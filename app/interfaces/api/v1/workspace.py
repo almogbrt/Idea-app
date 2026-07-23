@@ -375,6 +375,7 @@ def _task_view(task: Task) -> TaskView:
         due_at=task.due_at,
         client_id=task.client_id,
         start_at=task.start_at,
+        timer_started_at=task.timer_started_at,
     )
 
 
@@ -400,6 +401,30 @@ async def update_task_status(
     existing = await scope.manage_tasks.get_or_raise(task_id)
     _ensure_task_owned_by(existing, user)
     updated = await scope.manage_tasks.update_status(task_id, body.status)
+    return _task_view(updated)
+
+
+@router.post("/tasks/{task_id}/timer/start", response_model=TaskView)
+async def start_task_timer(
+    task_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> TaskView:
+    existing = await scope.manage_tasks.get_or_raise(task_id)
+    _ensure_task_owned_by(existing, user)
+    updated = await scope.manage_tasks.start_timer(task_id)
+    return _task_view(updated)
+
+
+@router.post("/tasks/{task_id}/timer/stop", response_model=TaskView)
+async def stop_task_timer(
+    task_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> TaskView:
+    existing = await scope.manage_tasks.get_or_raise(task_id)
+    _ensure_task_owned_by(existing, user)
+    updated = await scope.manage_tasks.stop_timer(task_id)
     return _task_view(updated)
 
 

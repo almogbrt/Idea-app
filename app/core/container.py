@@ -43,6 +43,7 @@ from app.application.use_cases.manage_workspace import (
     ManageThoughtsUseCase,
 )
 from app.application.use_cases.memory_use_cases import RetrieveMemoryUseCase, StoreMemoryUseCase
+from app.application.use_cases.send_daily_review import SendDailyReviewUseCase
 from app.core.config import SecretManagerBackend, Settings
 from app.core.logging import get_logger
 from app.core.security import SessionTokenService, TokenCipher
@@ -103,6 +104,7 @@ class RequestScopedServices:
     list_activity: ListActivityUseCase
     manage_notifications: ManageNotificationsUseCase
     check_reminders: CheckRemindersUseCase
+    send_daily_review: SendDailyReviewUseCase
     manage_calendar: ManageCalendarUseCase
     manage_email: ManageEmailUseCase
     manage_files: ManageFilesUseCase
@@ -241,6 +243,14 @@ class Container:
             check_reminders=CheckRemindersUseCase(
                 user_repository=users,
                 task_repository=tasks_repo,
+                notification_repository=notifications_repo,
+                email_sender=self.email_sender_port,
+                calendar_port=self.calendar_port,
+            ),
+            send_daily_review=SendDailyReviewUseCase(
+                user_repository=users,
+                task_repository=tasks_repo,
+                calendar_port=self.calendar_port,
                 notification_repository=notifications_repo,
                 email_sender=self.email_sender_port,
             ),

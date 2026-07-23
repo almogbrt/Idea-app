@@ -71,6 +71,7 @@ class TaskView(BaseModel):
     due_at: datetime | None = None
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
+    timer_started_at: datetime | None = None
 
 
 class CreateTaskRequest(BaseModel):
@@ -146,3 +147,7 @@ class NotificationView(BaseModel):
 
 class RunRemindersResponse(BaseModel):
     notifications_raised: int
+
+
+class RunDailyReviewResponse(BaseModel):
+    reviews_sent: int

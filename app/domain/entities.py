@@ -42,6 +42,9 @@ class NotificationKind(StrEnum):
     TASK_DUE_SOON = "task_due_soon"
     TASK_OVERDUE = "task_overdue"
     TASK_ENDING_SOON = "task_ending_soon"
+    TASK_TIMER_EXPIRED = "task_timer_expired"
+    CALENDAR_EVENT_STARTING = "calendar_event_starting"
+    DAILY_REVIEW = "daily_review"
 
 
 class WhatsAppDirection(StrEnum):
@@ -188,6 +191,11 @@ class Task:
     `due_at`, its end time) when a task is created through the normal
     creation paths — nullable here only so older rows created before this
     field existed keep loading."""
+    timer_started_at: datetime | None = None
+    """Set when the user actually clicks "start" on the task (not the same
+    as `start_at`, the originally planned start time). The timer's duration
+    is `due_at - start_at`; `timer_started_at + that duration` is the
+    countdown deadline, timed from when work actually began."""
 
 
 @dataclass(slots=True)

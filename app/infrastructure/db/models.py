@@ -184,6 +184,7 @@ class TaskModel(Base):
         ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
     )
     start_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    timer_started_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
 
 
 class ThoughtModel(Base):

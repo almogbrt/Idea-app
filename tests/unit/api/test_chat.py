@@ -25,6 +25,7 @@ from app.application.use_cases.manage_workspace import (
     ManageTasksUseCase,
     ManageThoughtsUseCase,
 )
+from app.application.use_cases.send_daily_review import SendDailyReviewUseCase
 from app.core.container import RequestScopedServices
 from app.domain.entities import (
     CalendarEvent,
@@ -136,6 +137,14 @@ def _workspace_kwargs() -> dict[str, object]:
         "check_reminders": CheckRemindersUseCase(
             FakeUserRepository(),
             tasks_repo,
+            notifications_repo,
+            _NullEmailSender(),
+            _NullCalendar(),
+        ),
+        "send_daily_review": SendDailyReviewUseCase(
+            FakeUserRepository(),
+            tasks_repo,
+            _NullCalendar(),
             notifications_repo,
             _NullEmailSender(),
         ),

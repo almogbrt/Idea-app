@@ -1008,9 +1008,114 @@ function sortTasksForDisplay(tasks) {
   return { open, done };
 }
 
+function computeTimerDeadline(task) {
+  if (!task.start_at || !task.due_at || !task.timer_started_at) return null;
+  const duration = new Date(task.due_at).getTime() - new Date(task.start_at).getTime();
+  return new Date(task.timer_started_at).getTime() + duration;
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function requestNotificationPermissionOnce() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function showTimerExpiredNotification(title) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  new Notification("נגמר הזמן למשימה", { body: title || "" });
+}
+
+function playTimerExpiredSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.6);
+  } catch {
+    // sound is a nice-to-have — never let it break the timer itself
+  }
+}
+
+function tickTaskTimers() {
+  const now = Date.now();
+  document.querySelectorAll(".task-timer").forEach((el) => {
+    if (el.dataset.alerted === "true") return;
+    const remaining = Number(el.dataset.deadline) - now;
+    if (remaining > 0) {
+      el.textContent = formatCountdown(remaining);
+      return;
+    }
+    el.dataset.alerted = "true";
+    el.textContent = "⏰ נגמר הזמן!";
+    const card = el.closest(".task-card");
+    if (card) card.classList.add("task-card--timer-expired");
+    playTimerExpiredSound();
+    showTimerExpiredNotification(el.dataset.taskTitle || "");
+  });
+}
+
+function buildTaskTimerRow(task) {
+  const row = document.createElement("div");
+  row.className = "task-timer-row";
+
+  if (task.status === "in_progress" && task.timer_started_at) {
+    const deadline = computeTimerDeadline(task);
+    const countdown = document.createElement("span");
+    countdown.className = "task-timer";
+    countdown.dataset.deadline = String(deadline);
+    countdown.dataset.taskTitle = task.title;
+    countdown.textContent = formatCountdown(deadline - Date.now());
+    row.appendChild(countdown);
+
+    const stopBtn = document.createElement("button");
+    stopBtn.type = "button";
+    stopBtn.className = "task-timer-btn task-timer-btn--stop";
+    stopBtn.textContent = "⏹ עצירה";
+    stopBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await apiFetch(`/tasks/${task.id}/timer/stop`, { method: "POST" });
+      loadTasks();
+    });
+    row.appendChild(stopBtn);
+  } else {
+    const startBtn = document.createElement("button");
+    startBtn.type = "button";
+    startBtn.className = "task-timer-btn task-timer-btn--start";
+    startBtn.textContent = "▶ התחלה";
+    startBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      requestNotificationPermissionOnce();
+      await apiFetch(`/tasks/${task.id}/timer/start`, { method: "POST" });
+      loadTasks();
+    });
+    row.appendChild(startBtn);
+  }
+  return row;
+}
+
 function buildTaskCard(task, clientNameById) {
+  const isTiming = task.status === "in_progress" && task.timer_started_at;
   const card = document.createElement("div");
-  card.className = `task-card${task.status === "done" ? " done" : ""}`;
+  card.className = `task-card${task.status === "done" ? " done" : ""}${
+    isTiming ? " task-card--timing" : ""
+  }`;
 
   const top = document.createElement("div");
   top.className = "task-card-top";
@@ -1046,6 +1151,10 @@ function buildTaskCard(task, clientNameById) {
   title.textContent = task.title;
   title.addEventListener("click", () => openEditTaskModal(task.id));
   card.appendChild(title);
+
+  if (task.status !== "done" && task.start_at && task.due_at) {
+    card.appendChild(buildTaskTimerRow(task));
+  }
 
   const footer = document.createElement("div");
   footer.className = "task-card-footer";
@@ -1711,4 +1820,5 @@ window.addEventListener("appinstalled", () => {
 (async function init() {
   await checkAuth();
   refreshWorkspace();
+  setInterval(tickTaskTimers, 1000);
 })();

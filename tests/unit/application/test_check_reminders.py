@@ -3,12 +3,14 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from app.application.ports.calendar_port import CalendarPort
 from app.application.ports.email_sender import EmailSenderPort
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.manage_notifications import ManageNotificationsUseCase
 from app.core.exceptions import AppError, AuthError, ExternalServiceError
-from app.domain.entities import NotificationKind, TaskStatus
+from app.domain.entities import CalendarEvent, NotificationKind, TaskStatus
 from tests.conftest import (
+    FakeCalendarPort,
     FakeNotificationRepository,
     FakeTaskRepository,
     FakeUserRepository,
@@ -31,8 +33,11 @@ async def _make_use_case(
     tasks: FakeTaskRepository,
     notifications: FakeNotificationRepository,
     email_sender: EmailSenderPort,
+    calendar_port: CalendarPort | None = None,
 ) -> CheckRemindersUseCase:
-    return CheckRemindersUseCase(users, tasks, notifications, email_sender)
+    return CheckRemindersUseCase(
+        users, tasks, notifications, email_sender, calendar_port or FakeCalendarPort()
+    )
 
 
 async def test_raises_overdue_notification_and_sends_email(
@@ -217,6 +222,180 @@ async def test_survives_email_send_failure_when_google_account_not_linked(
     assert raised == 2
     unread = await fake_notification_repository.list_unread(user.id)
     assert len(unread) == 2
+
+
+async def test_calendar_nudge_fires_for_event_starting_soon(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+    fake_calendar_port: FakeCalendarPort,
+) -> None:
+    user = await fake_user_repository.create("sub-cal-1", "cal1@example.com", "Owner")
+    fake_calendar_port.events["evt-1"] = _event(
+        "evt-1", "Client call", starts_in=timedelta(minutes=5)
+    )
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+        calendar_port=fake_calendar_port,
+    )
+
+    raised = await use_case.execute()
+
+    assert raised == 1
+    unread = await fake_notification_repository.list_unread(user.id)
+    assert unread[0].kind == NotificationKind.CALENDAR_EVENT_STARTING
+
+
+async def test_calendar_nudge_is_idempotent(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+    fake_calendar_port: FakeCalendarPort,
+) -> None:
+    await fake_user_repository.create("sub-cal-2", "cal2@example.com", "Owner")
+    fake_calendar_port.events["evt-2"] = _event(
+        "evt-2", "Standup", starts_in=timedelta(minutes=3)
+    )
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+        calendar_port=fake_calendar_port,
+    )
+
+    first_run = await use_case.execute()
+    second_run = await use_case.execute()
+
+    assert first_run == 1
+    assert second_run == 0
+
+
+async def test_calendar_nudge_survives_calendar_fetch_failure(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+) -> None:
+    """A not-yet-linked or expired Google account must not abort the sweep —
+    task reminders for the same user still get processed."""
+    user = await fake_user_repository.create("sub-cal-3", "cal3@example.com", "Owner")
+    await fake_task_repository.create(
+        user.id, "Overdue task", due_at=datetime.now(UTC) - timedelta(days=1)
+    )
+    failing_calendar = FakeCalendarPort(fail_with=AuthError)
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+        calendar_port=failing_calendar,
+    )
+
+    raised = await use_case.execute()
+
+    assert raised == 1
+    unread = await fake_notification_repository.list_unread(user.id)
+    assert unread[0].kind == NotificationKind.TASK_OVERDUE
+
+
+async def test_timer_expiry_notification_fires_once_past_deadline(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-timer-1", "timer1@example.com", "Owner")
+    now = datetime.now(UTC)
+    task = await fake_task_repository.create(
+        user.id,
+        "Write proposal",
+        start_at=now - timedelta(hours=2),
+        due_at=now - timedelta(hours=1),
+    )
+    task.status = TaskStatus.IN_PROGRESS
+    task.timer_started_at = now - timedelta(minutes=90)  # duration is 1h, started 90 min ago
+
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+    )
+
+    raised = await use_case.execute()
+
+    # The task's due_at is also in the past, so TASK_OVERDUE fires alongside
+    # TASK_TIMER_EXPIRED on this same sweep — both checks are independent.
+    assert raised == 2
+    unread = await fake_notification_repository.list_unread(user.id)
+    kinds = {n.kind for n in unread}
+    assert NotificationKind.TASK_TIMER_EXPIRED in kinds
+
+
+async def test_timer_expiry_notification_skipped_while_still_running(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-timer-2", "timer2@example.com", "Owner")
+    now = datetime.now(UTC)
+    task = await fake_task_repository.create(
+        user.id, "Write proposal", start_at=now, due_at=now + timedelta(hours=1)
+    )
+    task.status = TaskStatus.IN_PROGRESS
+    task.timer_started_at = now  # just started, an hour of runway left
+
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+    )
+
+    raised = await use_case.execute()
+
+    # due_at is within the 24h "due soon" window, so that fires independently
+    # — the point of this test is that TASK_TIMER_EXPIRED does not.
+    unread = await fake_notification_repository.list_unread(user.id)
+    kinds = {n.kind for n in unread}
+    assert NotificationKind.TASK_TIMER_EXPIRED not in kinds
+    assert raised == len(kinds)
+
+
+async def test_timer_expiry_notification_skipped_when_task_done(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_notification_repository: FakeNotificationRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-timer-3", "timer3@example.com", "Owner")
+    now = datetime.now(UTC)
+    task = await fake_task_repository.create(
+        user.id,
+        "Write proposal",
+        start_at=now - timedelta(hours=2),
+        due_at=now - timedelta(hours=1),
+    )
+    task.timer_started_at = now - timedelta(minutes=90)
+    task.status = TaskStatus.DONE
+
+    use_case = await _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        notifications=fake_notification_repository,
+        email_sender=_FakeEmailSender(),
+    )
+
+    raised = await use_case.execute()
+
+    assert raised == 0
+
+
+def _event(event_id: str, summary: str, *, starts_in: timedelta) -> CalendarEvent:
+    start = datetime.now(UTC) + starts_in
+    end = start + timedelta(hours=1)
+    return CalendarEvent(id=event_id, summary=summary, start=start.isoformat(), end=end.isoformat())
 
 
 async def test_manage_notifications_list_and_mark_read(
