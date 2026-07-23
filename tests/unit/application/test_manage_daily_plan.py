@@ -29,6 +29,7 @@ def _pick(task_id: uuid.UUID, **overrides: object) -> DailyTaskPick:
         "estimated_minutes": 60,
         "importance": TaskImportance.HIGH,
         "goal_id": None,
+        "next_step": "Open the draft and write one sentence",
     }
     defaults.update(overrides)
     return DailyTaskPick(task_id=task_id, **defaults)  # type: ignore[arg-type]
@@ -223,6 +224,48 @@ async def test_set_carry_over(
     plan = await use_case.set_carry_over(user_id, task.id)
 
     assert plan.carry_over_task_id == task.id
+
+
+async def test_plan_tomorrows_first_task_creates_and_locks_tomorrow(
+    fake_daily_plan_repository: FakeDailyPlanRepository,
+    fake_daily_plan_swap_repository: FakeDailyPlanSwapRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = _daily_plan_use_case(
+        fake_daily_plan_repository, fake_daily_plan_swap_repository, fake_task_repository
+    )
+    user_id = uuid.uuid4()
+    task = await fake_task_repository.create(user_id, "Tomorrow's first task")
+
+    plan = await use_case.plan_tomorrows_first_task(user_id, _pick(task.id))
+
+    tomorrow = datetime.now(UTC).date() + timedelta(days=1)
+    assert plan.plan_date == tomorrow
+    assert plan.main_task_id == task.id
+    assert plan.is_locked is True
+    updated_task = await fake_task_repository.get(task.id)
+    assert updated_task is not None
+    assert updated_task.next_step == "Open the draft and write one sentence"
+
+    today_plan = await use_case.get_or_create_today(user_id)
+    assert today_plan.carry_over_task_id == task.id
+
+
+async def test_plan_tomorrows_first_task_rejects_if_tomorrow_already_locked(
+    fake_daily_plan_repository: FakeDailyPlanRepository,
+    fake_daily_plan_swap_repository: FakeDailyPlanSwapRepository,
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = _daily_plan_use_case(
+        fake_daily_plan_repository, fake_daily_plan_swap_repository, fake_task_repository
+    )
+    user_id = uuid.uuid4()
+    task = await fake_task_repository.create(user_id, "Tomorrow's first task")
+    other_task = await fake_task_repository.create(user_id, "Another task")
+    await use_case.plan_tomorrows_first_task(user_id, _pick(task.id))
+
+    with pytest.raises(ConflictError):
+        await use_case.plan_tomorrows_first_task(user_id, _pick(other_task.id))
 
 
 async def test_start_focus_requires_locked_plan(

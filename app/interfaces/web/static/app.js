@@ -137,6 +137,7 @@ const els = {
   urgentSwapModal: document.getElementById("urgent-swap-modal"),
   urgentSwapBumpedSelect: document.getElementById("urgent-swap-bumped-select"),
   urgentSwapDeliverable: document.getElementById("urgent-swap-deliverable"),
+  urgentSwapNextStep: document.getElementById("urgent-swap-next-step"),
   urgentSwapMinutes: document.getElementById("urgent-swap-minutes"),
   urgentSwapImportance: document.getElementById("urgent-swap-importance"),
   urgentSwapGoal: document.getElementById("urgent-swap-goal"),
@@ -1968,10 +1969,12 @@ function buildTaskPickSlot(label, selectedTaskId) {
   const wrapper = document.createElement("div");
   wrapper.className = "my-day-slot-card";
 
-  const heading = document.createElement("div");
-  heading.className = "my-day-slot-heading";
-  heading.textContent = label;
-  wrapper.appendChild(heading);
+  if (label) {
+    const heading = document.createElement("div");
+    heading.className = "my-day-slot-heading";
+    heading.textContent = label;
+    wrapper.appendChild(heading);
+  }
 
   const openTasks = currentTasks.filter((t) => t.status !== "done");
   const taskSelect = document.createElement("select");
@@ -1991,6 +1994,12 @@ function buildTaskPickSlot(label, selectedTaskId) {
   deliverable.rows = 2;
   deliverable.placeholder = "תוצר סופי — איך ייראה שהמשימה בוצעה?";
   wrapper.appendChild(deliverable);
+
+  const nextStep = document.createElement("textarea");
+  nextStep.className = "my-day-slot-field";
+  nextStep.rows = 2;
+  nextStep.placeholder = "הצעד הראשון הקטן ביותר — למשל \"לפתוח את הקובץ ולכתוב שורה אחת\"";
+  wrapper.appendChild(nextStep);
 
   const minutes = document.createElement("input");
   minutes.type = "number";
@@ -2016,7 +2025,7 @@ function buildTaskPickSlot(label, selectedTaskId) {
     myDayGoalsCache.map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join("");
   wrapper.appendChild(goalSelect);
 
-  return { wrapper, taskSelect, deliverable, minutes, importance, goalSelect };
+  return { wrapper, taskSelect, deliverable, nextStep, minutes, importance, goalSelect };
 }
 
 function renderDailyTaskPicker(plan) {
@@ -2037,7 +2046,14 @@ function buildDailyPickPayload(slot) {
     estimated_minutes: Number(slot.minutes.value) || 30,
     importance: slot.importance.value,
     goal_id: slot.goalSelect.value || null,
+    next_step: slot.nextStep.value.trim(),
   };
+}
+
+function assertSlotHasNextStep(slot, label) {
+  if (!slot.nextStep.value.trim()) {
+    throw new Error(`צריך להגדיר צעד ראשון קטן ל${label}.`);
+  }
 }
 
 async function saveDailyTaskSelection() {
@@ -2046,8 +2062,12 @@ async function saveDailyTaskSelection() {
   if (!main.taskSelect.value) {
     throw new Error("צריך לבחור משימה מרכזית.");
   }
+  assertSlotHasNextStep(main, "משימה המרכזית");
+  const usedSecondary = secondary.filter((s) => s.taskSelect.value);
+  usedSecondary.forEach((s) => assertSlotHasNextStep(s, "משימה נוספת"));
+
   const mainPick = buildDailyPickPayload(main);
-  const secondaryPicks = secondary.filter((s) => s.taskSelect.value).map(buildDailyPickPayload);
+  const secondaryPicks = usedSecondary.map(buildDailyPickPayload);
   return apiFetch("/my-day/plan/today/select", {
     method: "POST",
     body: JSON.stringify({ main: mainPick, secondary: secondaryPicks }),
@@ -2155,6 +2175,7 @@ function openUrgentSwapModal(newTaskId) {
     )
     .join("");
   els.urgentSwapDeliverable.value = "";
+  els.urgentSwapNextStep.value = "";
   els.urgentSwapMinutes.value = "30";
   els.urgentSwapImportance.value = "high";
   els.urgentSwapGoal.innerHTML =
@@ -2175,6 +2196,10 @@ els.urgentSwapSave.addEventListener("click", async () => {
     alert("צריך לבחור משימה לדחות.");
     return;
   }
+  if (!els.urgentSwapNextStep.value.trim()) {
+    alert("צריך להגדיר צעד ראשון קטן למשימה הדחופה.");
+    return;
+  }
   try {
     const plan = await apiFetch("/my-day/plan/today/swap", {
       method: "POST",
@@ -2186,6 +2211,7 @@ els.urgentSwapSave.addEventListener("click", async () => {
           estimated_minutes: Number(els.urgentSwapMinutes.value) || 30,
           importance: els.urgentSwapImportance.value,
           goal_id: els.urgentSwapGoal.value || null,
+          next_step: els.urgentSwapNextStep.value.trim(),
         },
       }),
     });
@@ -2313,9 +2339,29 @@ async function checkForActiveFocusSessionOnLoad() {
     if (session) {
       await loadTasks();
       startFocusUI(session);
+      return true;
     }
   } catch {
     // not authenticated yet
+  }
+  return false;
+}
+
+async function autoStartLockedMainTaskOnLoad() {
+  try {
+    const plan = await apiFetch("/my-day/plan/today");
+    if (!plan.is_locked || !plan.main_task_id) return;
+    await loadTasks();
+    const mainTask = currentTasks.find((t) => t.id === plan.main_task_id);
+    if (!mainTask || mainTask.status === "done") return;
+    const session = await apiFetch("/my-day/focus/start", {
+      method: "POST",
+      body: JSON.stringify({ task_id: plan.main_task_id }),
+    });
+    startFocusUI(session);
+  } catch {
+    // no locked plan yet, not authenticated, or a race with another session —
+    // fail silently into the normal dashboard, this is an unprompted auto-action.
   }
 }
 
@@ -2345,29 +2391,35 @@ function renderMyDaySummary(summary) {
       <div class="eod-stat-row"><strong>לא הושלם:</strong> ${summary.incomplete_tasks.length ? summary.incomplete_tasks.map(escapeHtml).join(", ") : "—"}</div>
       <div class="eod-stat-row"><strong>מה הפריע:</strong> ${stuckEntries.length ? stuckEntries.map(([k, v]) => `${escapeHtml(stuckLabels[k] || k)} (${v})`).join(", ") : "—"}</div>
       <div class="eod-stat-row"><strong>משימות דחופות שנכנסו:</strong> ${summary.swap_count}</div>
-      <div class="eod-stat-row eod-carry-over-row">
-        <strong>המשימה הראשונה למחר:</strong>
-        <select id="eod-carry-over-select" class="my-day-slot-field">
-          <option value="">בחר משימה...</option>
-          ${currentTasks
-            .filter((t) => t.status !== "done")
-            .map(
-              (t) =>
-                `<option value="${t.id}" ${t.id === summary.carry_over_task_id ? "selected" : ""}>${escapeHtml(t.title)}</option>`
-            )
-            .join("")}
-        </select>
-        <button type="button" id="eod-carry-over-save" class="btn btn--ghost btn--small">שמירה</button>
+      <div class="eod-stat-row">
+        <strong>המשימה הראשונה למחר — נועלים עכשיו, כדי שמחר לא תצטרך להחליט כלום:</strong>
       </div>
+      <div id="eod-first-task-slot"></div>
+      <button type="button" id="eod-first-task-save" class="btn btn--primary btn--small">לנעול את המשימה הראשונה למחר</button>
     </div>
   `;
-  document.getElementById("eod-carry-over-save").addEventListener("click", async () => {
-    const taskId = document.getElementById("eod-carry-over-select").value || null;
+
+  const slotContainer = document.getElementById("eod-first-task-slot");
+  const slot = buildTaskPickSlot("", summary.carry_over_task_id);
+  slotContainer.appendChild(slot.wrapper);
+
+  document.getElementById("eod-first-task-save").addEventListener("click", async () => {
+    if (!slot.taskSelect.value) {
+      alert("צריך לבחור משימה.");
+      return;
+    }
     try {
-      await apiFetch("/my-day/plan/today/carry-over", {
+      assertSlotHasNextStep(slot, "משימה הראשונה למחר");
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
+    try {
+      await apiFetch("/my-day/plan/tomorrow/first-task", {
         method: "POST",
-        body: JSON.stringify({ task_id: taskId }),
+        body: JSON.stringify(buildDailyPickPayload(slot)),
       });
+      alert("המשימה הראשונה למחר ננעלה. כשתפתח את האפליקציה מחר, היא תיפתח ישר אליה.");
     } catch (err) {
       alert(err.message);
     }
@@ -2419,5 +2471,8 @@ window.addEventListener("appinstalled", () => {
   await checkAuth();
   refreshWorkspace();
   setInterval(tickTaskTimers, 1000);
-  await checkForActiveFocusSessionOnLoad();
+  const resumedActiveSession = await checkForActiveFocusSessionOnLoad();
+  if (!resumedActiveSession) {
+    await autoStartLockedMainTaskOnLoad();
+  }
 })();

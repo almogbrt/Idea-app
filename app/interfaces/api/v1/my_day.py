@@ -23,10 +23,10 @@ from app.domain.entities import (
 )
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.my_day import (
-    CarryOverRequest,
     CreateGoalRequest,
     DailyPlanMetricsView,
     DailyPlanView,
+    DailyTaskPickRequest,
     EndFocusRequest,
     EndOfDaySummaryView,
     FocusSessionView,
@@ -149,6 +149,7 @@ async def select_daily_tasks(
         estimated_minutes=body.main.estimated_minutes,
         importance=body.main.importance,
         goal_id=body.main.goal_id,
+        next_step=body.main.next_step,
     )
     secondary = [
         DailyTaskPick(
@@ -157,6 +158,7 @@ async def select_daily_tasks(
             estimated_minutes=p.estimated_minutes,
             importance=p.importance,
             goal_id=p.goal_id,
+            next_step=p.next_step,
         )
         for p in body.secondary
     ]
@@ -208,18 +210,27 @@ async def swap_daily_task(
         estimated_minutes=body.pick.estimated_minutes,
         importance=body.pick.importance,
         goal_id=body.pick.goal_id,
+        next_step=body.pick.next_step,
     )
     plan = await scope.manage_daily_plan.swap_daily_task(user.id, body.bumped_task_id, pick)
     return _daily_plan_view(plan)
 
 
-@router.post("/plan/today/carry-over", response_model=DailyPlanView)
-async def set_carry_over(
-    body: CarryOverRequest,
+@router.post("/plan/tomorrow/first-task", response_model=DailyPlanView)
+async def plan_tomorrows_first_task(
+    body: DailyTaskPickRequest,
     user: User = Depends(get_current_user),
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> DailyPlanView:
-    plan = await scope.manage_daily_plan.set_carry_over(user.id, body.task_id)
+    pick = DailyTaskPick(
+        task_id=body.task_id,
+        deliverable=body.deliverable,
+        estimated_minutes=body.estimated_minutes,
+        importance=body.importance,
+        goal_id=body.goal_id,
+        next_step=body.next_step,
+    )
+    plan = await scope.manage_daily_plan.plan_tomorrows_first_task(user.id, pick)
     return _daily_plan_view(plan)
 
 

@@ -82,6 +82,7 @@ def _pick_payload(task_id: str, **overrides: object) -> dict[str, object]:
         "estimated_minutes": 60,
         "importance": "high",
         "goal_id": None,
+        "next_step": "Open the draft and write one sentence",
     }
     payload.update(overrides)
     return payload
@@ -253,14 +254,34 @@ def test_swap_daily_task(client: TestClient) -> None:
     assert response.json()["secondary_task_id_1"] == urgent_task["id"]
 
 
-def test_carry_over(client: TestClient) -> None:
+def test_plan_tomorrows_first_task(client: TestClient) -> None:
     _install_scope(client)
     task = client.post("/api/v1/my-day/inbox", json={"title": "Tomorrow's task"}).json()
 
-    response = client.post("/api/v1/my-day/plan/today/carry-over", json={"task_id": task["id"]})
+    response = client.post(
+        "/api/v1/my-day/plan/tomorrow/first-task", json=_pick_payload(task["id"])
+    )
 
     assert response.status_code == 200
-    assert response.json()["carry_over_task_id"] == task["id"]
+    body = response.json()
+    assert body["main_task_id"] == task["id"]
+    assert body["is_locked"] is True
+
+    today = client.get("/api/v1/my-day/plan/today").json()
+    assert today["carry_over_task_id"] == task["id"]
+
+
+def test_plan_tomorrows_first_task_rejects_if_already_locked(client: TestClient) -> None:
+    _install_scope(client)
+    task = client.post("/api/v1/my-day/inbox", json={"title": "Tomorrow's task"}).json()
+    other_task = client.post("/api/v1/my-day/inbox", json={"title": "Another task"}).json()
+    client.post("/api/v1/my-day/plan/tomorrow/first-task", json=_pick_payload(task["id"]))
+
+    response = client.post(
+        "/api/v1/my-day/plan/tomorrow/first-task", json=_pick_payload(other_task["id"])
+    )
+
+    assert response.status_code == 409
 
 
 def test_end_of_day_summary(client: TestClient) -> None:

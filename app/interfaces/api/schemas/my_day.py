@@ -28,6 +28,7 @@ class DailyTaskPickRequest(BaseModel):
     estimated_minutes: int = Field(..., gt=0)
     importance: TaskImportance
     goal_id: uuid.UUID | None = None
+    next_step: str = Field(..., min_length=1)
 
 
 class SelectDailyTasksRequest(BaseModel):
@@ -78,10 +79,6 @@ class FocusSessionView(BaseModel):
     ended_at: datetime | None
     exit_reason: FocusExitReason | None
     stuck_reason: FocusStuckReason | None
-
-
-class CarryOverRequest(BaseModel):
-    task_id: uuid.UUID | None = None
 
 
 class EndOfDaySummaryView(BaseModel):

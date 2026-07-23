@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from app.application.ports.daily_plan_repository import DailyPlanRepositoryPort
 from app.application.ports.daily_plan_swap_repository import DailyPlanSwapRepositoryPort
@@ -68,6 +68,7 @@ class DailyTaskPick:
     estimated_minutes: int
     importance: TaskImportance
     goal_id: uuid.UUID | None
+    next_step: str
 
 
 class ManageDailyPlanUseCase:
@@ -82,11 +83,13 @@ class ManageDailyPlanUseCase:
         self._tasks = task_repository
 
     async def get_or_create_today(self, user_id: uuid.UUID) -> DailyPlan:
-        today = datetime.now(UTC).date()
-        plan = await self._plans.get_by_date(user_id, today)
+        return await self._get_or_create(user_id, datetime.now(UTC).date())
+
+    async def _get_or_create(self, user_id: uuid.UUID, plan_date: date) -> DailyPlan:
+        plan = await self._plans.get_by_date(user_id, plan_date)
         if plan is not None:
             return plan
-        return await self._plans.create(user_id, today)
+        return await self._plans.create(user_id, plan_date)
 
     async def select_daily_tasks(
         self, user_id: uuid.UUID, main: DailyTaskPick, secondary: list[DailyTaskPick]
@@ -110,9 +113,10 @@ class ManageDailyPlanUseCase:
         return plan
 
     async def _apply_pick(self, pick: DailyTaskPick) -> Task:
-        return await self._tasks.set_daily_attributes(
+        await self._tasks.set_daily_attributes(
             pick.task_id, pick.deliverable, pick.estimated_minutes, pick.importance, pick.goal_id
         )
+        return await self._tasks.set_next_step(pick.task_id, pick.next_step)
 
     async def lock_day(self, user_id: uuid.UUID) -> DailyPlan:
         plan = await self.get_or_create_today(user_id)
@@ -146,6 +150,28 @@ class ManageDailyPlanUseCase:
     async def set_carry_over(self, user_id: uuid.UUID, task_id: uuid.UUID | None) -> DailyPlan:
         plan = await self.get_or_create_today(user_id)
         return await self._plans.set_carry_over(plan.id, task_id)
+
+    async def plan_tomorrows_first_task(
+        self, user_id: uuid.UUID, pick: DailyTaskPick
+    ) -> DailyPlan:
+        """Commits tomorrow's main task tonight, while the decision is easy —
+        creates and locks tomorrow's `DailyPlan` right away, so opening the
+        app tomorrow morning can jump straight into Focus mode with zero
+        further decisions. Also records the pick as today's carry-over note,
+        so the end-of-day summary's "first task tomorrow" line keeps
+        working unchanged."""
+        tomorrow = datetime.now(UTC).date() + timedelta(days=1)
+        plan = await self._get_or_create(user_id, tomorrow)
+        if plan.is_locked:
+            raise ConflictError("Tomorrow's plan is already locked.")
+
+        await self._apply_pick(pick)
+        plan = await self._plans.set_main_task(plan.id, pick.task_id)
+        plan = await self._plans.lock(plan.id)
+
+        today_plan = await self.get_or_create_today(user_id)
+        await self._plans.set_carry_over(today_plan.id, pick.task_id)
+        return plan
 
 
 class ManageFocusSessionUseCase:
