@@ -33,21 +33,23 @@ locals {
   )
 
   secret_values = {
-    "idea-os-database-url"               = local.database_url
-    "idea-os-redis-url"                  = var.upstash_redis_url
-    "idea-os-token-encryption-key"       = var.token_encryption_key
-    "idea-os-jwt-signing-key"            = random_password.jwt_signing_key.result
-    "idea-os-anthropic-api-key"          = var.anthropic_api_key
-    "idea-os-openai-api-key"             = var.openai_api_key
-    "idea-os-google-oauth-client-id"     = var.google_oauth_client_id
-    "idea-os-google-oauth-client-secret" = var.google_oauth_client_secret
-    "idea-os-owner-email"                = var.owner_email
-    "idea-os-scheduler-shared-secret"    = random_password.scheduler_shared_secret.result
-    "idea-os-whatsapp-access-token"      = var.whatsapp_access_token
-    "idea-os-whatsapp-phone-number-id"   = var.whatsapp_phone_number_id
-    "idea-os-whatsapp-app-secret"        = var.whatsapp_app_secret
-    "idea-os-whatsapp-verify-token"      = var.whatsapp_verify_token
+    "idea-os-database-url"                = local.database_url
+    "idea-os-redis-url"                   = var.upstash_redis_url
+    "idea-os-token-encryption-key"        = var.token_encryption_key
+    "idea-os-jwt-signing-key"             = random_password.jwt_signing_key.result
+    "idea-os-anthropic-api-key"           = var.anthropic_api_key
+    "idea-os-openai-api-key"              = var.openai_api_key
+    "idea-os-google-oauth-client-id"      = var.google_oauth_client_id
+    "idea-os-google-oauth-client-secret"  = var.google_oauth_client_secret
+    "idea-os-owner-email"                 = var.owner_email
+    "idea-os-scheduler-shared-secret"     = random_password.scheduler_shared_secret.result
+    "idea-os-whatsapp-access-token"       = var.whatsapp_access_token
+    "idea-os-whatsapp-phone-number-id"    = var.whatsapp_phone_number_id
+    "idea-os-whatsapp-app-secret"         = var.whatsapp_app_secret
+    "idea-os-whatsapp-verify-token"       = var.whatsapp_verify_token
     "idea-os-whatsapp-owner-phone-number" = var.whatsapp_owner_phone_number
+    "idea-os-green-invoice-api-id"        = var.green_invoice_api_id
+    "idea-os-green-invoice-api-secret"    = var.green_invoice_api_secret
   }
 }
 

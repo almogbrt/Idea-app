@@ -174,6 +174,7 @@ def _workspace_kwargs() -> dict[str, object]:
             FakeDailyPlanSwapRepository(),
             tasks_repo,
         ),
+        "finance_overview": None,
     }
 
 _USER = User(

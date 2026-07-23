@@ -80,6 +80,13 @@ const els = {
   notificationsWrap: document.querySelector(".notifications-wrap"),
   calendarList: document.getElementById("calendar-list"),
   calendarEmpty: document.getElementById("calendar-empty"),
+  financeContent: document.getElementById("finance-content"),
+  financeSummary: document.getElementById("finance-summary"),
+  financeIncomeList: document.getElementById("finance-income-list"),
+  financeIncomeEmpty: document.getElementById("finance-income-empty"),
+  financeExpensesList: document.getElementById("finance-expenses-list"),
+  financeExpensesEmpty: document.getElementById("finance-expenses-empty"),
+  financeEmpty: document.getElementById("finance-empty"),
   newEventBtn: document.getElementById("new-event-btn"),
   newEventModal: document.getElementById("new-event-modal"),
   newEventSummary: document.getElementById("new-event-summary"),
@@ -471,6 +478,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
       tasks: "tasks-section",
       clients: "clients-section",
       calendar: "calendar-section",
+      finance: "finance-section",
       files: "files-section",
       thoughts: "thoughts-section",
     };
@@ -480,6 +488,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
     } else if (sectionMap[target]) {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
       if (target === "chat") els.chatInput.focus();
+      if (target === "finance") loadFinance();
     } else {
       addBubble("assistant", "האזור הזה עוד לא זמין — בקרוב.");
     }
@@ -1557,6 +1566,82 @@ async function loadCalendar() {
   } catch {
     // not authenticated yet
   }
+}
+
+function formatCurrency(amount, currency) {
+  return `${amount.toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
+async function loadFinance() {
+  try {
+    const overview = await apiFetch("/finance/overview");
+    els.financeEmpty.hidden = true;
+    els.financeContent.hidden = false;
+
+    els.financeSummary.innerHTML = "";
+    const summaryRows = [
+      { label: "הכנסות", value: overview.total_income, cls: "finance-stat--income" },
+      { label: "הוצאות", value: overview.total_expenses, cls: "finance-stat--expense" },
+      { label: "נטו", value: overview.net, cls: overview.net >= 0 ? "finance-stat--income" : "finance-stat--expense" },
+    ];
+    for (const stat of summaryRows) {
+      const box = document.createElement("div");
+      box.className = `finance-stat ${stat.cls}`;
+      const label = document.createElement("div");
+      label.className = "finance-stat-label";
+      label.textContent = stat.label;
+      const value = document.createElement("div");
+      value.className = "finance-stat-value";
+      value.textContent = formatCurrency(stat.value, "₪");
+      box.appendChild(label);
+      box.appendChild(value);
+      els.financeSummary.appendChild(box);
+    }
+
+    els.financeIncomeList.innerHTML = "";
+    els.financeIncomeEmpty.hidden = overview.income.length > 0;
+    for (const record of overview.income) {
+      els.financeIncomeList.appendChild(buildFinanceRecordRow(record, "income"));
+    }
+
+    els.financeExpensesList.innerHTML = "";
+    els.financeExpensesEmpty.hidden = overview.expenses.length > 0;
+    for (const record of overview.expenses) {
+      els.financeExpensesList.appendChild(buildFinanceRecordRow(record, "expense"));
+    }
+  } catch {
+    els.financeContent.hidden = true;
+    els.financeEmpty.hidden = false;
+  }
+}
+
+function buildFinanceRecordRow(record, kind) {
+  const row = document.createElement("div");
+  row.className = "finance-item";
+
+  const date = document.createElement("span");
+  date.className = "finance-item-date";
+  date.textContent = record.date;
+  row.appendChild(date);
+
+  const desc = document.createElement("span");
+  desc.className = "finance-item-desc";
+  desc.textContent = record.description || (kind === "income" ? record.client_name : record.category) || "—";
+  row.appendChild(desc);
+
+  if (kind === "income" && record.client_name && !record.matched_client_id) {
+    const badge = document.createElement("span");
+    badge.className = "finance-item-badge";
+    badge.textContent = "לא משויך ללקוח קיים";
+    row.appendChild(badge);
+  }
+
+  const amount = document.createElement("span");
+  amount.className = "finance-item-amount";
+  amount.textContent = formatCurrency(record.amount, record.currency);
+  row.appendChild(amount);
+
+  return row;
 }
 
 function formatEventTime(startIso, endIso) {

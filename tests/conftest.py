@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
+from app.application.ports.cache import CachePort
 from app.application.ports.calendar_port import CalendarPort
 from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
@@ -25,6 +26,7 @@ from app.application.ports.daily_plan_swap_repository import DailyPlanSwapReposi
 from app.application.ports.embedding import EmbeddingPort
 from app.application.ports.focus_session_repository import FocusSessionRepositoryPort
 from app.application.ports.goal_repository import GoalRepositoryPort
+from app.application.ports.green_invoice_port import GreenInvoicePort
 from app.application.ports.llm_gateway import LLMGatewayPort, LLMMessage, LLMResponse, LLMStopReason
 from app.application.ports.memory_repository import MemoryRepositoryPort
 from app.application.ports.notification_repository import NotificationRepositoryPort
@@ -43,10 +45,12 @@ from app.domain.entities import (
     Conversation,
     DailyPlan,
     DailyPlanSwap,
+    ExpenseRecord,
     FocusExitReason,
     FocusSession,
     FocusStuckReason,
     Goal,
+    IncomeRecord,
     MemoryRecord,
     Message,
     Notification,
@@ -828,6 +832,37 @@ class FakeCalendarPort(CalendarPort):
 
     async def delete(self, user_id: uuid.UUID, event_id: str) -> None:
         self.events.pop(event_id, None)
+
+
+class FakeGreenInvoicePort(GreenInvoicePort):
+    def __init__(self, *, fail_with: type[AppError] | None = None) -> None:
+        self.income: list[IncomeRecord] = []
+        self.expenses: list[ExpenseRecord] = []
+        self._fail_with = fail_with
+
+    async def list_income(self, from_date: date, to_date: date) -> list[IncomeRecord]:
+        if self._fail_with is not None:
+            raise self._fail_with("Green Invoice is unavailable")
+        return self.income
+
+    async def list_expenses(self, from_date: date, to_date: date) -> list[ExpenseRecord]:
+        if self._fail_with is not None:
+            raise self._fail_with("Green Invoice is unavailable")
+        return self.expenses
+
+
+class FakeCache(CachePort):
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def set(self, key: str, value: str, ttl_seconds: int | None = None) -> None:
+        self.store[key] = value
+
+    async def delete(self, key: str) -> None:
+        self.store.pop(key, None)
 
 
 class FakeEmbeddingGateway(EmbeddingPort):

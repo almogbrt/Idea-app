@@ -378,6 +378,49 @@ class Notification:
 
 
 @dataclass(slots=True)
+class IncomeRecord:
+    """One income document (invoice/receipt) from Green Invoice — read-only,
+    not persisted locally, Green Invoice is the source of truth."""
+
+    id: str
+    date: str
+    """ISO 8601 date string, as returned by the Green Invoice API."""
+    amount: float
+    currency: str
+    client_name: str | None
+    description: str | None
+    status: str
+    matched_client_id: uuid.UUID | None = None
+
+
+@dataclass(slots=True)
+class ExpenseRecord:
+    """One expense record from Green Invoice — read-only, not persisted
+    locally, Green Invoice is the source of truth."""
+
+    id: str
+    date: str
+    amount: float
+    currency: str
+    category: str | None
+    description: str | None
+
+
+@dataclass(slots=True)
+class FinanceOverview:
+    """Aggregated income/expense view for the dashboard finance section, for
+    a given date range."""
+
+    from_date: date
+    to_date: date
+    income: list[IncomeRecord]
+    expenses: list[ExpenseRecord]
+    total_income: float
+    total_expenses: float
+    net: float
+
+
+@dataclass(slots=True)
 class OrchestrationResult:
     """The final answer returned to the caller, plus the audit trail."""
 

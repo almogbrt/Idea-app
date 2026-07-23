@@ -30,3 +30,10 @@ upstash_redis_url = "rediss://default:password@xxxx.upstash.io:6379"
 # After the first deploy, set this to the printed service URL and re-apply
 # to create the hourly reminders Cloud Scheduler job.
 cloud_run_service_url = ""
+
+# Green Invoice (חשבונית ירוקה) -> account menu -> Developer Tools -> API ID/Secret.
+# Leave both at "unset" until you've rotated the secret (if it was ever pasted
+# in plaintext anywhere) — the finance dashboard section just stays empty
+# until these are configured.
+green_invoice_api_id     = "unset"
+green_invoice_api_secret = "unset"

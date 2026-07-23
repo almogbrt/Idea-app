@@ -28,6 +28,7 @@ from app.agents.whatsapp.service import WhatsAppService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
+from app.application.use_cases.finance_overview import FinanceOverviewUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
 from app.application.use_cases.manage_conversation import ManageConversationUseCase
 from app.application.use_cases.manage_daily_plan import (
@@ -92,6 +93,7 @@ from app.infrastructure.db.repositories.whatsapp_message_repository import (
 from app.infrastructure.db.session import create_engine, create_session_factory
 from app.infrastructure.google.api_client_factory import GoogleApiClientFactory
 from app.infrastructure.google.oauth import GoogleOAuthClient
+from app.infrastructure.green_invoice.client import GreenInvoiceClient
 from app.infrastructure.llm.anthropic_gateway import AnthropicLLMGateway
 from app.infrastructure.llm.openai_embeddings import OpenAIEmbeddingGateway
 from app.infrastructure.secrets.env_secret_manager import EnvSecretManager
@@ -126,6 +128,7 @@ class RequestScopedServices:
     manage_daily_plan: ManageDailyPlanUseCase
     manage_focus_sessions: ManageFocusSessionUseCase
     daily_plan_metrics: DailyPlanMetricsUseCase
+    finance_overview: FinanceOverviewUseCase
 
 
 class Container:
@@ -180,6 +183,11 @@ class Container:
         self.whatsapp_client = WhatsAppClient(
             access_token=settings.whatsapp_access_token,
             phone_number_id=settings.whatsapp_phone_number_id,
+        )
+        self.green_invoice_client = GreenInvoiceClient(
+            api_id=settings.green_invoice_api_id,
+            api_secret=settings.green_invoice_api_secret,
+            base_url=settings.green_invoice_base_url,
         )
         self.whatsapp_service = WhatsAppService(
             session_factory=self.session_factory, client=self.whatsapp_client
@@ -286,6 +294,9 @@ class Container:
             manage_focus_sessions=ManageFocusSessionUseCase(focus_sessions_repo, daily_plans_repo),
             daily_plan_metrics=DailyPlanMetricsUseCase(
                 daily_plans_repo, focus_sessions_repo, daily_plan_swaps_repo, tasks_repo
+            ),
+            finance_overview=FinanceOverviewUseCase(
+                self.green_invoice_client, clients_repo, self.cache
             ),
         )
 

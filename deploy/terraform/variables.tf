@@ -122,6 +122,28 @@ variable "whatsapp_owner_phone_number" {
   default     = "unset"
 }
 
+variable "green_invoice_api_id" {
+  description = <<-EOT
+    API ID for the Green Invoice (חשבונית ירוקה) account, generated in
+    Green Invoice under the account menu > Developer Tools. Leave at the
+    default placeholder until configured — the finance dashboard section
+    stays empty (not broken) until this is set.
+  EOT
+  type        = string
+  default     = "unset"
+}
+
+variable "green_invoice_api_secret" {
+  description = <<-EOT
+    API Secret paired with green_invoice_api_id, from the same Developer
+    Tools screen. Rotate it in the Green Invoice dashboard before typing it
+    here if it was ever pasted anywhere in plaintext (chat, email, etc).
+  EOT
+  type        = string
+  sensitive   = true
+  default     = "unset"
+}
+
 variable "cloud_run_service_url" {
   description = <<-EOT
     The deployed Cloud Run service's HTTPS URL (e.g.

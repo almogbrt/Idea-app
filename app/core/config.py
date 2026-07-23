@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     messages from this number are routed to Edith as chat commands instead
     of being logged as a client conversation."""
 
+    # Green Invoice (חשבונית ירוקה) — read-only income/expense dashboard
+    # integration. Empty by default; the finance section simply shows no
+    # data until these are configured.
+    green_invoice_api_id: str = ""
+    green_invoice_api_secret: str = ""
+    green_invoice_base_url: str = "https://api.greeninvoice.co.il/api/v1"
+
     @field_validator("google_oauth_scopes")
     @classmethod
     def _normalize_scopes(cls, v: str) -> str:

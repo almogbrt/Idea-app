@@ -126,6 +126,16 @@ spec:
                 secretKeyRef:
                   name: idea-os-whatsapp-owner-phone-number
                   key: latest
+            - name: GREEN_INVOICE_API_ID
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-green-invoice-api-id
+                  key: latest
+            - name: GREEN_INVOICE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-green-invoice-api-secret
+                  key: latest
   traffic:
     - latestRevision: true
       percent: 100
