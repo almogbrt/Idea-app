@@ -17,6 +17,7 @@ import pytest
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
 from app.application.ports.cache import CachePort
 from app.application.ports.calendar_port import CalendarPort
+from app.application.ports.cash_flow_port import CashFlowPort
 from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
 from app.application.ports.client_logo_storage import ClientLogoStoragePort
 from app.application.ports.client_repository import ClientRepositoryPort
@@ -40,6 +41,7 @@ from app.core.exceptions import AppError, NotFoundError
 from app.domain.entities import (
     AgentExecution,
     CalendarEvent,
+    CashFlowSnapshot,
     Client,
     ClientAttachment,
     Conversation,
@@ -849,6 +851,14 @@ class FakeGreenInvoicePort(GreenInvoicePort):
         if self._fail_with is not None:
             raise self._fail_with("Green Invoice is unavailable")
         return self.expenses
+
+
+class FakeCashFlowPort(CashFlowPort):
+    def __init__(self) -> None:
+        self.snapshot: CashFlowSnapshot | None = None
+
+    async def get_snapshot(self, user_id: uuid.UUID) -> CashFlowSnapshot | None:
+        return self.snapshot
 
 
 class FakeCache(CachePort):

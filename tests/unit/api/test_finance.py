@@ -6,11 +6,17 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
+from app.application.use_cases.cash_flow import CashFlowUseCase
 from app.application.use_cases.finance_overview import FinanceOverviewUseCase
 from app.core.container import RequestScopedServices
-from app.domain.entities import ExpenseRecord, IncomeRecord, User
+from app.domain.entities import CashFlowSnapshot, ExpenseRecord, IncomeRecord, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
-from tests.conftest import FakeCache, FakeClientRepository, FakeGreenInvoicePort
+from tests.conftest import (
+    FakeCache,
+    FakeCashFlowPort,
+    FakeClientRepository,
+    FakeGreenInvoicePort,
+)
 
 _USER = User(
     id=uuid.uuid4(),
@@ -25,6 +31,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     green_invoice = FakeGreenInvoicePort()
     clients_repo = FakeClientRepository()
     cache = FakeCache()
+    cash_flow_port = FakeCashFlowPort()
 
     scope = RequestScopedServices(
         orchestrator=None,  # type: ignore[arg-type]
@@ -48,10 +55,16 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_focus_sessions=None,  # type: ignore[arg-type]
         daily_plan_metrics=None,  # type: ignore[arg-type]
         finance_overview=FinanceOverviewUseCase(green_invoice, clients_repo, cache),
+        cash_flow=CashFlowUseCase(cash_flow_port),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
     client.app.dependency_overrides[get_request_scope] = lambda: scope
-    return {"green_invoice": green_invoice, "clients_repo": clients_repo, "cache": cache}
+    return {
+        "green_invoice": green_invoice,
+        "clients_repo": clients_repo,
+        "cache": cache,
+        "cash_flow_port": cash_flow_port,
+    }
 
 
 def test_overview_defaults_to_current_month(client: TestClient) -> None:
@@ -117,3 +130,31 @@ def test_overview_matches_income_to_existing_client(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["income"][0]["matched_client_id"] == str(matched_client.id)
+
+
+def test_cash_flow_returns_null_when_not_configured(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.get("/api/v1/finance/cash-flow")
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_cash_flow_returns_snapshot_when_available(client: TestClient) -> None:
+    resources = _install_scope(client)
+    cash_flow_port: FakeCashFlowPort = resources["cash_flow_port"]  # type: ignore[assignment]
+    cash_flow_port.snapshot = CashFlowSnapshot(
+        current_balance=-23622.0,
+        fixed_expenses_this_month=-2510.0,
+        dues_this_month=-4617.46,
+        projected_end_of_month_balance=-30201.0,
+        fetched_at=datetime.now(UTC),
+    )
+
+    response = client.get("/api/v1/finance/cash-flow")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["current_balance"] == -23622.0
+    assert body["dues_this_month"] == -4617.46

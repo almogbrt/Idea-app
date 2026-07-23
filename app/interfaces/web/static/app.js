@@ -87,6 +87,12 @@ const els = {
   financeExpensesList: document.getElementById("finance-expenses-list"),
   financeExpensesEmpty: document.getElementById("finance-expenses-empty"),
   financeEmpty: document.getElementById("finance-empty"),
+  cashFlowCard: document.getElementById("cash-flow-card"),
+  cashFlowEmpty: document.getElementById("cash-flow-empty"),
+  cashFlowBalance: document.getElementById("cash-flow-balance"),
+  cashFlowFixedExpenses: document.getElementById("cash-flow-fixed-expenses"),
+  cashFlowDues: document.getElementById("cash-flow-dues"),
+  cashFlowProjected: document.getElementById("cash-flow-projected"),
   newEventBtn: document.getElementById("new-event-btn"),
   newEventModal: document.getElementById("new-event-modal"),
   newEventSummary: document.getElementById("new-event-summary"),
@@ -489,7 +495,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
     } else if (sectionMap[target]) {
       document.getElementById(sectionMap[target]).scrollIntoView({ behavior: "smooth", block: "start" });
       if (target === "chat") els.chatInput.focus();
-      if (target === "finance") loadFinance();
+      if (target === "finance") {
+        loadFinance();
+        loadCashFlow();
+      }
     } else {
       addBubble("assistant", "האזור הזה עוד לא זמין — בקרוב.");
     }
@@ -1571,6 +1580,26 @@ async function loadCalendar() {
 
 function formatCurrency(amount, currency) {
   return `${amount.toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+}
+
+async function loadCashFlow() {
+  try {
+    const snapshot = await apiFetch("/finance/cash-flow");
+    if (!snapshot) {
+      els.cashFlowCard.hidden = true;
+      els.cashFlowEmpty.hidden = false;
+      return;
+    }
+    els.cashFlowEmpty.hidden = true;
+    els.cashFlowCard.hidden = false;
+    els.cashFlowBalance.textContent = formatCurrency(snapshot.current_balance, "₪");
+    els.cashFlowFixedExpenses.textContent = formatCurrency(snapshot.fixed_expenses_this_month, "₪");
+    els.cashFlowDues.textContent = formatCurrency(snapshot.dues_this_month, "₪");
+    els.cashFlowProjected.textContent = formatCurrency(snapshot.projected_end_of_month_balance, "₪");
+  } catch {
+    els.cashFlowCard.hidden = true;
+    els.cashFlowEmpty.hidden = false;
+  }
 }
 
 async function loadFinance() {

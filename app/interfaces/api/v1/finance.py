@@ -12,9 +12,10 @@ from datetime import UTC, date, datetime
 from fastapi import APIRouter, Depends
 
 from app.core.container import RequestScopedServices
-from app.domain.entities import ExpenseRecord, FinanceOverview, IncomeRecord, User
+from app.domain.entities import CashFlowSnapshot, ExpenseRecord, FinanceOverview, IncomeRecord, User
 from app.interfaces.api.dependencies import get_current_user, get_request_scope
 from app.interfaces.api.schemas.finance import (
+    CashFlowSnapshotView,
     ExpenseRecordView,
     FinanceOverviewView,
     IncomeRecordView,
@@ -76,3 +77,22 @@ async def get_overview(
 
 def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+def _cash_flow_view(snapshot: CashFlowSnapshot) -> CashFlowSnapshotView:
+    return CashFlowSnapshotView(
+        current_balance=snapshot.current_balance,
+        fixed_expenses_this_month=snapshot.fixed_expenses_this_month,
+        dues_this_month=snapshot.dues_this_month,
+        projected_end_of_month_balance=snapshot.projected_end_of_month_balance,
+        fetched_at=snapshot.fetched_at,
+    )
+
+
+@router.get("/cash-flow", response_model=CashFlowSnapshotView | None)
+async def get_cash_flow(
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> CashFlowSnapshotView | None:
+    snapshot = await scope.cash_flow.get_snapshot(user.id)
+    return _cash_flow_view(snapshot) if snapshot else None

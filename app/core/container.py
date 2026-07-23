@@ -23,10 +23,13 @@ from app.agents.google_calendar.schedule_adapter import CalendarScheduleAdapter
 from app.agents.google_drive.client import DriveClient
 from app.agents.google_drive.drive_port_adapter import GoogleDrivePortAdapter
 from app.agents.google_drive.logo_storage_adapter import GoogleDriveLogoStorageAdapter
+from app.agents.google_sheets.cash_flow_adapter import GoogleSheetsCashFlowAdapter
+from app.agents.google_sheets.client import SheetsClient
 from app.agents.project_management.service import WorkspaceService
 from app.agents.whatsapp.service import WhatsAppService
 from app.application.ports.secret_manager import SecretManagerPort
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.application.use_cases.cash_flow import CashFlowUseCase
 from app.application.use_cases.check_reminders import CheckRemindersUseCase
 from app.application.use_cases.finance_overview import FinanceOverviewUseCase
 from app.application.use_cases.manage_calendar import ManageCalendarUseCase
@@ -129,6 +132,7 @@ class RequestScopedServices:
     manage_focus_sessions: ManageFocusSessionUseCase
     daily_plan_metrics: DailyPlanMetricsUseCase
     finance_overview: FinanceOverviewUseCase
+    cash_flow: CashFlowUseCase
 
 
 class Container:
@@ -205,12 +209,16 @@ class Container:
         gmail_client = GmailClient(self.google_api_client_factory)
         calendar_client = CalendarClient(self.google_api_client_factory)
         drive_client = DriveClient(self.google_api_client_factory)
+        sheets_client = SheetsClient(self.google_api_client_factory)
         self.inbox_port = GmailInboxAdapter(gmail_client)
         self.schedule_port = CalendarScheduleAdapter(calendar_client)
         self.email_sender_port = GmailEmailSenderAdapter(gmail_client)
         self.calendar_port = GoogleCalendarPortAdapter(calendar_client)
         self.drive_port = GoogleDrivePortAdapter(drive_client)
         self.client_logo_storage = GoogleDriveLogoStorageAdapter(drive_client)
+        self.cash_flow_port = GoogleSheetsCashFlowAdapter(
+            sheets_client, settings.cash_flow_spreadsheet_id
+        )
 
     def build_request_scope(self, session: AsyncSession) -> RequestScopedServices:
         conversations = SqlAlchemyConversationRepository(session)
@@ -300,6 +308,7 @@ class Container:
             finance_overview=FinanceOverviewUseCase(
                 self.green_invoice_client, clients_repo, self.cache
             ),
+            cash_flow=CashFlowUseCase(self.cash_flow_port),
         )
 
     def build_user_repository(self, session: AsyncSession) -> SqlAlchemyUserRepository:

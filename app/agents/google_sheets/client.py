@@ -14,17 +14,25 @@ class SheetsClient:
         self._google_clients = google_clients
 
     async def read_range(
-        self, user_id: uuid.UUID, spreadsheet_id: str, cell_range: str
-    ) -> list[list[str]]:
+        self,
+        user_id: uuid.UUID,
+        spreadsheet_id: str,
+        cell_range: str,
+        value_render_option: str = "FORMATTED_VALUE",
+    ) -> list[list[Any]]:
         service = await self._google_clients.sheets(user_id)
         response = await call_google_api(
             lambda: service.spreadsheets()
             .values()
-            .get(spreadsheetId=spreadsheet_id, range=cell_range)
+            .get(
+                spreadsheetId=spreadsheet_id,
+                range=cell_range,
+                valueRenderOption=value_render_option,
+            )
             .execute(),
             action="sheets.values.get",
         )
-        return cast(list[list[str]], response.get("values", []))
+        return cast(list[list[Any]], response.get("values", []))
 
     async def write_range(
         self, user_id: uuid.UUID, spreadsheet_id: str, cell_range: str, values: list[list[str]]

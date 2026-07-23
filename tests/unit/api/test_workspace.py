@@ -223,6 +223,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
             daily_plans_repo, focus_sessions_repo, daily_plan_swaps_repo, tasks_repo
         ),
         finance_overview=None,  # type: ignore[arg-type]
+        cash_flow=None,  # type: ignore[arg-type]
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
     client.app.dependency_overrides[get_request_scope] = lambda: scope

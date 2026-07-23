@@ -144,6 +144,18 @@ variable "green_invoice_api_secret" {
   default     = "unset"
 }
 
+variable "cash_flow_spreadsheet_id" {
+  description = <<-EOT
+    The ID of Almog's own cash-flow Google Sheet (from its URL, the part
+    between /d/ and /edit). Requires a dedicated `IDEA_OS` tab with 4
+    labeled cells — see the finance dashboard section for the exact
+    contract. Leave at the default placeholder until that tab exists — the
+    cash-flow card just stays empty until then.
+  EOT
+  type        = string
+  default     = "unset"
+}
+
 variable "cloud_run_service_url" {
   description = <<-EOT
     The deployed Cloud Run service's HTTPS URL (e.g.

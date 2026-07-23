@@ -421,6 +421,19 @@ class FinanceOverview:
 
 
 @dataclass(slots=True)
+class CashFlowSnapshot:
+    """A snapshot of a few key numbers read from a dedicated tab in the
+    user's own cash-flow Google Sheet — not persisted locally, the sheet is
+    the source of truth."""
+
+    current_balance: float
+    fixed_expenses_this_month: float
+    dues_this_month: float
+    projected_end_of_month_balance: float
+    fetched_at: datetime
+
+
+@dataclass(slots=True)
 class OrchestrationResult:
     """The final answer returned to the caller, plus the audit trail."""
 

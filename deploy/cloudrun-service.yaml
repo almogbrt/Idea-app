@@ -140,6 +140,11 @@ spec:
                 secretKeyRef:
                   name: idea-os-green-invoice-api-secret
                   key: latest
+            - name: CASH_FLOW_SPREADSHEET_ID
+              valueFrom:
+                secretKeyRef:
+                  name: idea-os-cash-flow-spreadsheet-id
+                  key: latest
   traffic:
     - latestRevision: true
       percent: 100

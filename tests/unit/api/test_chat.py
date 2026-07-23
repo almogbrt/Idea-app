@@ -176,6 +176,7 @@ def _workspace_kwargs() -> dict[str, object]:
             tasks_repo,
         ),
         "finance_overview": None,
+        "cash_flow": None,
     }
 
 _USER = User(

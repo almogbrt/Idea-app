@@ -221,6 +221,31 @@
 
       <section id="finance-section">
         <div class="section-heading">
+          <h2>תזרים ותחזית</h2>
+        </div>
+        <div id="cash-flow-card" class="finance-summary" hidden>
+          <div class="finance-stat">
+            <div class="finance-stat-label">יתרת עו"ש נוכחית</div>
+            <div class="finance-stat-value" id="cash-flow-balance"></div>
+          </div>
+          <div class="finance-stat">
+            <div class="finance-stat-label">הוצאות קבועות החודש</div>
+            <div class="finance-stat-value" id="cash-flow-fixed-expenses"></div>
+          </div>
+          <div class="finance-stat">
+            <div class="finance-stat-label">חובה לרשויות החודש</div>
+            <div class="finance-stat-value" id="cash-flow-dues"></div>
+          </div>
+          <div class="finance-stat">
+            <div class="finance-stat-label">תחזית יתרה לסוף החודש</div>
+            <div class="finance-stat-value" id="cash-flow-projected"></div>
+          </div>
+        </div>
+        <div id="cash-flow-empty" class="empty-state empty-state--small" hidden>
+          לא הוגדר גיליון תזרים, או שהטאב IDEA_OS לא נמצא בו.
+        </div>
+
+        <div class="section-heading">
           <h2>הכנסות והוצאות (חשבונית ירוקה)</h2>
         </div>
         <div id="finance-content" hidden>

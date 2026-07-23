@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -34,3 +34,11 @@ class FinanceOverviewView(BaseModel):
     total_income: float
     total_expenses: float
     net: float
+
+
+class CashFlowSnapshotView(BaseModel):
+    current_balance: float
+    fixed_expenses_this_month: float
+    dues_this_month: float
+    projected_end_of_month_balance: float
+    fetched_at: datetime

@@ -37,3 +37,8 @@ cloud_run_service_url = ""
 # until these are configured.
 green_invoice_api_id     = "unset"
 green_invoice_api_secret = "unset"
+
+# Google Sheets ID of your own cash-flow spreadsheet (the part of its URL
+# between /d/ and /edit) — requires a dedicated "IDEA_OS" tab with 4 labeled
+# cells. Leave at "unset" until that tab exists.
+cash_flow_spreadsheet_id = "unset"

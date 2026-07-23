@@ -704,7 +704,7 @@ input {
   color: var(--danger);
 }
 
-.finance-summary {
+.finance-summary:not([hidden]) {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;

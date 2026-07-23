@@ -50,6 +50,7 @@ locals {
     "idea-os-whatsapp-owner-phone-number" = var.whatsapp_owner_phone_number
     "idea-os-green-invoice-api-id"        = var.green_invoice_api_id
     "idea-os-green-invoice-api-secret"    = var.green_invoice_api_secret
+    "idea-os-cash-flow-spreadsheet-id"    = var.cash_flow_spreadsheet_id
   }
 }
 

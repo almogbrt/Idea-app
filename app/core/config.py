@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     green_invoice_api_secret: str = ""
     green_invoice_base_url: str = "https://api.greeninvoice.co.il/api/v1"
 
+    # Almog's own cash-flow Google Sheet — read-only, dashboard finance
+    # section. Empty by default; the cash-flow card simply stays empty until
+    # this is configured.
+    cash_flow_spreadsheet_id: str = ""
+
     @field_validator("google_oauth_scopes")
     @classmethod
     def _normalize_scopes(cls, v: str) -> str:
