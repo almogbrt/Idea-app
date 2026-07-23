@@ -39,11 +39,20 @@ class GreenInvoiceClient(GreenInvoicePort):
         self._token_expires_at: float = 0.0
 
     async def list_income(self, from_date: date, to_date: date) -> list[IncomeRecord]:
+        """`/documents/search` returns every document type in range, not just
+        realized income — price quotes and orders are pre-sale drafts with
+        no money actually received, so including them roughly doubled the
+        reported total. Filtering happens client-side on each item's own
+        `type` field (see `_parse_income`) rather than via a search-request
+        filter, since the exact request-side filter parameter isn't
+        documented publicly and every returned document reliably carries
+        its own type."""
         body = await self._post(
             "/documents/search",
             {"fromDate": from_date.isoformat(), "toDate": to_date.isoformat()},
         )
-        return [_parse_income(item) for item in body.get("items", [])]
+        records = (_parse_income(item) for item in body.get("items", []))
+        return [record for record in records if record is not None]
 
     async def list_expenses(self, from_date: date, to_date: date) -> list[ExpenseRecord]:
         body = await self._post(
@@ -118,14 +127,28 @@ def _token_expiry(token: str) -> float:
     return time.time() + 25 * 60
 
 
-def _parse_income(item: dict[str, Any]) -> IncomeRecord:
+_NON_INCOME_DOCUMENT_TYPES = frozenset({10, 100, 200, 210})
+"""Price quote, order, delivery note, return delivery note — pre-sale
+documents with no money actually received; not real income."""
+
+_CREDIT_INVOICE_DOCUMENT_TYPE = 330
+"""A refund/credit note — reduces income, isn't additional income."""
+
+
+def _parse_income(item: dict[str, Any]) -> IncomeRecord | None:
+    doc_type = item.get("type")
+    if doc_type in _NON_INCOME_DOCUMENT_TYPES:
+        return None
     client = item.get("client")
     client_name = client.get("name") if isinstance(client, dict) else None
     description = item.get("description") or item.get("remarks")
+    amount = float(item.get("amount", 0) or 0)
+    if doc_type == _CREDIT_INVOICE_DOCUMENT_TYPE:
+        amount = -abs(amount)
     return IncomeRecord(
         id=str(item.get("id", "")),
         date=str(item.get("date", "")),
-        amount=float(item.get("amount", 0) or 0),
+        amount=amount,
         currency=str(item.get("currency", "ILS")),
         client_name=str(client_name) if client_name is not None else None,
         description=str(description) if description is not None else None,

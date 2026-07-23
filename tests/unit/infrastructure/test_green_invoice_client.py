@@ -58,6 +58,51 @@ async def test_list_income_authenticates_then_fetches_and_parses() -> None:
 
 
 @respx.mock
+async def test_list_income_excludes_quotes_and_orders() -> None:
+    """`/documents/search` returns every document type in range, including
+    price quotes and orders that were never actually paid — these must not
+    be counted as income."""
+    respx.post(f"{_BASE_URL}/account/token").mock(
+        return_value=Response(200, json={"token": _make_token(1800)})
+    )
+    respx.post(f"{_BASE_URL}/documents/search").mock(
+        return_value=Response(
+            200,
+            json={
+                "items": [
+                    {"id": "quote-1", "type": 10, "amount": 5000, "date": "2026-07-01"},
+                    {"id": "order-1", "type": 100, "amount": 3000, "date": "2026-07-02"},
+                    {"id": "invoice-1", "type": 320, "amount": 1000, "date": "2026-07-03"},
+                ]
+            },
+        )
+    )
+    client = GreenInvoiceClient("api-id", "api-secret", _BASE_URL)
+
+    records = await client.list_income(date(2026, 7, 1), date(2026, 7, 31))
+
+    assert [r.id for r in records] == ["invoice-1"]
+
+
+@respx.mock
+async def test_list_income_treats_credit_invoice_as_negative() -> None:
+    respx.post(f"{_BASE_URL}/account/token").mock(
+        return_value=Response(200, json={"token": _make_token(1800)})
+    )
+    respx.post(f"{_BASE_URL}/documents/search").mock(
+        return_value=Response(
+            200,
+            json={"items": [{"id": "credit-1", "type": 330, "amount": 200, "date": "2026-07-05"}]},
+        )
+    )
+    client = GreenInvoiceClient("api-id", "api-secret", _BASE_URL)
+
+    records = await client.list_income(date(2026, 7, 1), date(2026, 7, 31))
+
+    assert records[0].amount == -200.0
+
+
+@respx.mock
 async def test_list_expenses_parses_defensively_with_missing_fields() -> None:
     respx.post(f"{_BASE_URL}/account/token").mock(
         return_value=Response(200, json={"token": _make_token(1800)})
