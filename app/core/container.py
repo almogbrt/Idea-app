@@ -283,6 +283,8 @@ class Container:
                 calendar_port=self.calendar_port,
                 notification_repository=notifications_repo,
                 email_sender=self.email_sender_port,
+                daily_plan_repository=daily_plans_repo,
+                app_base_url=self.settings.app_base_url,
             ),
             manage_calendar=ManageCalendarUseCase(self.calendar_port),
             manage_email=ManageEmailUseCase(self.inbox_port),

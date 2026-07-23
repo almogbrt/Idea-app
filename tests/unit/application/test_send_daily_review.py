@@ -7,6 +7,7 @@ from app.core.exceptions import AuthError
 from app.domain.entities import NotificationKind, TaskStatus
 from tests.conftest import (
     FakeCalendarPort,
+    FakeDailyPlanRepository,
     FakeNotificationRepository,
     FakeTaskRepository,
     FakeUserRepository,
@@ -27,8 +28,17 @@ def _make_use_case(
     calendar: FakeCalendarPort,
     notifications: FakeNotificationRepository,
     email_sender: _FakeEmailSender,
+    daily_plans: FakeDailyPlanRepository | None = None,
 ) -> SendDailyReviewUseCase:
-    return SendDailyReviewUseCase(users, tasks, calendar, notifications, email_sender)  # type: ignore[arg-type]
+    return SendDailyReviewUseCase(
+        users,
+        tasks,
+        calendar,
+        notifications,
+        email_sender,
+        daily_plans if daily_plans is not None else FakeDailyPlanRepository(),
+        app_base_url="https://idea-os.example.com",
+    )
 
 
 async def test_reports_done_and_not_done_tasks_for_today(
@@ -101,12 +111,15 @@ async def test_lists_calendar_events_as_fyi_without_completion_claim(
     assert "Client meeting" in body
 
 
-async def test_skips_users_with_nothing_today(
+async def test_prompts_to_lock_tomorrow_even_with_nothing_today(
     fake_user_repository: FakeUserRepository,
     fake_task_repository: FakeTaskRepository,
     fake_calendar_port: FakeCalendarPort,
     fake_notification_repository: FakeNotificationRepository,
 ) -> None:
+    """Even with nothing due today and no calendar events, the email still
+    goes out — its job now is also to prompt locking tomorrow's first task,
+    which is always relevant until that's done."""
     await fake_user_repository.create("sub-3", "owner3@example.com", "Owner")
     email_sender = _FakeEmailSender()
     use_case = _make_use_case(
@@ -119,8 +132,75 @@ async def test_skips_users_with_nothing_today(
 
     sent = await use_case.execute()
 
+    assert sent == 1
+    _, body = email_sender.sent[0]
+    assert "לא נעלת משימה ראשונה למחר" in body
+    assert "https://idea-os.example.com" in body
+
+
+async def test_skips_users_with_nothing_today_and_tomorrow_already_locked(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_calendar_port: FakeCalendarPort,
+    fake_notification_repository: FakeNotificationRepository,
+    fake_daily_plan_repository: FakeDailyPlanRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-3b", "owner3b@example.com", "Owner")
+    tomorrow = datetime.now(UTC).date() + timedelta(days=1)
+    plan = await fake_daily_plan_repository.create(user.id, tomorrow)
+    task = await fake_task_repository.create(user.id, "Tomorrow's task")
+    await fake_daily_plan_repository.set_main_task(plan.id, task.id)
+    await fake_daily_plan_repository.lock(plan.id)
+
+    email_sender = _FakeEmailSender()
+    use_case = _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        fake_calendar_port,
+        fake_notification_repository,
+        email_sender,
+        fake_daily_plan_repository,
+    )
+
+    sent = await use_case.execute()
+
     assert sent == 0
     assert email_sender.sent == []
+
+
+async def test_notes_tomorrow_already_locked_in_body(
+    fake_user_repository: FakeUserRepository,
+    fake_task_repository: FakeTaskRepository,
+    fake_calendar_port: FakeCalendarPort,
+    fake_notification_repository: FakeNotificationRepository,
+    fake_daily_plan_repository: FakeDailyPlanRepository,
+) -> None:
+    user = await fake_user_repository.create("sub-3c", "owner3c@example.com", "Owner")
+    tomorrow = datetime.now(UTC).date() + timedelta(days=1)
+    plan = await fake_daily_plan_repository.create(user.id, tomorrow)
+    tomorrow_task = await fake_task_repository.create(user.id, "Tomorrow's task")
+    await fake_daily_plan_repository.set_main_task(plan.id, tomorrow_task.id)
+    await fake_daily_plan_repository.lock(plan.id)
+    now = datetime.now(UTC)
+    await fake_task_repository.create(
+        user.id, "Today's task", start_at=now, due_at=now + timedelta(hours=1)
+    )
+
+    email_sender = _FakeEmailSender()
+    use_case = _make_use_case(
+        fake_user_repository,
+        fake_task_repository,
+        fake_calendar_port,
+        fake_notification_repository,
+        email_sender,
+        fake_daily_plan_repository,
+    )
+
+    sent = await use_case.execute()
+
+    assert sent == 1
+    _, body = email_sender.sent[0]
+    assert "כבר נעולה" in body
 
 
 async def test_is_idempotent_across_repeated_runs_same_day(

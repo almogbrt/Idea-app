@@ -157,6 +157,7 @@ def _workspace_kwargs() -> dict[str, object]:
             _NullCalendar(),
             notifications_repo,
             _NullEmailSender(),
+            FakeDailyPlanRepository(),
         ),
         "manage_calendar": ManageCalendarUseCase(_NullCalendar()),
         "manage_email": ManageEmailUseCase(inbox_port),

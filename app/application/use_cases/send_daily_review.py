@@ -12,6 +12,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from app.application.ports.calendar_port import CalendarPort
+from app.application.ports.daily_plan_repository import DailyPlanRepositoryPort
 from app.application.ports.email_sender import EmailSenderPort
 from app.application.ports.notification_repository import NotificationRepositoryPort
 from app.application.ports.task_repository import TaskRepositoryPort
@@ -37,12 +38,16 @@ class SendDailyReviewUseCase:
         calendar_port: CalendarPort,
         notification_repository: NotificationRepositoryPort,
         email_sender: EmailSenderPort,
+        daily_plan_repository: DailyPlanRepositoryPort,
+        app_base_url: str = "",
     ) -> None:
         self._users = user_repository
         self._tasks = task_repository
         self._calendar = calendar_port
         self._notifications = notification_repository
         self._email_sender = email_sender
+        self._plans = daily_plan_repository
+        self._app_base_url = app_base_url
 
     async def execute(self) -> int:
         """Returns how many review emails were sent this run."""
@@ -78,11 +83,14 @@ class SendDailyReviewUseCase:
             )
             events = []
 
-        if not todays_tasks and not events:
+        tomorrow_plan = await self._plans.get_by_date(user.id, day_start.date() + timedelta(days=1))
+        tomorrow_locked = tomorrow_plan is not None and tomorrow_plan.is_locked
+
+        if not todays_tasks and not events and tomorrow_locked:
             return 0
 
         title = "סיכום יומי: מה בוצע ומה לא"
-        body = self._compose_body(done, not_done, events)
+        body = self._compose_body(done, not_done, events, tomorrow_locked)
 
         await self._notifications.create(
             user.id, NotificationKind.DAILY_REVIEW, related_id, title, body
@@ -93,9 +101,12 @@ class SendDailyReviewUseCase:
             logger.warning("daily_review_email_failed", error=str(exc), user_id=str(user.id))
         return 1
 
-    @staticmethod
     def _compose_body(
-        done: list[Task], not_done: list[Task], events: list[CalendarEvent]
+        self,
+        done: list[Task],
+        not_done: list[Task],
+        events: list[CalendarEvent],
+        tomorrow_locked: bool,
     ) -> str:
         lines: list[str] = [f"הושלם היום ({len(done)}):"]
         lines.extend([f"✔ {t.title}" for t in done] or ["— אין"])
@@ -105,4 +116,17 @@ class SendDailyReviewUseCase:
         lines.append("")
         lines.append("ליומן (למידע בלבד, לא נבדק ביצוע):")
         lines.extend([f"• {e.summary}" for e in events] or ["— אין אירועים"])
+        lines.append("")
+        if tomorrow_locked:
+            lines.append(
+                "המשימה הראשונה למחר כבר נעולה. כשתפתח את האפליקציה מחר, "
+                "היא תיפתח ישר אליה."
+            )
+        else:
+            lines.append(
+                "עוד לא נעלת משימה ראשונה למחר — זה הרגע לעשות את זה, "
+                "לפני שהיום מתחיל ואתה צריך להחליט."
+            )
+            if self._app_base_url:
+                lines.append(self._app_base_url)
         return "\n".join(lines)

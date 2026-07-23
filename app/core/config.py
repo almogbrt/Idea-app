@@ -61,6 +61,11 @@ class Settings(BaseSettings):
 
     owner_email: str = ""
 
+    # The app's own public URL — empty in local dev, filled in at deploy time
+    # via the same SERVICE_URL sed substitution as google_oauth_redirect_uri.
+    # Used to link back into the app from emails (e.g. the daily review).
+    app_base_url: str = ""
+
     # Shared secret Cloud Scheduler sends as a header when calling the internal
     # reminders endpoint — there's no logged-in user in that context, so this
     # substitutes for a session JWT.

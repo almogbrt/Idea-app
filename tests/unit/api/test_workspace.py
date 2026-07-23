@@ -207,7 +207,12 @@ def _install_scope(client: TestClient) -> dict[str, object]:
             users_repo, tasks_repo, notifications_repo, _NullEmailSender(), calendar_port
         ),
         send_daily_review=SendDailyReviewUseCase(
-            users_repo, tasks_repo, calendar_port, notifications_repo, _NullEmailSender()
+            users_repo,
+            tasks_repo,
+            calendar_port,
+            notifications_repo,
+            _NullEmailSender(),
+            daily_plans_repo,
         ),
         manage_goals=ManageGoalsUseCase(goals_repo),
         manage_daily_plan=ManageDailyPlanUseCase(
