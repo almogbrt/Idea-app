@@ -1604,7 +1604,10 @@ async function loadCashFlow() {
 
 async function loadFinance() {
   try {
-    const overview = await apiFetch("/finance/overview");
+    const [overview, clients] = await Promise.all([
+      apiFetch("/finance/overview"),
+      apiFetch("/clients"),
+    ]);
     els.financeEmpty.hidden = true;
     els.financeContent.hidden = false;
 
@@ -1631,7 +1634,7 @@ async function loadFinance() {
     els.financeIncomeList.innerHTML = "";
     els.financeIncomeEmpty.hidden = overview.income.length > 0;
     for (const record of overview.income) {
-      els.financeIncomeList.appendChild(buildFinanceRecordRow(record, "income"));
+      els.financeIncomeList.appendChild(buildFinanceRecordRow(record, "income", clients));
     }
 
     els.financeExpensesList.innerHTML = "";
@@ -1645,7 +1648,7 @@ async function loadFinance() {
   }
 }
 
-function buildFinanceRecordRow(record, kind) {
+function buildFinanceRecordRow(record, kind, clients) {
   const row = document.createElement("div");
   row.className = "finance-item";
 
@@ -1660,10 +1663,20 @@ function buildFinanceRecordRow(record, kind) {
   row.appendChild(desc);
 
   if (kind === "income" && record.client_name && !record.matched_client_id) {
-    const badge = document.createElement("span");
-    badge.className = "finance-item-badge";
-    badge.textContent = "לא משויך ללקוח קיים";
-    row.appendChild(badge);
+    if (record.green_invoice_client_id && clients && clients.length > 0) {
+      const select = document.createElement("select");
+      select.className = "finance-item-link-select";
+      select.innerHTML =
+        '<option value="" selected disabled>לא משויך — שייך ללקוח</option>' +
+        clients.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+      select.addEventListener("change", () => linkIncomeClientAndReload(record, select.value));
+      row.appendChild(select);
+    } else {
+      const badge = document.createElement("span");
+      badge.className = "finance-item-badge";
+      badge.textContent = "לא משויך ללקוח קיים";
+      row.appendChild(badge);
+    }
   }
 
   const amount = document.createElement("span");
@@ -1672,6 +1685,22 @@ function buildFinanceRecordRow(record, kind) {
   row.appendChild(amount);
 
   return row;
+}
+
+async function linkIncomeClientAndReload(record, clientId) {
+  try {
+    await apiFetch("/finance/link-client", {
+      method: "POST",
+      body: JSON.stringify({
+        green_invoice_client_id: record.green_invoice_client_id,
+        green_invoice_client_name: record.client_name,
+        client_id: clientId,
+      }),
+    });
+    await loadFinance();
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
 function formatEventTime(startIso, endIso) {

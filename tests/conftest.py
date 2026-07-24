@@ -28,6 +28,7 @@ from app.application.ports.embedding import EmbeddingPort
 from app.application.ports.focus_session_repository import FocusSessionRepositoryPort
 from app.application.ports.goal_repository import GoalRepositoryPort
 from app.application.ports.green_invoice_port import GreenInvoicePort
+from app.application.ports.income_client_link_repository import IncomeClientLinkRepositoryPort
 from app.application.ports.llm_gateway import LLMGatewayPort, LLMMessage, LLMResponse, LLMStopReason
 from app.application.ports.memory_repository import MemoryRepositoryPort
 from app.application.ports.notification_repository import NotificationRepositoryPort
@@ -851,6 +852,27 @@ class FakeGreenInvoicePort(GreenInvoicePort):
         if self._fail_with is not None:
             raise self._fail_with("Green Invoice is unavailable")
         return self.expenses
+
+
+class FakeIncomeClientLinkRepository(IncomeClientLinkRepositoryPort):
+    def __init__(self) -> None:
+        self.links: dict[tuple[uuid.UUID, str], uuid.UUID] = {}
+
+    async def get_all(self, user_id: uuid.UUID) -> dict[str, uuid.UUID]:
+        return {
+            gi_client_id: client_id
+            for (uid, gi_client_id), client_id in self.links.items()
+            if uid == user_id
+        }
+
+    async def upsert(
+        self,
+        user_id: uuid.UUID,
+        green_invoice_client_id: str,
+        green_invoice_client_name: str,
+        client_id: uuid.UUID,
+    ) -> None:
+        self.links[(user_id, green_invoice_client_id)] = client_id
 
 
 class FakeCashFlowPort(CashFlowPort):

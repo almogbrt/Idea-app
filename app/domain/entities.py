@@ -390,6 +390,9 @@ class IncomeRecord:
     client_name: str | None
     description: str | None
     status: str
+    green_invoice_client_id: str | None = None
+    """Green Invoice's own client id — a stable key for manual client
+    linking, unlike `client_name` which breaks if the client is renamed."""
     matched_client_id: uuid.UUID | None = None
 
 

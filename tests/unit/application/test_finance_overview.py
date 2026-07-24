@@ -8,24 +8,40 @@ import pytest
 from app.application.use_cases.finance_overview import FinanceOverviewUseCase
 from app.core.exceptions import ExternalServiceError
 from app.domain.entities import ExpenseRecord, IncomeRecord
-from tests.conftest import FakeCache, FakeClientRepository, FakeGreenInvoicePort
+from tests.conftest import (
+    FakeCache,
+    FakeClientRepository,
+    FakeGreenInvoicePort,
+    FakeIncomeClientLinkRepository,
+)
 
 USER_ID = uuid.uuid4()
 FROM_DATE = date(2026, 7, 1)
 TO_DATE = date(2026, 7, 31)
 
 
-def _use_case() -> (
-    tuple[FinanceOverviewUseCase, FakeGreenInvoicePort, FakeClientRepository, FakeCache]
-):
+def _use_case() -> tuple[
+    FinanceOverviewUseCase,
+    FakeGreenInvoicePort,
+    FakeClientRepository,
+    FakeCache,
+    FakeIncomeClientLinkRepository,
+]:
     green_invoice = FakeGreenInvoicePort()
     clients = FakeClientRepository()
     cache = FakeCache()
-    return FinanceOverviewUseCase(green_invoice, clients, cache), green_invoice, clients, cache
+    income_client_links = FakeIncomeClientLinkRepository()
+    return (
+        FinanceOverviewUseCase(green_invoice, clients, cache, income_client_links),
+        green_invoice,
+        clients,
+        cache,
+        income_client_links,
+    )
 
 
 async def test_computes_totals_and_net() -> None:
-    use_case, green_invoice, _clients, _cache = _use_case()
+    use_case, green_invoice, _clients, _cache, _links = _use_case()
     green_invoice.income = [
         IncomeRecord(
             id="doc-1", date="2026-07-05", amount=1000.0, currency="ILS",
@@ -49,7 +65,7 @@ async def test_computes_totals_and_net() -> None:
 
 
 async def test_matches_income_to_existing_client_by_name_case_insensitive() -> None:
-    use_case, green_invoice, clients, _cache = _use_case()
+    use_case, green_invoice, clients, _cache, _links = _use_case()
     client = await clients.create(USER_ID, "לקוח לדוגמה")
     green_invoice.income = [
         IncomeRecord(
@@ -64,7 +80,7 @@ async def test_matches_income_to_existing_client_by_name_case_insensitive() -> N
 
 
 async def test_unmatched_client_name_leaves_matched_client_id_none() -> None:
-    use_case, green_invoice, clients, _cache = _use_case()
+    use_case, green_invoice, clients, _cache, _links = _use_case()
     await clients.create(USER_ID, "לקוח אחר")
     green_invoice.income = [
         IncomeRecord(
@@ -78,8 +94,46 @@ async def test_unmatched_client_name_leaves_matched_client_id_none() -> None:
     assert overview.income[0].matched_client_id is None
 
 
+async def test_manual_link_matches_income_by_green_invoice_client_id() -> None:
+    use_case, green_invoice, clients, _cache, _links = _use_case()
+    client = await clients.create(USER_ID, "לקוח אמיתי")
+    green_invoice.income = [
+        IncomeRecord(
+            id="doc-1", date="2026-07-05", amount=1000.0, currency="ILS",
+            client_name="שם שונה בחשבונית ירוקה", description=None, status="1",
+            green_invoice_client_id="gi-client-1",
+        ),
+    ]
+
+    await use_case.link_income_client(USER_ID, "gi-client-1", "שם שונה בחשבונית ירוקה", client.id)
+    overview = await use_case.get_overview(USER_ID, FROM_DATE, TO_DATE)
+
+    assert overview.income[0].matched_client_id == client.id
+
+
+async def test_manual_link_overrides_conflicting_name_match() -> None:
+    use_case, green_invoice, clients, _cache, _links = _use_case()
+    wrong_by_name = await clients.create(USER_ID, "לקוח קיים")
+    right_by_manual_link = await clients.create(USER_ID, "לקוח אחר")
+    green_invoice.income = [
+        IncomeRecord(
+            id="doc-1", date="2026-07-05", amount=1000.0, currency="ILS",
+            client_name="לקוח קיים", description=None, status="1",
+            green_invoice_client_id="gi-client-1",
+        ),
+    ]
+
+    await use_case.link_income_client(
+        USER_ID, "gi-client-1", "לקוח קיים", right_by_manual_link.id
+    )
+    overview = await use_case.get_overview(USER_ID, FROM_DATE, TO_DATE)
+
+    assert overview.income[0].matched_client_id == right_by_manual_link.id
+    assert overview.income[0].matched_client_id != wrong_by_name.id
+
+
 async def test_second_call_within_ttl_hits_cache_not_port() -> None:
-    use_case, green_invoice, _clients, cache = _use_case()
+    use_case, green_invoice, _clients, cache, _links = _use_case()
     green_invoice.income = [
         IncomeRecord(id="doc-1", date="2026-07-05", amount=1000.0, currency="ILS",
                      client_name=None, description=None, status="OPENED_DOCUMENT"),
@@ -94,7 +148,7 @@ async def test_second_call_within_ttl_hits_cache_not_port() -> None:
 
 
 async def test_propagates_green_invoice_failure() -> None:
-    use_case, green_invoice, _clients, _cache = _use_case()
+    use_case, green_invoice, _clients, _cache, _links = _use_case()
     green_invoice._fail_with = ExternalServiceError
 
     with pytest.raises(ExternalServiceError):

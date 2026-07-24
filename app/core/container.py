@@ -79,6 +79,9 @@ from app.infrastructure.db.repositories.focus_session_repository import (
     SqlAlchemyFocusSessionRepository,
 )
 from app.infrastructure.db.repositories.goal_repository import SqlAlchemyGoalRepository
+from app.infrastructure.db.repositories.income_client_link_repository import (
+    SqlAlchemyIncomeClientLinkRepository,
+)
 from app.infrastructure.db.repositories.memory_repository import SqlAlchemyMemoryRepository
 from app.infrastructure.db.repositories.notification_repository import (
     SqlAlchemyNotificationRepository,
@@ -306,7 +309,10 @@ class Container:
                 daily_plans_repo, focus_sessions_repo, daily_plan_swaps_repo, tasks_repo
             ),
             finance_overview=FinanceOverviewUseCase(
-                self.green_invoice_client, clients_repo, self.cache
+                self.green_invoice_client,
+                clients_repo,
+                self.cache,
+                SqlAlchemyIncomeClientLinkRepository(session),
             ),
             cash_flow=CashFlowUseCase(self.cash_flow_port),
         )

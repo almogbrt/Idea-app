@@ -19,6 +19,7 @@ from app.interfaces.api.schemas.finance import (
     ExpenseRecordView,
     FinanceOverviewView,
     IncomeRecordView,
+    LinkIncomeClientRequest,
 )
 
 router = APIRouter(prefix="/finance", tags=["finance"])
@@ -33,6 +34,7 @@ def _income_view(record: IncomeRecord) -> IncomeRecordView:
         client_name=record.client_name,
         description=record.description,
         status=record.status,
+        green_invoice_client_id=record.green_invoice_client_id,
         matched_client_id=record.matched_client_id,
     )
 
@@ -77,6 +79,19 @@ async def get_overview(
 
 def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+@router.post("/link-client", status_code=204)
+async def link_income_client(
+    body: LinkIncomeClientRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> None:
+    """Manually links a Green Invoice client (by its own id, not name) to an
+    existing IDEA OS client — for income that doesn't auto-match by name."""
+    await scope.finance_overview.link_income_client(
+        user.id, body.green_invoice_client_id, body.green_invoice_client_name, body.client_id
+    )
 
 
 def _cash_flow_view(snapshot: CashFlowSnapshot) -> CashFlowSnapshotView:

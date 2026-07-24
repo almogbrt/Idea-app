@@ -16,6 +16,7 @@ from tests.conftest import (
     FakeCashFlowPort,
     FakeClientRepository,
     FakeGreenInvoicePort,
+    FakeIncomeClientLinkRepository,
 )
 
 _USER = User(
@@ -32,6 +33,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
     clients_repo = FakeClientRepository()
     cache = FakeCache()
     cash_flow_port = FakeCashFlowPort()
+    income_client_links = FakeIncomeClientLinkRepository()
 
     scope = RequestScopedServices(
         orchestrator=None,  # type: ignore[arg-type]
@@ -54,7 +56,9 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         manage_daily_plan=None,  # type: ignore[arg-type]
         manage_focus_sessions=None,  # type: ignore[arg-type]
         daily_plan_metrics=None,  # type: ignore[arg-type]
-        finance_overview=FinanceOverviewUseCase(green_invoice, clients_repo, cache),
+        finance_overview=FinanceOverviewUseCase(
+            green_invoice, clients_repo, cache, income_client_links
+        ),
         cash_flow=CashFlowUseCase(cash_flow_port),
     )
     client.app.dependency_overrides[get_current_user] = lambda: _USER
@@ -64,6 +68,7 @@ def _install_scope(client: TestClient) -> dict[str, object]:
         "clients_repo": clients_repo,
         "cache": cache,
         "cash_flow_port": cash_flow_port,
+        "income_client_links": income_client_links,
     }
 
 
@@ -130,6 +135,35 @@ def test_overview_matches_income_to_existing_client(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["income"][0]["matched_client_id"] == str(matched_client.id)
+
+
+def test_link_income_client_persists_manual_match(client: TestClient) -> None:
+    resources = _install_scope(client)
+    client_repo: FakeClientRepository = resources["clients_repo"]  # type: ignore[assignment]
+    target_client = asyncio.run(client_repo.create(_USER.id, "לקוח אמיתי"))
+    green_invoice: FakeGreenInvoicePort = resources["green_invoice"]  # type: ignore[assignment]
+    green_invoice.income = [
+        IncomeRecord(
+            id="doc-1", date="2026-07-05", amount=1770.0, currency="ILS",
+            client_name="שם אחר בחשבונית ירוקה", description=None, status="1",
+            green_invoice_client_id="gi-client-1",
+        ),
+    ]
+
+    link_response = client.post(
+        "/api/v1/finance/link-client",
+        json={
+            "green_invoice_client_id": "gi-client-1",
+            "green_invoice_client_name": "שם אחר בחשבונית ירוקה",
+            "client_id": str(target_client.id),
+        },
+    )
+    assert link_response.status_code == 204
+
+    response = client.get("/api/v1/finance/overview")
+
+    assert response.status_code == 200
+    assert response.json()["income"][0]["matched_client_id"] == str(target_client.id)
 
 
 def test_cash_flow_returns_null_when_not_configured(client: TestClient) -> None:

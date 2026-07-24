@@ -146,6 +146,7 @@ def _parse_income(item: dict[str, Any]) -> IncomeRecord | None:
         return None
     client = item.get("client")
     client_name = client.get("name") if isinstance(client, dict) else None
+    client_id = client.get("id") if isinstance(client, dict) else None
     description = item.get("description") or item.get("remarks")
     amount = float(item.get("amount", 0) or 0)
     if doc_type == _CREDIT_INVOICE_DOCUMENT_TYPE:
@@ -158,6 +159,7 @@ def _parse_income(item: dict[str, Any]) -> IncomeRecord | None:
         client_name=str(client_name) if client_name is not None else None,
         description=str(description) if description is not None else None,
         status=str(item.get("status", "")),
+        green_invoice_client_id=str(client_id) if client_id is not None else None,
     )
 
 
