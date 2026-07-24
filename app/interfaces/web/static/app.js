@@ -1659,7 +1659,12 @@ function buildFinanceRecordRow(record, kind, clients) {
 
   const desc = document.createElement("span");
   desc.className = "finance-item-desc";
-  desc.textContent = record.description || (kind === "income" ? record.client_name : record.category) || "—";
+  if (kind === "income") {
+    const parts = [record.client_name, record.description].filter(Boolean);
+    desc.textContent = parts.length > 0 ? parts.join(" — ") : "—";
+  } else {
+    desc.textContent = record.description || record.category || "—";
+  }
   row.appendChild(desc);
 
   if (kind === "income" && record.client_name && !record.matched_client_id) {
