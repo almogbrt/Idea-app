@@ -156,10 +156,13 @@
       <section id="clients-section">
         <div class="section-heading">
           <h2>לקוחות</h2>
-          <button id="new-client-btn" class="btn btn--ghost">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            לקוח חדש
-          </button>
+          <div class="section-heading-actions">
+            <button id="clients-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+            <button id="new-client-btn" class="btn btn--ghost">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              לקוח חדש
+            </button>
+          </div>
         </div>
         <div id="clients-grid" class="clients-grid"></div>
         <div id="clients-empty" class="empty-state" hidden>
@@ -170,6 +173,7 @@
       <section id="thoughts-section">
         <div class="section-heading">
           <h2>מחשבות</h2>
+          <button id="thoughts-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
         </div>
         <div class="thought-capture-row">
           <input
@@ -190,10 +194,13 @@
       <section id="tasks-section">
         <div class="section-heading">
           <h2>משימות</h2>
-          <button id="new-task-btn" class="btn btn--ghost">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            משימה חדשה
-          </button>
+          <div class="section-heading-actions">
+            <button id="tasks-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+            <button id="new-task-btn" class="btn btn--ghost">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              משימה חדשה
+            </button>
+          </div>
         </div>
         <div id="tasks-list"></div>
         <div id="tasks-empty" class="empty-state" hidden>עדיין אין משימות.</div>
@@ -252,14 +259,20 @@
           <div id="finance-summary" class="finance-summary"></div>
           <div class="finance-columns">
             <div class="finance-column">
-              <h3>הכנסות</h3>
+              <div class="section-heading">
+                <h3>הכנסות</h3>
+                <button id="finance-income-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+              </div>
               <div id="finance-income-list"></div>
               <div id="finance-income-empty" class="empty-state empty-state--small" hidden>
                 אין הכנסות בטווח התאריכים הזה.
               </div>
             </div>
             <div class="finance-column">
-              <h3>הוצאות</h3>
+              <div class="section-heading">
+                <h3>הוצאות</h3>
+                <button id="finance-expenses-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+              </div>
               <div id="finance-expenses-list"></div>
               <div id="finance-expenses-empty" class="empty-state empty-state--small" hidden>
                 אין הוצאות בטווח התאריכים הזה.
@@ -275,6 +288,7 @@
       <section id="gmail-section">
         <div class="section-heading">
           <h2>מיילים אחרונים</h2>
+          <button id="gmail-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
         </div>
         <div id="gmail-list"></div>
         <div id="gmail-empty" class="empty-state" hidden>
@@ -285,10 +299,13 @@
       <section id="files-section">
         <div class="section-heading">
           <h2>קבצים אחרונים</h2>
-          <button id="new-file-btn" class="btn btn--ghost">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            קובץ חדש
-          </button>
+          <div class="section-heading-actions">
+            <button id="files-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+            <button id="new-file-btn" class="btn btn--ghost">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              קובץ חדש
+            </button>
+          </div>
         </div>
         <div id="files-table-wrap">
           <table id="files-table">
@@ -585,6 +602,16 @@
       <div class="modal-actions">
         <button id="share-file-cancel" class="btn btn--ghost">ביטול</button>
         <button id="share-file-save" class="btn btn--primary">שתף</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="list-modal" class="modal" hidden>
+    <div class="modal-card modal-card--full">
+      <h3 id="list-modal-title"></h3>
+      <div id="list-modal-body" class="list-modal-body"></div>
+      <div class="modal-actions">
+        <button id="list-modal-close" class="btn btn--ghost">סגור</button>
       </div>
     </div>
   </div>

@@ -16,16 +16,23 @@ const els = {
   thoughtSaveBtn: document.getElementById("thought-save-btn"),
   thoughtsList: document.getElementById("thoughts-list"),
   thoughtsEmpty: document.getElementById("thoughts-empty"),
+  thoughtsShowAllBtn: document.getElementById("thoughts-show-all-btn"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   navBadgeClients: document.getElementById("nav-badge-clients"),
   tasksList: document.getElementById("tasks-list"),
   tasksEmpty: document.getElementById("tasks-empty"),
+  tasksShowAllBtn: document.getElementById("tasks-show-all-btn"),
+  listModal: document.getElementById("list-modal"),
+  listModalTitle: document.getElementById("list-modal-title"),
+  listModalBody: document.getElementById("list-modal-body"),
+  listModalClose: document.getElementById("list-modal-close"),
   edithStatus: document.getElementById("edith-status"),
   shell: document.getElementById("shell"),
   sidebarToggle: document.getElementById("sidebar-toggle"),
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),
   clientsGrid: document.getElementById("clients-grid"),
   clientsEmpty: document.getElementById("clients-empty"),
+  clientsShowAllBtn: document.getElementById("clients-show-all-btn"),
   newClientBtn: document.getElementById("new-client-btn"),
   newClientModal: document.getElementById("new-client-modal"),
   newClientName: document.getElementById("new-client-name"),
@@ -84,8 +91,10 @@ const els = {
   financeSummary: document.getElementById("finance-summary"),
   financeIncomeList: document.getElementById("finance-income-list"),
   financeIncomeEmpty: document.getElementById("finance-income-empty"),
+  financeIncomeShowAllBtn: document.getElementById("finance-income-show-all-btn"),
   financeExpensesList: document.getElementById("finance-expenses-list"),
   financeExpensesEmpty: document.getElementById("finance-expenses-empty"),
+  financeExpensesShowAllBtn: document.getElementById("finance-expenses-show-all-btn"),
   financeEmpty: document.getElementById("finance-empty"),
   cashFlowCard: document.getElementById("cash-flow-card"),
   cashFlowEmpty: document.getElementById("cash-flow-empty"),
@@ -103,8 +112,10 @@ const els = {
   newEventCancel: document.getElementById("new-event-cancel"),
   gmailList: document.getElementById("gmail-list"),
   gmailEmpty: document.getElementById("gmail-empty"),
+  gmailShowAllBtn: document.getElementById("gmail-show-all-btn"),
   filesTbody: document.getElementById("files-tbody"),
   filesEmpty: document.getElementById("files-empty"),
+  filesShowAllBtn: document.getElementById("files-show-all-btn"),
   newFileBtn: document.getElementById("new-file-btn"),
   newFileModal: document.getElementById("new-file-modal"),
   newFileName: document.getElementById("new-file-name"),
@@ -619,6 +630,46 @@ els.shareFileSave.addEventListener("click", async () => {
     alert(err.message);
   }
 });
+
+function openListModal(title, items, buildFn, { emptyText = "אין פריטים להצגה.", theadHtml } = {}) {
+  els.listModalTitle.textContent = title;
+  els.listModalBody.innerHTML = "";
+  if (items.length === 0) {
+    els.listModalBody.innerHTML = `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
+  } else if (theadHtml) {
+    const table = document.createElement("table");
+    table.className = "files-table";
+    table.innerHTML = `<thead>${theadHtml}</thead>`;
+    const tbody = document.createElement("tbody");
+    for (const item of items) tbody.appendChild(buildFn(item));
+    table.appendChild(tbody);
+    els.listModalBody.appendChild(table);
+  } else {
+    for (const item of items) els.listModalBody.appendChild(buildFn(item));
+  }
+  els.listModal.hidden = false;
+}
+
+els.listModalClose.addEventListener("click", () => {
+  els.listModal.hidden = true;
+});
+
+// Renders only the first `limit` items in `container`; wires `showAllBtn`
+// (shown only when there are more) to open the full list in `list-modal`,
+// since re-fetching everything just to render 3 of them would be wasteful.
+function renderWithShowAll(
+  container,
+  items,
+  buildFn,
+  { limit = 3, showAllBtn, title, emptyText, theadHtml } = {}
+) {
+  container.innerHTML = "";
+  for (const item of items.slice(0, limit)) container.appendChild(buildFn(item));
+  if (showAllBtn) {
+    showAllBtn.hidden = items.length <= limit;
+    showAllBtn.onclick = () => openListModal(title, items, buildFn, { emptyText, theadHtml });
+  }
+}
 
 els.newClientBtn.addEventListener("click", () => {
   els.newClientModal.hidden = false;
@@ -1244,43 +1295,50 @@ async function loadTasks() {
     const [tasks, clientsList] = await Promise.all([apiFetch("/tasks"), apiFetch("/clients")]);
     currentTasks = tasks;
     const clientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
-    els.tasksList.innerHTML = "";
     els.tasksEmpty.hidden = tasks.length > 0;
 
     const { open, done } = sortTasksForDisplay(tasks);
-    for (const task of [...open, ...done]) {
-      els.tasksList.appendChild(buildTaskCard(task, clientNameById));
-    }
+    renderWithShowAll(
+      els.tasksList,
+      [...open, ...done],
+      (task) => buildTaskCard(task, clientNameById),
+      { showAllBtn: els.tasksShowAllBtn, title: "כל המשימות", emptyText: "עדיין אין משימות." }
+    );
   } catch {
     // not authenticated yet
   }
 }
 
+function buildThoughtRow(thought) {
+  const row = document.createElement("div");
+  row.className = "thought-row";
+  const content = document.createElement("span");
+  content.className = "thought-content";
+  content.textContent = thought.content;
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "task-delete-btn";
+  deleteBtn.title = "מחיקת מחשבה";
+  deleteBtn.textContent = "✕";
+  deleteBtn.addEventListener("click", async () => {
+    if (!confirm("למחוק את המחשבה הזאת?")) return;
+    await apiFetch(`/thoughts/${thought.id}`, { method: "DELETE" });
+    loadThoughts();
+  });
+  row.appendChild(content);
+  row.appendChild(deleteBtn);
+  return row;
+}
+
 async function loadThoughts() {
   try {
     const thoughts = await apiFetch("/thoughts");
-    els.thoughtsList.innerHTML = "";
     els.thoughtsEmpty.hidden = thoughts.length > 0;
-    for (const thought of thoughts) {
-      const row = document.createElement("div");
-      row.className = "thought-row";
-      const content = document.createElement("span");
-      content.className = "thought-content";
-      content.textContent = thought.content;
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "task-delete-btn";
-      deleteBtn.title = "מחיקת מחשבה";
-      deleteBtn.textContent = "✕";
-      deleteBtn.addEventListener("click", async () => {
-        if (!confirm("למחוק את המחשבה הזאת?")) return;
-        await apiFetch(`/thoughts/${thought.id}`, { method: "DELETE" });
-        loadThoughts();
-      });
-      row.appendChild(content);
-      row.appendChild(deleteBtn);
-      els.thoughtsList.appendChild(row);
-    }
+    renderWithShowAll(els.thoughtsList, thoughts, buildThoughtRow, {
+      showAllBtn: els.thoughtsShowAllBtn,
+      title: "כל המחשבות",
+      emptyText: "עדיין אין מחשבות שמורות.",
+    });
   } catch {
     // not authenticated yet
   }
@@ -1468,9 +1526,8 @@ async function loadClients() {
       if (!projectsByClient.has(p.client_id)) projectsByClient.set(p.client_id, []);
       projectsByClient.get(p.client_id).push(p);
     }
-    els.clientsGrid.innerHTML = "";
     els.clientsEmpty.hidden = clientsList.length > 0;
-    for (const c of clientsList) {
+    const buildCard = (c) => {
       const card = document.createElement("button");
       card.type = "button";
       card.className = "client-card";
@@ -1517,8 +1574,13 @@ async function loadClients() {
       `;
       card.appendChild(rest);
       card.addEventListener("click", () => openClientModal(c.id));
-      els.clientsGrid.appendChild(card);
-    }
+      return card;
+    };
+    renderWithShowAll(els.clientsGrid, clientsList, buildCard, {
+      showAllBtn: els.clientsShowAllBtn,
+      title: "כל הלקוחות",
+      emptyText: "עדיין אין לקוחות.",
+    });
   } catch {
     // not authenticated yet
   }
@@ -1631,17 +1693,29 @@ async function loadFinance() {
       els.financeSummary.appendChild(box);
     }
 
-    els.financeIncomeList.innerHTML = "";
     els.financeIncomeEmpty.hidden = overview.income.length > 0;
-    for (const record of overview.income) {
-      els.financeIncomeList.appendChild(buildFinanceRecordRow(record, "income", clients));
-    }
+    renderWithShowAll(
+      els.financeIncomeList,
+      overview.income,
+      (record) => buildFinanceRecordRow(record, "income", clients),
+      {
+        showAllBtn: els.financeIncomeShowAllBtn,
+        title: "כל ההכנסות",
+        emptyText: "אין הכנסות בטווח התאריכים הזה.",
+      }
+    );
 
-    els.financeExpensesList.innerHTML = "";
     els.financeExpensesEmpty.hidden = overview.expenses.length > 0;
-    for (const record of overview.expenses) {
-      els.financeExpensesList.appendChild(buildFinanceRecordRow(record, "expense"));
-    }
+    renderWithShowAll(
+      els.financeExpensesList,
+      overview.expenses,
+      (record) => buildFinanceRecordRow(record, "expense"),
+      {
+        showAllBtn: els.financeExpensesShowAllBtn,
+        title: "כל ההוצאות",
+        emptyText: "אין הוצאות בטווח התאריכים הזה.",
+      }
+    );
   } catch {
     els.financeContent.hidden = true;
     els.financeEmpty.hidden = false;
@@ -1834,80 +1908,93 @@ function formatEmailSender(sender) {
   return name || sender;
 }
 
+function buildEmailRow(email) {
+  const row = document.createElement("a");
+  row.className = "email-item";
+  row.href = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
+    currentUserEmail
+  )}#all/${encodeURIComponent(email.id)}`;
+  row.target = "_blank";
+  row.rel = "noopener";
+
+  const main = document.createElement("div");
+  main.className = "email-item-main";
+  const sender = document.createElement("span");
+  sender.className = "email-item-sender";
+  sender.textContent = formatEmailSender(email.sender);
+  const subject = document.createElement("span");
+  subject.className = "email-item-subject";
+  subject.textContent = email.subject || "(ללא נושא)";
+  const snippet = document.createElement("span");
+  snippet.className = "email-item-snippet";
+  snippet.textContent = email.snippet;
+  main.appendChild(sender);
+  main.appendChild(subject);
+  main.appendChild(snippet);
+
+  const date = document.createElement("span");
+  date.className = "email-item-date";
+  date.textContent = email.date ? new Date(email.date).toLocaleDateString("he-IL") : "";
+
+  row.appendChild(main);
+  row.appendChild(date);
+  return row;
+}
+
 async function loadEmails() {
   try {
-    const emails = await apiFetch("/emails?max_results=4");
-    els.gmailList.innerHTML = "";
+    const emails = await apiFetch("/emails?max_results=30");
     els.gmailEmpty.hidden = emails.length > 0;
-    for (const email of emails) {
-      const row = document.createElement("a");
-      row.className = "email-item";
-      row.href = `https://mail.google.com/mail/?authuser=${encodeURIComponent(
-        currentUserEmail
-      )}#all/${encodeURIComponent(email.id)}`;
-      row.target = "_blank";
-      row.rel = "noopener";
-
-      const main = document.createElement("div");
-      main.className = "email-item-main";
-      const sender = document.createElement("span");
-      sender.className = "email-item-sender";
-      sender.textContent = formatEmailSender(email.sender);
-      const subject = document.createElement("span");
-      subject.className = "email-item-subject";
-      subject.textContent = email.subject || "(ללא נושא)";
-      const snippet = document.createElement("span");
-      snippet.className = "email-item-snippet";
-      snippet.textContent = email.snippet;
-      main.appendChild(sender);
-      main.appendChild(subject);
-      main.appendChild(snippet);
-
-      const date = document.createElement("span");
-      date.className = "email-item-date";
-      date.textContent = email.date ? new Date(email.date).toLocaleDateString("he-IL") : "";
-
-      row.appendChild(main);
-      row.appendChild(date);
-      els.gmailList.appendChild(row);
-    }
+    renderWithShowAll(els.gmailList, emails, buildEmailRow, {
+      showAllBtn: els.gmailShowAllBtn,
+      title: "כל המיילים האחרונים",
+      emptyText: "אין מיילים להצגה.",
+    });
   } catch {
     // not authenticated yet
   }
 }
 
+const FILES_TABLE_THEAD = "<tr><th>שם</th><th>סוג</th><th>עודכן</th><th></th></tr>";
+
+function buildFileRow(file) {
+  const tr = document.createElement("tr");
+  const modified = file.modified_time
+    ? new Date(file.modified_time).toLocaleDateString("he-IL")
+    : "—";
+  const nameCell = file.web_view_link
+    ? `<a href="${file.web_view_link}" target="_blank" rel="noopener">${escapeHtml(file.name)}</a>`
+    : escapeHtml(file.name);
+  tr.innerHTML = `
+    <td>${nameCell}</td>
+    <td>${escapeHtml(file.mime_type)}</td>
+    <td>${modified}</td>
+    <td></td>
+  `;
+  const shareBtn = document.createElement("button");
+  shareBtn.className = "btn btn--ghost file-share-btn";
+  shareBtn.textContent = "שתף";
+  shareBtn.addEventListener("click", () => {
+    currentShareFileId = file.id;
+    els.shareFileEmail.value = "";
+    els.shareFileRole.value = "reader";
+    els.shareFileModal.hidden = false;
+    els.shareFileEmail.focus();
+  });
+  tr.lastElementChild.appendChild(shareBtn);
+  return tr;
+}
+
 async function loadFiles() {
   try {
-    const files = await apiFetch("/files?max_results=5&order_by=viewedByMeTime%20desc");
-    els.filesTbody.innerHTML = "";
+    const files = await apiFetch("/files?max_results=30&order_by=viewedByMeTime%20desc");
     els.filesEmpty.hidden = files.length > 0;
-    for (const file of files) {
-      const tr = document.createElement("tr");
-      const modified = file.modified_time
-        ? new Date(file.modified_time).toLocaleDateString("he-IL")
-        : "—";
-      const nameCell = file.web_view_link
-        ? `<a href="${file.web_view_link}" target="_blank" rel="noopener">${escapeHtml(file.name)}</a>`
-        : escapeHtml(file.name);
-      tr.innerHTML = `
-        <td>${nameCell}</td>
-        <td>${escapeHtml(file.mime_type)}</td>
-        <td>${modified}</td>
-        <td></td>
-      `;
-      const shareBtn = document.createElement("button");
-      shareBtn.className = "btn btn--ghost file-share-btn";
-      shareBtn.textContent = "שתף";
-      shareBtn.addEventListener("click", () => {
-        currentShareFileId = file.id;
-        els.shareFileEmail.value = "";
-        els.shareFileRole.value = "reader";
-        els.shareFileModal.hidden = false;
-        els.shareFileEmail.focus();
-      });
-      tr.lastElementChild.appendChild(shareBtn);
-      els.filesTbody.appendChild(tr);
-    }
+    renderWithShowAll(els.filesTbody, files, buildFileRow, {
+      showAllBtn: els.filesShowAllBtn,
+      title: "כל הקבצים האחרונים",
+      emptyText: "אין קבצים להצגה.",
+      theadHtml: FILES_TABLE_THEAD,
+    });
   } catch {
     // not authenticated yet
   }
