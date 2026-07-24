@@ -51,22 +51,7 @@ class GreenInvoiceClient(GreenInvoicePort):
             "/documents/search",
             {"fromDate": from_date.isoformat(), "toDate": to_date.isoformat()},
         )
-        items = body.get("items", [])
-        logger.info(
-            "green_invoice_documents_fetched",
-            documents=[
-                {
-                    "id": item.get("id"),
-                    "type": item.get("type"),
-                    "amount": item.get("amount"),
-                    "date": item.get("date"),
-                    "linkedDocumentIds": item.get("linkedDocumentIds"),
-                    "originDocumentId": item.get("originDocumentId"),
-                }
-                for item in items
-            ],
-        )
-        records = (_parse_income(item) for item in items)
+        records = (_parse_income(item) for item in body.get("items", []))
         return [record for record in records if record is not None]
 
     async def list_expenses(self, from_date: date, to_date: date) -> list[ExpenseRecord]:
@@ -142,9 +127,14 @@ def _token_expiry(token: str) -> float:
     return time.time() + 25 * 60
 
 
-_NON_INCOME_DOCUMENT_TYPES = frozenset({10, 100, 200, 210})
+_NON_INCOME_DOCUMENT_TYPES = frozenset({10, 100, 200, 210, 300})
 """Price quote, order, delivery note, return delivery note — pre-sale
-documents with no money actually received; not real income."""
+documents with no money actually received; not real income. Type 300
+("Transaction Account") is different: confirmed against a real account
+(see commit history) that Green Invoice auto-generates one of these
+alongside every real sale document (e.g. type 320) as an internal
+accounting-ledger mirror, carrying the *same* amount — counting both
+double-counts a single sale."""
 
 _CREDIT_INVOICE_DOCUMENT_TYPE = 330
 """A refund/credit note — reduces income, isn't additional income."""

@@ -85,6 +85,32 @@ async def test_list_income_excludes_quotes_and_orders() -> None:
 
 
 @respx.mock
+async def test_list_income_excludes_transaction_account_shadow_of_a_real_sale() -> None:
+    """Green Invoice auto-generates a type-300 "Transaction Account" entry
+    alongside every real sale document (e.g. type 320), carrying the same
+    amount as an internal accounting-ledger mirror — not a second sale."""
+    respx.post(f"{_BASE_URL}/account/token").mock(
+        return_value=Response(200, json={"token": _make_token(1800)})
+    )
+    respx.post(f"{_BASE_URL}/documents/search").mock(
+        return_value=Response(
+            200,
+            json={
+                "items": [
+                    {"id": "invoice-1", "type": 320, "amount": 8850},
+                    {"id": "ledger-shadow-1", "type": 300, "amount": 8850},
+                ]
+            },
+        )
+    )
+    client = GreenInvoiceClient("api-id", "api-secret", _BASE_URL)
+
+    records = await client.list_income(date(2026, 7, 1), date(2026, 7, 31))
+
+    assert [r.id for r in records] == ["invoice-1"]
+
+
+@respx.mock
 async def test_list_income_treats_credit_invoice_as_negative() -> None:
     respx.post(f"{_BASE_URL}/account/token").mock(
         return_value=Response(200, json={"token": _make_token(1800)})
