@@ -51,7 +51,22 @@ class GreenInvoiceClient(GreenInvoicePort):
             "/documents/search",
             {"fromDate": from_date.isoformat(), "toDate": to_date.isoformat()},
         )
-        records = (_parse_income(item) for item in body.get("items", []))
+        items = body.get("items", [])
+        logger.info(
+            "green_invoice_documents_fetched",
+            documents=[
+                {
+                    "id": item.get("id"),
+                    "type": item.get("type"),
+                    "amount": item.get("amount"),
+                    "date": item.get("date"),
+                    "linkedDocumentIds": item.get("linkedDocumentIds"),
+                    "originDocumentId": item.get("originDocumentId"),
+                }
+                for item in items
+            ],
+        )
+        records = (_parse_income(item) for item in items)
         return [record for record in records if record is not None]
 
     async def list_expenses(self, from_date: date, to_date: date) -> list[ExpenseRecord]:
