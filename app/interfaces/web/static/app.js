@@ -10,6 +10,7 @@ const els = {
   chatForm: document.getElementById("chat-form"),
   chatInput: document.getElementById("chat-input"),
   voiceInputBtn: document.getElementById("voice-input-btn"),
+  speakRepliesBtn: document.getElementById("speak-replies-btn"),
   chatWindow: document.getElementById("chat-window"),
   thoughtInput: document.getElementById("thought-input"),
   thoughtVoiceBtn: document.getElementById("thought-voice-btn"),
@@ -280,15 +281,44 @@ function motivationalQuoteOfTheDay() {
   return MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length];
 }
 
-let hasSpokenGreeting = false;
-
-function speakGreeting(greeting) {
-  if (hasSpokenGreeting || !("speechSynthesis" in window)) return;
-  hasSpokenGreeting = true;
-  const utterance = new SpeechSynthesisUtterance(`${greeting}, בוס. טוב שחזרת.`);
+function speakText(text) {
+  if (!("speechSynthesis" in window) || !text) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "he-IL";
   window.speechSynthesis.speak(utterance);
 }
+
+let hasSpokenGreeting = false;
+
+function speakGreeting(greeting) {
+  if (hasSpokenGreeting) return;
+  hasSpokenGreeting = true;
+  speakText(`${greeting}, בוס. טוב שחזרת.`);
+}
+
+const SPEAK_REPLIES_STORAGE_KEY = "idea_os_speak_replies";
+let speakRepliesEnabled = localStorage.getItem(SPEAK_REPLIES_STORAGE_KEY) === "true";
+
+function updateSpeakRepliesBtn() {
+  if (!("speechSynthesis" in window)) {
+    els.speakRepliesBtn.hidden = true;
+    return;
+  }
+  els.speakRepliesBtn.classList.toggle("active", speakRepliesEnabled);
+  els.speakRepliesBtn.title = speakRepliesEnabled
+    ? "הקראת תשובות Edith בקול (פעיל — לחץ לכיבוי)"
+    : "הקראת תשובות Edith בקול";
+}
+
+els.speakRepliesBtn.addEventListener("click", () => {
+  speakRepliesEnabled = !speakRepliesEnabled;
+  localStorage.setItem(SPEAK_REPLIES_STORAGE_KEY, String(speakRepliesEnabled));
+  updateSpeakRepliesBtn();
+  if (!speakRepliesEnabled) window.speechSynthesis.cancel();
+});
+
+updateSpeakRepliesBtn();
 
 async function checkAuth() {
   try {
@@ -345,6 +375,7 @@ async function sendCommand(text) {
     });
     conversationId = data.conversation_id;
     addBubble("assistant", data.reply);
+    if (speakRepliesEnabled) speakText(data.reply);
     addToolTrace(data.tool_calls_made);
     refreshWorkspace();
   } catch (err) {
