@@ -8,6 +8,7 @@ from typing import Any
 from app.agents.project_management.tools import (
     AssignProjectToClientTool,
     AssignTaskToClientTool,
+    BulkCreateTasksTool,
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
@@ -166,6 +167,25 @@ class _FakeWorkspaceService:
             due_at=due_at,
             start_at=start_at,
         )
+
+    async def bulk_quick_capture_tasks(
+        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None]]
+    ) -> list[Task]:
+        self.calls.append(("bulk_quick_capture_tasks", (user_id, items)))
+        now = datetime.now(UTC)
+        return [
+            Task(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                project_id=None,
+                title=title,
+                status=TaskStatus.OPEN,
+                created_at=now,
+                updated_at=now,
+                due_at=due_at,
+            )
+            for title, due_at in items
+        ]
 
     async def update_task_status(
         self, user_id: uuid.UUID, task_title: str, status: TaskStatus
@@ -462,6 +482,38 @@ async def test_create_task_tool_passes_client_name() -> None:
         )
     ]
     assert json.loads(result.content)["client_id"] is not None
+
+
+async def test_bulk_create_tasks_tool_parses_titles_and_due_dates() -> None:
+    service = _FakeWorkspaceService()
+    tool = BulkCreateTasksTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {
+            "tasks": [
+                {"title": "Send contract to lawyer", "due_date": "2026-07-27"},
+                {"title": "Set final pricing"},
+            ]
+        },
+        context,
+    )
+
+    assert service.calls == [
+        (
+            "bulk_quick_capture_tasks",
+            (
+                context.user_id,
+                [
+                    ("Send contract to lawyer", datetime(2026, 7, 27, 0, 0)),
+                    ("Set final pricing", None),
+                ],
+            ),
+        )
+    ]
+    parsed = json.loads(result.content)
+    assert len(parsed) == 2
+    assert parsed[0]["title"] == "Send contract to lawyer"
 
 
 async def test_set_task_due_date_tool() -> None:

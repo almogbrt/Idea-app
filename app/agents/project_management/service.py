@@ -199,6 +199,24 @@ class WorkspaceService:
             await session.commit()
             return task
 
+    async def bulk_quick_capture_tasks(
+        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None]]
+    ) -> list[Task]:
+        """Creates many simple tasks in one call — title and an optional due
+        date each, no start/end time — for bulk imports (e.g. a pasted
+        checklist) that `create_task`'s time-block requirement isn't suited
+        for, and that would burn through several tool-call turns one at a
+        time otherwise."""
+        async with self._session_factory() as session:
+            repo = SqlAlchemyTaskRepository(session)
+            tasks = [
+                await repo.create(user_id, title.strip(), due_at=due_at)
+                for title, due_at in items
+                if title.strip()
+            ]
+            await session.commit()
+            return tasks
+
     async def update_task_status(
         self, user_id: uuid.UUID, task_title: str, status: TaskStatus
     ) -> Task:

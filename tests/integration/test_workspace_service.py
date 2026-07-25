@@ -269,6 +269,24 @@ async def test_create_task_with_due_at_and_set_task_due_at_resolves_by_partial_t
     assert updated.due_at == new_due
 
 
+async def test_bulk_quick_capture_tasks_creates_each_without_a_time_block(
+    db_session: AsyncSession, workspace_service: WorkspaceService
+) -> None:
+    users = SqlAlchemyUserRepository(db_session)
+    user = await users.create("google-sub-ws-20", "owner-ws20@example.com", "Owner")
+    await db_session.commit()
+
+    due = datetime(2026, 8, 2, 0, 0, tzinfo=UTC)
+    tasks = await workspace_service.bulk_quick_capture_tasks(
+        user.id, [("Write plan", due), ("Untitled follow-up", None), ("  ", None)]
+    )
+
+    assert [t.title for t in tasks] == ["Write plan", "Untitled follow-up"]
+    assert tasks[0].due_at == due
+    assert tasks[0].start_at is None
+    assert tasks[1].due_at is None
+
+
 async def test_update_client_resolves_by_partial_name_and_sets_only_given_fields(
     db_session: AsyncSession, workspace_service: WorkspaceService
 ) -> None:

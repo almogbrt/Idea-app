@@ -4,6 +4,7 @@ from app.agents.project_management.service import WorkspaceService
 from app.agents.project_management.tools import (
     AssignProjectToClientTool,
     AssignTaskToClientTool,
+    BulkCreateTasksTool,
     CreateClientTool,
     CreateProjectTool,
     CreateTaskTool,
@@ -42,6 +43,7 @@ class ProjectManagementAgent(BaseAgent):
             DeleteProjectTool(self._service),
             ListProjectsTool(self._service),
             CreateTaskTool(self._service),
+            BulkCreateTasksTool(self._service),
             UpdateTaskStatusTool(self._service),
             SetTaskDueDateTool(self._service),
             DeleteTaskTool(self._service),

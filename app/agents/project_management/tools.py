@@ -349,6 +349,56 @@ class CreateTaskTool(Tool):
         )
 
 
+class BulkCreateTasksTool(Tool):
+    name = "workspace_bulk_create_tasks"
+    description = (
+        "Create many simple tasks at once, each with just a title and an optional "
+        "due date — no start/end time needed, unlike workspace_create_task. Use this "
+        "for bulk imports: a pasted checklist, a project plan broken into action "
+        "items, a list of deadlines — anything with more than a couple of items, or "
+        "where the user gave deadlines but not specific meeting times. Prefer this "
+        "over calling workspace_create_task repeatedly."
+    )
+    parameters_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "tasks": {
+                "type": "array",
+                "description": "The tasks to create.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "Task title."},
+                        "due_date": {
+                            "type": "string",
+                            "description": (
+                                "Due date in ISO 8601, e.g. 2026-08-02 (optional)."
+                            ),
+                        },
+                    },
+                    "required": ["title"],
+                },
+            },
+        },
+        "required": ["tasks"],
+    }
+    agent_name = AGENT_NAME
+
+    def __init__(self, service: WorkspaceService) -> None:
+        self._service = service
+
+    async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        items = [
+            (item["title"], _parse_due_at(item.get("due_date"))) for item in arguments["tasks"]
+        ]
+        tasks = await self._service.bulk_quick_capture_tasks(context.user_id, items)
+        return ToolResult(
+            tool_call_id="",
+            tool_name=self.name,
+            content=json.dumps([_task_json(t) for t in tasks]),
+        )
+
+
 class UpdateTaskStatusTool(Tool):
     name = "workspace_update_task_status"
     description = "Change a task's status. Match the task by (partial) title."
