@@ -283,10 +283,15 @@ function motivationalQuoteOfTheDay() {
 
 function speakText(text) {
   if (!("speechSynthesis" in window) || !text) return;
+  // Calling speak() in the same tick right after cancel() is a known
+  // Chrome/Android quirk that silently drops the new utterance — deferring
+  // to the next tick reliably avoids it.
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "he-IL";
-  window.speechSynthesis.speak(utterance);
+  setTimeout(() => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "he-IL";
+    window.speechSynthesis.speak(utterance);
+  }, 60);
 }
 
 let hasSpokenGreeting = false;
