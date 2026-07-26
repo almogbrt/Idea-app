@@ -23,6 +23,7 @@ const els = {
   tasksList: document.getElementById("tasks-list"),
   tasksEmpty: document.getElementById("tasks-empty"),
   tasksShowAllBtn: document.getElementById("tasks-show-all-btn"),
+  tasksClientFilter: document.getElementById("tasks-client-filter"),
   listModal: document.getElementById("list-modal"),
   listModalTitle: document.getElementById("list-modal-title"),
   listModalBody: document.getElementById("list-modal-body"),
@@ -1325,20 +1326,50 @@ function buildTaskCard(task, clientNameById) {
   return card;
 }
 
+let taskClientNameById = new Map();
+
+function populateTasksClientFilter(clientsList) {
+  const previousValue = els.tasksClientFilter.value;
+  els.tasksClientFilter.innerHTML = '<option value="">כל הלקוחות</option>';
+  for (const client of clientsList) {
+    const option = document.createElement("option");
+    option.value = client.id;
+    option.textContent = client.name;
+    els.tasksClientFilter.appendChild(option);
+  }
+  if (clientsList.some((c) => c.id === previousValue)) {
+    els.tasksClientFilter.value = previousValue;
+  }
+}
+
+function renderTasksList() {
+  const filterClientId = els.tasksClientFilter.value;
+  const filteredTasks = filterClientId
+    ? currentTasks.filter((t) => t.client_id === filterClientId)
+    : currentTasks;
+  els.tasksEmpty.hidden = filteredTasks.length > 0;
+  els.tasksEmpty.textContent = filterClientId
+    ? "אין משימות ללקוח שנבחר."
+    : "עדיין אין משימות.";
+
+  const { open, done } = sortTasksForDisplay(filteredTasks);
+  renderWithShowAll(
+    els.tasksList,
+    [...open, ...done],
+    (task) => buildTaskCard(task, taskClientNameById),
+    { showAllBtn: els.tasksShowAllBtn, title: "כל המשימות", emptyText: "עדיין אין משימות." }
+  );
+}
+
+els.tasksClientFilter.addEventListener("change", renderTasksList);
+
 async function loadTasks() {
   try {
     const [tasks, clientsList] = await Promise.all([apiFetch("/tasks"), apiFetch("/clients")]);
     currentTasks = tasks;
-    const clientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
-    els.tasksEmpty.hidden = tasks.length > 0;
-
-    const { open, done } = sortTasksForDisplay(tasks);
-    renderWithShowAll(
-      els.tasksList,
-      [...open, ...done],
-      (task) => buildTaskCard(task, clientNameById),
-      { showAllBtn: els.tasksShowAllBtn, title: "כל המשימות", emptyText: "עדיין אין משימות." }
-    );
+    taskClientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
+    populateTasksClientFilter(clientsList);
+    renderTasksList();
   } catch {
     // not authenticated yet
   }

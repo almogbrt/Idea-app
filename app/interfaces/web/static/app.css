@@ -1314,6 +1314,14 @@ input {
   display: none;
 }
 
+#edit-task-modal {
+  /* Editing a task can be triggered from inside the tasks "show all"
+     popup (#list-modal), which stays open underneath. Both share
+     z-index:50, so same-z-index ties would fall back to DOM order and
+     paint #list-modal (declared later) on top, burying this one. */
+  z-index: 55;
+}
+
 .modal-card {
   direction: rtl;
   background: var(--panel-bg);
@@ -1397,6 +1405,16 @@ input {
 .section-heading-actions {
   display: flex;
   gap: 8px;
+}
+
+.tasks-client-filter {
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 12.5px;
+  max-width: 140px;
 }
 
 .month-view-header {
