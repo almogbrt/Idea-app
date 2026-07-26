@@ -41,6 +41,7 @@ from app.interfaces.api.schemas.workspace import (
     DashboardSummaryView,
     NotificationView,
     ProjectView,
+    SetTaskCategoryRequest,
     TaskView,
     ThoughtView,
     UpdateClientRequest,
@@ -381,6 +382,7 @@ def _task_view(task: Task) -> TaskView:
         importance=task.importance,
         goal_id=task.goal_id,
         next_step=task.next_step,
+        category=task.category,
     )
 
 
@@ -391,7 +393,13 @@ async def create_task(
     scope: RequestScopedServices = Depends(get_request_scope),
 ) -> TaskView:
     task = await scope.manage_tasks.create(
-        user.id, body.title, body.project_id, body.due_at, body.client_id, body.start_at
+        user.id,
+        body.title,
+        body.project_id,
+        body.due_at,
+        body.client_id,
+        body.start_at,
+        body.category,
     )
     return _task_view(task)
 
@@ -443,8 +451,27 @@ async def update_task(
     existing = await scope.manage_tasks.get_or_raise(task_id)
     _ensure_task_owned_by(existing, user)
     updated = await scope.manage_tasks.update_details(
-        task_id, body.title, body.due_at, body.project_id, body.client_id, body.start_at
+        task_id,
+        body.title,
+        body.due_at,
+        body.project_id,
+        body.client_id,
+        body.start_at,
+        body.category,
     )
+    return _task_view(updated)
+
+
+@router.patch("/tasks/{task_id}/category", response_model=TaskView)
+async def set_task_category(
+    task_id: uuid.UUID,
+    body: SetTaskCategoryRequest,
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> TaskView:
+    existing = await scope.manage_tasks.get_or_raise(task_id)
+    _ensure_task_owned_by(existing, user)
+    updated = await scope.manage_tasks.set_category(task_id, body.category)
     return _task_view(updated)
 
 

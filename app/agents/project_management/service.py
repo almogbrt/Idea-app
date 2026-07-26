@@ -26,6 +26,7 @@ from app.domain.entities import (
     ProjectSummary,
     ProjectType,
     Task,
+    TaskCategory,
     TaskStatus,
     Thought,
 )
@@ -166,6 +167,7 @@ class WorkspaceService:
         due_at: datetime | None = None,
         client_name: str | None = None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         if start_at is None or due_at is None:
             raise ValidationError(
@@ -175,6 +177,8 @@ class WorkspaceService:
                     "due_at": due_at.isoformat() if due_at else None,
                 },
             )
+        if category is None:
+            raise ValidationError("A new task needs a category (managerial or operational).")
         async with self._session_factory() as session:
             project_id = None
             if project_name:
@@ -195,23 +199,24 @@ class WorkspaceService:
                 due_at=due_at,
                 client_id=client_id,
                 start_at=start_at,
+                category=category,
             )
             await session.commit()
             return task
 
     async def bulk_quick_capture_tasks(
-        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None]]
+        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None, TaskCategory]]
     ) -> list[Task]:
-        """Creates many simple tasks in one call — title and an optional due
-        date each, no start/end time — for bulk imports (e.g. a pasted
-        checklist) that `create_task`'s time-block requirement isn't suited
-        for, and that would burn through several tool-call turns one at a
-        time otherwise."""
+        """Creates many simple tasks in one call — title, an optional due
+        date, and a required category each, no start/end time — for bulk
+        imports (e.g. a pasted checklist) that `create_task`'s time-block
+        requirement isn't suited for, and that would burn through several
+        tool-call turns one at a time otherwise."""
         async with self._session_factory() as session:
             repo = SqlAlchemyTaskRepository(session)
             tasks = [
-                await repo.create(user_id, title.strip(), due_at=due_at)
-                for title, due_at in items
+                await repo.create(user_id, title.strip(), due_at=due_at, category=category)
+                for title, due_at, category in items
                 if title.strip()
             ]
             await session.commit()
@@ -260,7 +265,13 @@ class WorkspaceService:
                     )
                 client_id = client.id
             updated = await SqlAlchemyTaskRepository(session).update_details(
-                task.id, task.title, task.due_at, task.project_id, client_id
+                task.id,
+                task.title,
+                task.due_at,
+                task.project_id,
+                client_id,
+                task.start_at,
+                task.category,
             )
             await session.commit()
             return updated

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.task_repository import TaskRepositoryPort
 from app.core.exceptions import NotFoundError
-from app.domain.entities import Task, TaskImportance, TaskStatus
+from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus
 from app.infrastructure.db.models import TaskModel
 
 
@@ -24,6 +24,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         row = TaskModel(
             user_id=user_id,
@@ -33,6 +34,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             due_at=due_at,
             client_id=client_id,
             start_at=start_at,
+            category=category.value if category else None,
         )
         self._session.add(row)
         await self._session.flush()
@@ -98,6 +100,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         row = await self._session.get(TaskModel, task_id)
         if row is None:
@@ -107,6 +110,16 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         row.project_id = project_id
         row.client_id = client_id
         row.start_at = start_at
+        row.category = category.value if category else None
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
+    async def set_category(self, task_id: uuid.UUID, category: TaskCategory) -> Task:
+        row = await self._session.get(TaskModel, task_id)
+        if row is None:
+            raise NotFoundError("Task not found", details={"task_id": str(task_id)})
+        row.category = category.value
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -173,4 +186,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             importance=TaskImportance(row.importance) if row.importance else None,
             goal_id=row.goal_id,
             next_step=row.next_step,
+            category=TaskCategory(row.category) if row.category else None,
         )

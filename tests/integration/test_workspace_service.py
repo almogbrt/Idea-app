@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.project_management.service import WorkspaceService
 from app.core.exceptions import NotFoundError, ValidationError
-from app.domain.entities import ProjectType, TaskStatus
+from app.domain.entities import ProjectType, TaskCategory, TaskStatus
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from tests.integration.conftest import TEST_DATABASE_URL, requires_postgres
 
@@ -97,7 +97,12 @@ async def test_delete_project_resolves_by_partial_name_and_unlinks_tasks(
         user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
     )
     task = await workspace_service.create_task(
-        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Prep dishes",
+        "summer",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
 
     await workspace_service.delete_project(user.id, "summer")
@@ -197,7 +202,12 @@ async def test_create_task_resolves_project_by_partial_name(
         user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
     )
     task = await workspace_service.create_task(
-        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Prep dishes",
+        "summer",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
 
     assert task.project_id == project.id
@@ -212,7 +222,12 @@ async def test_create_task_resolves_client_by_partial_name(
 
     client = await workspace_service.create_client(user.id, "Baron's Wine House")
     task = await workspace_service.create_task(
-        user.id, "Kickoff call", client_name="baron's", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Kickoff call",
+        client_name="baron's",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
 
     assert task.client_id == client.id
@@ -227,7 +242,12 @@ async def test_create_task_raises_when_client_name_has_no_match(
 
     with pytest.raises(NotFoundError):
         await workspace_service.create_task(
-            user.id, "Kickoff call", client_name="nonexistent", due_at=_DUE_AT, start_at=_START_AT
+            user.id,
+            "Kickoff call",
+            client_name="nonexistent",
+            due_at=_DUE_AT,
+            start_at=_START_AT,
+            category=TaskCategory.OPERATIONAL,
         )
 
 
@@ -239,12 +259,14 @@ async def test_update_task_status_resolves_by_partial_title(
     await db_session.commit()
 
     await workspace_service.create_task(
-        user.id, "Prep the summer menu dishes", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Prep the summer menu dishes",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
 
-    updated = await workspace_service.update_task_status(
-        user.id, "summer menu", TaskStatus.DONE
-    )
+    updated = await workspace_service.update_task_status(user.id, "summer menu", TaskStatus.DONE)
 
     assert updated.status == TaskStatus.DONE
 
@@ -258,7 +280,7 @@ async def test_create_task_with_due_at_and_set_task_due_at_resolves_by_partial_t
 
     due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
     task = await workspace_service.create_task(
-        user.id, "Send invoice", due_at=due, start_at=_START_AT
+        user.id, "Send invoice", due_at=due, start_at=_START_AT, category=TaskCategory.OPERATIONAL
     )
     assert task.due_at == due
 
@@ -278,13 +300,20 @@ async def test_bulk_quick_capture_tasks_creates_each_without_a_time_block(
 
     due = datetime(2026, 8, 2, 0, 0, tzinfo=UTC)
     tasks = await workspace_service.bulk_quick_capture_tasks(
-        user.id, [("Write plan", due), ("Untitled follow-up", None), ("  ", None)]
+        user.id,
+        [
+            ("Write plan", due, TaskCategory.MANAGERIAL),
+            ("Untitled follow-up", None, TaskCategory.OPERATIONAL),
+            ("  ", None, TaskCategory.OPERATIONAL),
+        ],
     )
 
     assert [t.title for t in tasks] == ["Write plan", "Untitled follow-up"]
     assert tasks[0].due_at == due
     assert tasks[0].start_at is None
+    assert tasks[0].category == TaskCategory.MANAGERIAL
     assert tasks[1].due_at is None
+    assert tasks[1].category == TaskCategory.OPERATIONAL
 
 
 async def test_update_client_resolves_by_partial_name_and_sets_only_given_fields(
@@ -324,7 +353,11 @@ async def test_delete_task_removes_it(
     await db_session.commit()
 
     await workspace_service.create_task(
-        user.id, "Throwaway task", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Throwaway task",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
     await workspace_service.delete_task(user.id, "throwaway")
 
@@ -341,14 +374,20 @@ async def test_assign_task_client_links_and_clears(
 
     client = await workspace_service.create_client(user.id, "Baron's")
     await workspace_service.create_task(
-        user.id, "Kickoff call", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Kickoff call",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
 
     linked = await workspace_service.assign_task_client(user.id, "kickoff", "baron's")
     assert linked.client_id == client.id
+    assert linked.category == TaskCategory.OPERATIONAL
 
     cleared = await workspace_service.assign_task_client(user.id, "kickoff", None)
     assert cleared.client_id is None
+    assert cleared.category == TaskCategory.OPERATIONAL
 
 
 async def test_delete_client_resolves_by_partial_name(
@@ -388,7 +427,12 @@ async def test_get_client_detail_returns_linked_projects_and_tasks(
         user.id, "Summer menu", "Baron's", ProjectType.CONSULTING
     )
     await workspace_service.create_task(
-        user.id, "Prep dishes", "summer", due_at=_DUE_AT, start_at=_START_AT
+        user.id,
+        "Prep dishes",
+        "summer",
+        due_at=_DUE_AT,
+        start_at=_START_AT,
+        category=TaskCategory.OPERATIONAL,
     )
     await workspace_service.create_project(
         user.id, "Unrelated project", "Other Co", ProjectType.CONSULTING

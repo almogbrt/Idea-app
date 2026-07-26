@@ -13,6 +13,7 @@ from app.domain.entities import (
     ProjectSummary,
     ProjectType,
     Task,
+    TaskCategory,
     TaskStatus,
     Thought,
     ToolResult,
@@ -60,6 +61,7 @@ def _task_json(task: Task) -> dict[str, Any]:
         "client_id": str(task.client_id) if task.client_id else None,
         "due_at": task.due_at.isoformat() if task.due_at else None,
         "start_at": task.start_at.isoformat() if task.start_at else None,
+        "category": task.category.value if task.category else None,
     }
 
 
@@ -301,8 +303,9 @@ class CreateTaskTool(Tool):
     name = "workspace_create_task"
     description = (
         "Create a new task, optionally under a project and/or directly for a client "
-        "(both matched by partial name). Every task needs a start time AND an end time — "
-        "if the user didn't give both, ask them before calling this tool."
+        "(both matched by partial name). Every task needs a start time AND an end time, "
+        "AND a category (managerial or operational) — if the user didn't give all of "
+        "these, ask them before calling this tool."
     )
     parameters_schema: dict[str, Any] = {
         "type": "object",
@@ -327,8 +330,16 @@ class CreateTaskTool(Tool):
                 "type": "string",
                 "description": "End (due) date/time in ISO 8601, e.g. 2026-08-01T10:00:00Z.",
             },
+            "category": {
+                "type": "string",
+                "enum": [c.value for c in TaskCategory],
+                "description": (
+                    "Task category. Required — every task is either managerial or "
+                    "operational, which decides which dashboard window it appears in."
+                ),
+            },
         },
-        "required": ["title", "start_at", "due_at"],
+        "required": ["title", "start_at", "due_at", "category"],
     }
     agent_name = AGENT_NAME
 
@@ -343,6 +354,7 @@ class CreateTaskTool(Tool):
             _parse_due_at(arguments.get("due_at")),
             arguments.get("client_name"),
             _parse_due_at(arguments.get("start_at")),
+            TaskCategory(arguments["category"]),
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))
@@ -375,8 +387,17 @@ class BulkCreateTasksTool(Tool):
                                 "Due date in ISO 8601, e.g. 2026-08-02 (optional)."
                             ),
                         },
+                        "category": {
+                            "type": "string",
+                            "enum": [c.value for c in TaskCategory],
+                            "description": (
+                                "Task category. Required for every item — managerial or "
+                                "operational. Infer it from context (e.g. a section header "
+                                "in a pasted list) or ask the user if it's ambiguous."
+                            ),
+                        },
                     },
-                    "required": ["title"],
+                    "required": ["title", "category"],
                 },
             },
         },
@@ -389,7 +410,8 @@ class BulkCreateTasksTool(Tool):
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
         items = [
-            (item["title"], _parse_due_at(item.get("due_date"))) for item in arguments["tasks"]
+            (item["title"], _parse_due_at(item.get("due_date")), TaskCategory(item["category"]))
+            for item in arguments["tasks"]
         ]
         tasks = await self._service.bulk_quick_capture_tasks(context.user_id, items)
         return ToolResult(

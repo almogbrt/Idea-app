@@ -583,7 +583,6 @@ input {
 }
 
 #thoughts-section,
-#tasks-section,
 #clients-section,
 #calendar-section,
 #gmail-section,
@@ -592,13 +591,20 @@ input {
 #my-day-goals-section,
 #my-day-picker-section,
 #my-day-locked-section,
-#my-day-summary-section {
+#my-day-summary-section,
+.dashboard-window {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 20px 22px 22px;
   margin-bottom: 24px;
+}
+
+.tasks-section-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
 .clients-grid {
@@ -952,7 +958,9 @@ input {
   font-size: 12.5px;
 }
 
-#tasks-list {
+#tasks-uncategorized-list,
+#tasks-managerial-list,
+#tasks-operational-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1405,6 +1413,12 @@ input {
 .section-heading-actions {
   display: flex;
   gap: 8px;
+}
+
+.task-classify-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .tasks-client-filter {

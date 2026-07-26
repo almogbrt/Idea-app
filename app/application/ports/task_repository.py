@@ -4,7 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from app.domain.entities import Task, TaskImportance, TaskStatus
+from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus
 
 
 class TaskRepositoryPort(ABC):
@@ -17,6 +17,7 @@ class TaskRepositoryPort(ABC):
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         raise NotImplementedError
 
@@ -57,10 +58,17 @@ class TaskRepositoryPort(ABC):
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         """A full-form save (edit modal), not a partial patch — every field
         is set exactly to what's given, `None` included, so clearing a
         project/client assignment or due date works as expected."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_category(self, task_id: uuid.UUID, category: TaskCategory) -> Task:
+        """Classify a task as managerial/operational — the quick, dedicated
+        action for tasks that don't have a category yet."""
         raise NotImplementedError
 
     @abstractmethod

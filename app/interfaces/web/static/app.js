@@ -20,10 +20,16 @@ const els = {
   thoughtsShowAllBtn: document.getElementById("thoughts-show-all-btn"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   navBadgeClients: document.getElementById("nav-badge-clients"),
-  tasksList: document.getElementById("tasks-list"),
-  tasksEmpty: document.getElementById("tasks-empty"),
-  tasksShowAllBtn: document.getElementById("tasks-show-all-btn"),
-  tasksClientFilter: document.getElementById("tasks-client-filter"),
+  tasksUncategorizedWindow: document.getElementById("tasks-uncategorized-window"),
+  tasksUncategorizedList: document.getElementById("tasks-uncategorized-list"),
+  tasksManagerialList: document.getElementById("tasks-managerial-list"),
+  tasksManagerialEmpty: document.getElementById("tasks-managerial-empty"),
+  tasksManagerialShowAllBtn: document.getElementById("tasks-managerial-show-all-btn"),
+  tasksManagerialClientFilter: document.getElementById("tasks-managerial-client-filter"),
+  tasksOperationalList: document.getElementById("tasks-operational-list"),
+  tasksOperationalEmpty: document.getElementById("tasks-operational-empty"),
+  tasksOperationalShowAllBtn: document.getElementById("tasks-operational-show-all-btn"),
+  tasksOperationalClientFilter: document.getElementById("tasks-operational-client-filter"),
   listModal: document.getElementById("list-modal"),
   listModalTitle: document.getElementById("list-modal-title"),
   listModalBody: document.getElementById("list-modal-body"),
@@ -61,12 +67,14 @@ const els = {
   clientModalNewTaskTitle: document.getElementById("client-modal-new-task-title"),
   clientModalNewTaskStartAt: document.getElementById("client-modal-new-task-start-at"),
   clientModalNewTaskDueAt: document.getElementById("client-modal-new-task-due-at"),
+  clientModalNewTaskCategory: document.getElementById("client-modal-new-task-category"),
   clientModalNewTaskAdd: document.getElementById("client-modal-new-task-add"),
   newTaskBtn: document.getElementById("new-task-btn"),
   newTaskModal: document.getElementById("new-task-modal"),
   newTaskTitle: document.getElementById("new-task-title"),
   newTaskStartAt: document.getElementById("new-task-start-at"),
   newTaskDueAt: document.getElementById("new-task-due-at"),
+  newTaskCategory: document.getElementById("new-task-category"),
   newTaskSave: document.getElementById("new-task-save"),
   newTaskCancel: document.getElementById("new-task-cancel"),
   editTaskModal: document.getElementById("edit-task-modal"),
@@ -76,6 +84,7 @@ const els = {
   editTaskProject: document.getElementById("edit-task-project"),
   editTaskClient: document.getElementById("edit-task-client"),
   editTaskClientOptions: document.getElementById("edit-task-client-options"),
+  editTaskCategory: document.getElementById("edit-task-category"),
   editTaskSave: document.getElementById("edit-task-save"),
   editTaskCancel: document.getElementById("edit-task-cancel"),
   editTaskDelete: document.getElementById("edit-task-delete"),
@@ -557,6 +566,7 @@ els.newTaskBtn.addEventListener("click", () => {
   els.newTaskTitle.value = "";
   els.newTaskStartAt.value = "";
   els.newTaskDueAt.value = "";
+  els.newTaskCategory.value = "";
   els.newTaskTitle.focus();
 });
 els.newTaskCancel.addEventListener("click", () => {
@@ -566,9 +576,14 @@ els.newTaskSave.addEventListener("click", async () => {
   const title = els.newTaskTitle.value.trim();
   const startValue = els.newTaskStartAt.value;
   const dueValue = els.newTaskDueAt.value;
+  const category = els.newTaskCategory.value;
   if (!title) return;
   if (!startValue || !dueValue) {
     alert("צריך להזין גם זמן התחלה וגם זמן סיום למשימה.");
+    return;
+  }
+  if (!category) {
+    alert("צריך לבחור סוג משימה — ניהולי או תפעולי.");
     return;
   }
   try {
@@ -578,6 +593,7 @@ els.newTaskSave.addEventListener("click", async () => {
         title,
         start_at: new Date(startValue).toISOString(),
         due_at: new Date(dueValue).toISOString(),
+        category,
       }),
     });
     els.newTaskModal.hidden = true;
@@ -935,9 +951,14 @@ els.clientModalNewTaskAdd.addEventListener("click", async () => {
   const title = els.clientModalNewTaskTitle.value.trim();
   const startValue = els.clientModalNewTaskStartAt.value;
   const dueValue = els.clientModalNewTaskDueAt.value;
+  const category = els.clientModalNewTaskCategory.value;
   if (!title || !currentClientId) return;
   if (!startValue || !dueValue) {
     alert("צריך להזין גם זמן התחלה וגם זמן סיום למשימה.");
+    return;
+  }
+  if (!category) {
+    alert("צריך לבחור סוג משימה — ניהולי או תפעולי.");
     return;
   }
   try {
@@ -948,11 +969,13 @@ els.clientModalNewTaskAdd.addEventListener("click", async () => {
         client_id: currentClientId,
         start_at: new Date(startValue).toISOString(),
         due_at: new Date(dueValue).toISOString(),
+        category,
       }),
     });
     els.clientModalNewTaskTitle.value = "";
     els.clientModalNewTaskStartAt.value = "";
     els.clientModalNewTaskDueAt.value = "";
+    els.clientModalNewTaskCategory.value = "";
     loadTasks();
     loadDashboardSummary();
     openClientModal(currentClientId);
@@ -1328,47 +1351,101 @@ function buildTaskCard(task, clientNameById) {
 
 let taskClientNameById = new Map();
 
-function populateTasksClientFilter(clientsList) {
-  const previousValue = els.tasksClientFilter.value;
-  els.tasksClientFilter.innerHTML = '<option value="">כל הלקוחות</option>';
+const TASK_CATEGORY_LABELS = { managerial: "ניהולי", operational: "תפעולי" };
+
+function buildUncategorizedTaskCard(task, clientNameById) {
+  const card = buildTaskCard(task, clientNameById);
+  const classifyRow = document.createElement("div");
+  classifyRow.className = "task-classify-row";
+  for (const [value, label] of Object.entries(TASK_CATEGORY_LABELS)) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn--ghost btn--small";
+    btn.textContent = label;
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await apiFetch(`/tasks/${task.id}/category`, {
+        method: "PATCH",
+        body: JSON.stringify({ category: value }),
+      });
+      loadTasks();
+    });
+    classifyRow.appendChild(btn);
+  }
+  card.appendChild(classifyRow);
+  return card;
+}
+
+function populateClientFilter(selectEl, clientsList) {
+  const previousValue = selectEl.value;
+  selectEl.innerHTML = '<option value="">כל הלקוחות</option>';
   for (const client of clientsList) {
     const option = document.createElement("option");
     option.value = client.id;
     option.textContent = client.name;
-    els.tasksClientFilter.appendChild(option);
+    selectEl.appendChild(option);
   }
   if (clientsList.some((c) => c.id === previousValue)) {
-    els.tasksClientFilter.value = previousValue;
+    selectEl.value = previousValue;
   }
 }
 
-function renderTasksList() {
-  const filterClientId = els.tasksClientFilter.value;
+function renderTaskCategoryWindow(category, { listEl, emptyEl, showAllBtn, clientFilterEl, emptyLabel }) {
+  const filterClientId = clientFilterEl.value;
+  const categoryTasks = currentTasks.filter((t) => t.category === category);
   const filteredTasks = filterClientId
-    ? currentTasks.filter((t) => t.client_id === filterClientId)
-    : currentTasks;
-  els.tasksEmpty.hidden = filteredTasks.length > 0;
-  els.tasksEmpty.textContent = filterClientId
-    ? "אין משימות ללקוח שנבחר."
-    : "עדיין אין משימות.";
+    ? categoryTasks.filter((t) => t.client_id === filterClientId)
+    : categoryTasks;
+  emptyEl.hidden = filteredTasks.length > 0;
+  emptyEl.textContent = filterClientId ? "אין משימות ללקוח שנבחר." : emptyLabel;
 
   const { open, done } = sortTasksForDisplay(filteredTasks);
   renderWithShowAll(
-    els.tasksList,
+    listEl,
     [...open, ...done],
     (task) => buildTaskCard(task, taskClientNameById),
-    { showAllBtn: els.tasksShowAllBtn, title: "כל המשימות", emptyText: "עדיין אין משימות." }
+    {
+      showAllBtn,
+      title: category === "managerial" ? "כל המשימות הניהוליות" : "כל המשימות התפעוליות",
+      emptyText: emptyLabel,
+    }
   );
 }
 
-els.tasksClientFilter.addEventListener("change", renderTasksList);
+function renderTasksList() {
+  const uncategorized = currentTasks.filter((t) => !t.category);
+  els.tasksUncategorizedWindow.hidden = uncategorized.length === 0;
+  els.tasksUncategorizedList.innerHTML = "";
+  for (const task of uncategorized) {
+    els.tasksUncategorizedList.appendChild(buildUncategorizedTaskCard(task, taskClientNameById));
+  }
+
+  renderTaskCategoryWindow("managerial", {
+    listEl: els.tasksManagerialList,
+    emptyEl: els.tasksManagerialEmpty,
+    showAllBtn: els.tasksManagerialShowAllBtn,
+    clientFilterEl: els.tasksManagerialClientFilter,
+    emptyLabel: "עדיין אין משימות ניהוליות.",
+  });
+  renderTaskCategoryWindow("operational", {
+    listEl: els.tasksOperationalList,
+    emptyEl: els.tasksOperationalEmpty,
+    showAllBtn: els.tasksOperationalShowAllBtn,
+    clientFilterEl: els.tasksOperationalClientFilter,
+    emptyLabel: "עדיין אין משימות תפעוליות.",
+  });
+}
+
+els.tasksManagerialClientFilter.addEventListener("change", renderTasksList);
+els.tasksOperationalClientFilter.addEventListener("change", renderTasksList);
 
 async function loadTasks() {
   try {
     const [tasks, clientsList] = await Promise.all([apiFetch("/tasks"), apiFetch("/clients")]);
     currentTasks = tasks;
     taskClientNameById = new Map(clientsList.map((c) => [c.id, c.name]));
-    populateTasksClientFilter(clientsList);
+    populateClientFilter(els.tasksManagerialClientFilter, clientsList);
+    populateClientFilter(els.tasksOperationalClientFilter, clientsList);
     renderTasksList();
   } catch {
     // not authenticated yet
@@ -1474,6 +1551,7 @@ async function openEditTaskModal(taskId) {
   els.editTaskDueAt.value = task.due_at ? toDatetimeLocalValue(task.due_at) : "";
   els.editTaskProject.value = task.project_id || "";
   els.editTaskClient.value = currentClient ? currentClient.name : "";
+  els.editTaskCategory.value = task.category || "";
   els.editTaskModal.hidden = false;
 }
 
@@ -1520,6 +1598,7 @@ els.editTaskSave.addEventListener("click", async () => {
         due_at: dueValue ? new Date(dueValue).toISOString() : null,
         project_id: els.editTaskProject.value || null,
         client_id: clientId,
+        category: els.editTaskCategory.value || null,
       }),
     });
     els.editTaskModal.hidden = true;

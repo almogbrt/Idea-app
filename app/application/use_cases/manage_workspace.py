@@ -33,6 +33,7 @@ from app.domain.entities import (
     ProjectSummary,
     ProjectType,
     Task,
+    TaskCategory,
     TaskStatus,
     Thought,
 )
@@ -230,6 +231,7 @@ class ManageTasksUseCase:
         due_at: datetime | None = None,
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         if start_at is None or due_at is None:
             raise ValidationError(
@@ -239,7 +241,11 @@ class ManageTasksUseCase:
                     "due_at": due_at.isoformat() if due_at else None,
                 },
             )
-        return await self._tasks.create(user_id, title, project_id, due_at, client_id, start_at)
+        if category is None:
+            raise ValidationError("A new task needs a category (managerial or operational).")
+        return await self._tasks.create(
+            user_id, title, project_id, due_at, client_id, start_at, category
+        )
 
     async def quick_capture(self, user_id: uuid.UUID, title: str) -> Task:
         """Fast Inbox capture: title only, no schedule required — unlike
@@ -277,12 +283,17 @@ class ManageTasksUseCase:
         project_id: uuid.UUID | None,
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         """A full-form save — unlike `create`, editing an existing task does
-        not force adding a start/end time retroactively if it never had one."""
+        not force adding a start/end time (or a category) retroactively if
+        it never had one."""
         return await self._tasks.update_details(
-            task_id, title, due_at, project_id, client_id, start_at
+            task_id, title, due_at, project_id, client_id, start_at, category
         )
+
+    async def set_category(self, task_id: uuid.UUID, category: TaskCategory) -> Task:
+        return await self._tasks.set_category(task_id, category)
 
     async def delete(self, task_id: uuid.UUID) -> None:
         await self._tasks.delete(task_id)

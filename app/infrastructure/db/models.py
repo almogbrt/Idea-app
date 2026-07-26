@@ -219,6 +219,7 @@ class TaskModel(Base):
         ForeignKey("goals.id", ondelete="SET NULL"), nullable=True
     )
     next_step: Mapped[str | None] = mapped_column(nullable=True)
+    category: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class ThoughtModel(Base):

@@ -55,13 +55,14 @@ from tests.conftest import (
 
 
 def _task_payload(**overrides: object) -> dict[str, object]:
-    """Every task the REST API creates now requires start_at/due_at — this
-    fills in valid defaults so tests only spell out what they're actually
-    exercising."""
+    """Every task the REST API creates now requires start_at/due_at/category
+    — this fills in valid defaults so tests only spell out what they're
+    actually exercising."""
     payload: dict[str, object] = {
         "title": "Task",
         "start_at": "2026-08-01T08:00:00Z",
         "due_at": "2026-08-01T09:00:00Z",
+        "category": "operational",
     }
     payload.update(overrides)
     return payload
@@ -127,7 +128,10 @@ class _FakeCalendar(CalendarPort):
         description: str | None = None,
     ) -> CalendarEvent:
         event = CalendarEvent(
-            id=str(uuid.uuid4()), summary=summary, start=start_time, end=end_time,
+            id=str(uuid.uuid4()),
+            summary=summary,
+            start=start_time,
+            end=end_time,
             description=description,
         )
         self.events[event.id] = event
@@ -401,9 +405,7 @@ def test_upload_client_attachment_rejects_other_users_client(client: TestClient)
 def test_create_project_requires_client(client: TestClient) -> None:
     _install_scope(client)
 
-    response = client.post(
-        "/api/v1/projects", json={"name": "Summer menu", "type": "consulting"}
-    )
+    response = client.post("/api/v1/projects", json={"name": "Summer menu", "type": "consulting"})
 
     assert response.status_code == 422
 
@@ -445,9 +447,7 @@ def test_update_project_type(client: TestClient) -> None:
         json={"name": "Rebrand", "client_id": client_entity["id"], "type": "consulting"},
     ).json()
 
-    response = client.patch(
-        f"/api/v1/projects/{project['id']}/type", json={"type": "mentoring"}
-    )
+    response = client.patch(f"/api/v1/projects/{project['id']}/type", json={"type": "mentoring"})
 
     assert response.status_code == 200
     assert response.json()["type"] == "mentoring"
@@ -608,7 +608,9 @@ def test_dashboard_activity_reflects_only_current_user(client: TestClient) -> No
 def test_create_task_requires_start_at_and_due_at(client: TestClient) -> None:
     _install_scope(client)
 
-    response = client.post("/api/v1/tasks", json={"title": "No times given"})
+    response = client.post(
+        "/api/v1/tasks", json={"title": "No times given", "category": "operational"}
+    )
 
     assert response.status_code == 422
     assert response.json()["error_code"] == "validation_error"
@@ -622,6 +624,34 @@ def test_create_task_requires_start_at_even_with_due_at(client: TestClient) -> N
     )
 
     assert response.status_code == 422
+
+
+def test_create_task_requires_category(client: TestClient) -> None:
+    _install_scope(client)
+
+    response = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "No category given",
+            "start_at": "2026-08-01T08:00:00Z",
+            "due_at": "2026-08-01T09:00:00Z",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_set_task_category_classifies_an_uncategorized_task(client: TestClient) -> None:
+    resources = _install_scope(client)
+    tasks_repo = resources["tasks_repo"]
+    task = client.post("/api/v1/tasks", json=_task_payload(title="Kickoff call")).json()
+    stored = tasks_repo.tasks[uuid.UUID(task["id"])]  # type: ignore[attr-defined]
+    stored.category = None
+
+    response = client.patch(f"/api/v1/tasks/{task['id']}/category", json={"category": "managerial"})
+
+    assert response.status_code == 200
+    assert response.json()["category"] == "managerial"
 
 
 def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:

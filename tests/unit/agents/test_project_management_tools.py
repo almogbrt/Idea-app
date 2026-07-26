@@ -33,6 +33,7 @@ from app.domain.entities import (
     ProjectSummary,
     ProjectType,
     Task,
+    TaskCategory,
     TaskStatus,
     Thought,
 )
@@ -150,9 +151,13 @@ class _FakeWorkspaceService:
         due_at: datetime | None = None,
         client_name: str | None = None,
         start_at: datetime | None = None,
+        category: TaskCategory | None = None,
     ) -> Task:
         self.calls.append(
-            ("create_task", (user_id, title, project_name, due_at, client_name, start_at))
+            (
+                "create_task",
+                (user_id, title, project_name, due_at, client_name, start_at, category),
+            )
         )
         now = datetime.now(UTC)
         return Task(
@@ -166,10 +171,11 @@ class _FakeWorkspaceService:
             updated_at=now,
             due_at=due_at,
             start_at=start_at,
+            category=category,
         )
 
     async def bulk_quick_capture_tasks(
-        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None]]
+        self, user_id: uuid.UUID, items: list[tuple[str, datetime | None, TaskCategory]]
     ) -> list[Task]:
         self.calls.append(("bulk_quick_capture_tasks", (user_id, items)))
         now = datetime.now(UTC)
@@ -183,8 +189,9 @@ class _FakeWorkspaceService:
                 created_at=now,
                 updated_at=now,
                 due_at=due_at,
+                category=category,
             )
-            for title, due_at in items
+            for title, due_at, category in items
         ]
 
     async def update_task_status(
@@ -344,13 +351,9 @@ async def test_assign_project_to_client_tool() -> None:
     tool = AssignProjectToClientTool(service)
     context = _context()
 
-    result = await tool.execute(
-        {"project_name": "Summer menu", "client_name": "Baron's"}, context
-    )
+    result = await tool.execute({"project_name": "Summer menu", "client_name": "Baron's"}, context)
 
-    assert service.calls == [
-        ("assign_project_client", (context.user_id, "Summer menu", "Baron's"))
-    ]
+    assert service.calls == [("assign_project_client", (context.user_id, "Summer menu", "Baron's"))]
     assert json.loads(result.content)["client_id"] is not None
 
 
@@ -370,9 +373,7 @@ async def test_update_project_type_tool_parses_enum() -> None:
     tool = UpdateProjectTypeTool(service)
     context = _context()
 
-    result = await tool.execute(
-        {"project_name": "Summer menu", "type": "mentoring"}, context
-    )
+    result = await tool.execute({"project_name": "Summer menu", "type": "mentoring"}, context)
 
     assert service.calls == [
         ("update_project_type", (context.user_id, "Summer menu", ProjectType.MENTORING))
@@ -403,6 +404,7 @@ async def test_create_task_tool_passes_project_name() -> None:
             "project_name": "Summer menu",
             "start_at": "2026-08-01T08:00:00+00:00",
             "due_at": "2026-08-01T09:00:00+00:00",
+            "category": "operational",
         },
         context,
     )
@@ -417,6 +419,7 @@ async def test_create_task_tool_passes_project_name() -> None:
                 datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
                 None,
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+                TaskCategory.OPERATIONAL,
             ),
         )
     ]
@@ -432,6 +435,7 @@ async def test_create_task_tool_parses_start_and_due_at() -> None:
             "title": "Send invoice",
             "start_at": "2026-08-01T08:00:00+00:00",
             "due_at": "2026-08-01T09:00:00+00:00",
+            "category": "managerial",
         },
         context,
     )
@@ -446,6 +450,7 @@ async def test_create_task_tool_parses_start_and_due_at() -> None:
                 datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
                 None,
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+                TaskCategory.MANAGERIAL,
             ),
         )
     ]
@@ -464,6 +469,7 @@ async def test_create_task_tool_passes_client_name() -> None:
             "client_name": "Baron's",
             "start_at": "2026-08-01T08:00:00+00:00",
             "due_at": "2026-08-01T09:00:00+00:00",
+            "category": "operational",
         },
         context,
     )
@@ -478,6 +484,7 @@ async def test_create_task_tool_passes_client_name() -> None:
                 datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
                 "Baron's",
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+                TaskCategory.OPERATIONAL,
             ),
         )
     ]
@@ -492,8 +499,12 @@ async def test_bulk_create_tasks_tool_parses_titles_and_due_dates() -> None:
     result = await tool.execute(
         {
             "tasks": [
-                {"title": "Send contract to lawyer", "due_date": "2026-07-27"},
-                {"title": "Set final pricing"},
+                {
+                    "title": "Send contract to lawyer",
+                    "due_date": "2026-07-27",
+                    "category": "managerial",
+                },
+                {"title": "Set final pricing", "category": "operational"},
             ]
         },
         context,
@@ -505,8 +516,12 @@ async def test_bulk_create_tasks_tool_parses_titles_and_due_dates() -> None:
             (
                 context.user_id,
                 [
-                    ("Send contract to lawyer", datetime(2026, 7, 27, 0, 0)),
-                    ("Set final pricing", None),
+                    (
+                        "Send contract to lawyer",
+                        datetime(2026, 7, 27, 0, 0),
+                        TaskCategory.MANAGERIAL,
+                    ),
+                    ("Set final pricing", None, TaskCategory.OPERATIONAL),
                 ],
             ),
         )
@@ -549,9 +564,7 @@ async def test_update_task_status_tool_parses_enum() -> None:
     tool = UpdateTaskStatusTool(service)
     context = _context()
 
-    result = await tool.execute(
-        {"task_title": "Prep summer menu", "status": "done"}, context
-    )
+    result = await tool.execute({"task_title": "Prep summer menu", "status": "done"}, context)
 
     assert service.calls == [
         ("update_task_status", (context.user_id, "Prep summer menu", TaskStatus.DONE))
@@ -592,9 +605,7 @@ async def test_assign_task_to_client_tool_clears_when_omitted() -> None:
 
     result = await tool.execute({"task_title": "Prep summer menu"}, context)
 
-    assert service.calls == [
-        ("assign_task_client", (context.user_id, "Prep summer menu", None))
-    ]
+    assert service.calls == [("assign_task_client", (context.user_id, "Prep summer menu", None))]
     assert json.loads(result.content)["client_id"] is None
 
 

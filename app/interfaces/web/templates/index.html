@@ -191,23 +191,49 @@
         <div id="thoughts-empty" class="empty-state" hidden>עדיין אין מחשבות שמורות.</div>
       </section>
 
-      <section id="tasks-section">
-        <div class="section-heading">
-          <h2>משימות</h2>
-          <div class="section-heading-actions">
-            <select id="tasks-client-filter" class="tasks-client-filter">
-              <option value="">כל הלקוחות</option>
-            </select>
-            <button id="tasks-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
-            <button id="new-task-btn" class="btn btn--ghost">
-              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              משימה חדשה
-            </button>
-          </div>
+      <div id="tasks-section">
+        <div class="tasks-section-toolbar">
+          <button id="new-task-btn" class="btn btn--ghost">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            משימה חדשה
+          </button>
         </div>
-        <div id="tasks-list"></div>
-        <div id="tasks-empty" class="empty-state" hidden>עדיין אין משימות.</div>
-      </section>
+
+        <div id="tasks-uncategorized-window" class="dashboard-window" hidden>
+          <div class="section-heading">
+            <h2>משימות לסיווג</h2>
+          </div>
+          <div id="tasks-uncategorized-list"></div>
+        </div>
+
+        <div id="tasks-managerial-window" class="dashboard-window">
+          <div class="section-heading">
+            <h2>משימות ניהוליות</h2>
+            <div class="section-heading-actions">
+              <select id="tasks-managerial-client-filter" class="tasks-client-filter">
+                <option value="">כל הלקוחות</option>
+              </select>
+              <button id="tasks-managerial-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+            </div>
+          </div>
+          <div id="tasks-managerial-list"></div>
+          <div id="tasks-managerial-empty" class="empty-state" hidden>עדיין אין משימות ניהוליות.</div>
+        </div>
+
+        <div id="tasks-operational-window" class="dashboard-window">
+          <div class="section-heading">
+            <h2>משימות תפעוליות</h2>
+            <div class="section-heading-actions">
+              <select id="tasks-operational-client-filter" class="tasks-client-filter">
+                <option value="">כל הלקוחות</option>
+              </select>
+              <button id="tasks-operational-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
+            </div>
+          </div>
+          <div id="tasks-operational-list"></div>
+          <div id="tasks-operational-empty" class="empty-state" hidden>עדיין אין משימות תפעוליות.</div>
+        </div>
+      </div>
 
       <section id="calendar-section">
         <div class="section-heading">
@@ -428,6 +454,13 @@
       <label class="modal-field-label">זמן סיום
         <input id="new-task-due-at" type="datetime-local" required />
       </label>
+      <label class="modal-field-label">סוג משימה
+        <select id="new-task-category">
+          <option value="" disabled selected>בחירת סוג...</option>
+          <option value="managerial">ניהולי</option>
+          <option value="operational">תפעולי</option>
+        </select>
+      </label>
       <div class="modal-actions">
         <button id="new-task-cancel" class="btn btn--ghost">ביטול</button>
         <button id="new-task-save" class="btn btn--primary">צור משימה</button>
@@ -460,6 +493,13 @@
           autocomplete="off"
         />
         <datalist id="edit-task-client-options"></datalist>
+      </label>
+      <label class="modal-field-label">סוג משימה
+        <select id="edit-task-category">
+          <option value="">ללא סיווג</option>
+          <option value="managerial">ניהולי</option>
+          <option value="operational">תפעולי</option>
+        </select>
       </label>
       <div class="modal-actions modal-actions--split">
         <button id="edit-task-delete" class="btn btn--danger">מחיקת משימה</button>
@@ -545,6 +585,11 @@
           <input id="client-modal-new-task-title" type="text" placeholder="משימה חדשה..." autocomplete="off" />
           <input id="client-modal-new-task-start-at" type="datetime-local" title="זמן התחלה" required />
           <input id="client-modal-new-task-due-at" type="datetime-local" title="זמן סיום" required />
+          <select id="client-modal-new-task-category" title="סוג משימה" required>
+            <option value="" disabled selected>סוג...</option>
+            <option value="managerial">ניהולי</option>
+            <option value="operational">תפעולי</option>
+          </select>
           <button id="client-modal-new-task-add" class="btn btn--ghost btn--small">הוספה</button>
         </div>
       </div>

@@ -21,6 +21,7 @@ from app.domain.entities import (
     EmailSummary,
     ExecutionStatus,
     ProjectType,
+    TaskCategory,
     TaskStatus,
 )
 from tests.conftest import (
@@ -158,7 +159,9 @@ async def test_manage_clients_upload_and_get_logo(
     fake_client_logo_storage: FakeClientLogoStorage,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository,
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
         fake_client_logo_storage,
         FakeClientAttachmentRepository(),
     )
@@ -182,7 +185,9 @@ async def test_manage_clients_get_logo_raises_when_none_set(
     fake_client_logo_storage: FakeClientLogoStorage,
 ) -> None:
     use_case = ManageClientsUseCase(
-        fake_client_repository, fake_project_repository, fake_task_repository,
+        fake_client_repository,
+        fake_project_repository,
+        fake_task_repository,
         fake_client_logo_storage,
         FakeClientAttachmentRepository(),
     )
@@ -378,14 +383,29 @@ async def test_manage_tasks_create_list_and_update_status(
 
     start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
     due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
-    task = await use_case.create(user_id, "Prep summer menu", due_at=due, start_at=start)
+    task = await use_case.create(
+        user_id, "Prep summer menu", due_at=due, start_at=start, category=TaskCategory.OPERATIONAL
+    )
     tasks = await use_case.list_all(user_id)
 
     assert tasks[0].id == task.id
     assert tasks[0].status == TaskStatus.OPEN
+    assert tasks[0].category == TaskCategory.OPERATIONAL
 
     updated = await use_case.update_status(task.id, TaskStatus.DONE)
     assert updated.status == TaskStatus.DONE
+
+
+async def test_manage_tasks_create_rejects_missing_category(
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageTasksUseCase(fake_task_repository)
+    user_id = uuid.uuid4()
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
+    due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+
+    with pytest.raises(ValidationError):
+        await use_case.create(user_id, "Prep summer menu", due_at=due, start_at=start)
 
 
 async def test_quick_capture_creates_task_without_schedule(
@@ -429,9 +449,7 @@ async def test_dashboard_summary_aggregates_counts(
 ) -> None:
     user_id = uuid.uuid4()
     await fake_project_repository.create(user_id, "Consulting project", None)
-    await fake_project_repository.create(
-        user_id, "Setup project", None, type=ProjectType.SETUP
-    )
+    await fake_project_repository.create(user_id, "Setup project", None, type=ProjectType.SETUP)
     await fake_task_repository.create(user_id, "Open task")
     done_task = await fake_task_repository.create(user_id, "Done task")
     await fake_task_repository.update_status(done_task.id, TaskStatus.DONE)

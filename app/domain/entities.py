@@ -44,6 +44,11 @@ class TaskImportance(StrEnum):
     HIGH = "high"
 
 
+class TaskCategory(StrEnum):
+    MANAGERIAL = "managerial"
+    OPERATIONAL = "operational"
+
+
 class FocusExitReason(StrEnum):
     DONE = "done"
     STUCK = "stuck"
@@ -226,6 +231,11 @@ class Task:
     goal_id: uuid.UUID | None = None
     next_step: str | None = None
     """Free-text note on what to do next — shown/edited in Focus mode."""
+    category: TaskCategory | None = None
+    """Managerial vs. operational — decides which dashboard window the task
+    lives in. `None` only for tasks created before this field existed (or
+    via the Inbox quick-capture path); the dashboard shows those in a
+    dedicated "needs classification" bucket until the user picks one."""
 
 
 @dataclass(slots=True)

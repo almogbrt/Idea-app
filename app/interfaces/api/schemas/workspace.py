@@ -5,7 +5,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain.entities import NotificationKind, ProjectType, TaskImportance, TaskStatus
+from app.domain.entities import (
+    NotificationKind,
+    ProjectType,
+    TaskCategory,
+    TaskImportance,
+    TaskStatus,
+)
 
 
 class ClientView(BaseModel):
@@ -77,18 +83,22 @@ class TaskView(BaseModel):
     importance: TaskImportance | None = None
     goal_id: uuid.UUID | None = None
     next_step: str | None = None
+    category: TaskCategory | None = None
 
 
 class CreateTaskRequest(BaseModel):
     """start_at/due_at are optional here at the schema level — the use case
     is the single place that enforces both being required for new tasks, so
-    every entry point (dashboard, chat) is held to the same rule."""
+    every entry point (dashboard, chat) is held to the same rule. category
+    is required here, at the schema level, since every new task must always
+    be classified up front."""
 
     title: str = Field(..., min_length=1, max_length=500)
     project_id: uuid.UUID | None = None
     due_at: datetime | None = None
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
+    category: TaskCategory
 
 
 class UpdateTaskStatusRequest(BaseModel):
@@ -105,6 +115,11 @@ class UpdateTaskRequest(BaseModel):
     project_id: uuid.UUID | None = None
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
+    category: TaskCategory | None = None
+
+
+class SetTaskCategoryRequest(BaseModel):
+    category: TaskCategory
 
 
 class ThoughtView(BaseModel):
