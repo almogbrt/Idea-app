@@ -33,7 +33,6 @@ const els = {
   sidebarBackdrop: document.getElementById("sidebar-backdrop"),
   clientsGrid: document.getElementById("clients-grid"),
   clientsEmpty: document.getElementById("clients-empty"),
-  clientsShowAllBtn: document.getElementById("clients-show-all-btn"),
   newClientBtn: document.getElementById("new-client-btn"),
   newClientModal: document.getElementById("new-client-modal"),
   newClientName: document.getElementById("new-client-name"),
@@ -1612,11 +1611,10 @@ async function loadClients() {
       card.addEventListener("click", () => openClientModal(c.id));
       return card;
     };
-    renderWithShowAll(els.clientsGrid, clientsList, buildCard, {
-      showAllBtn: els.clientsShowAllBtn,
-      title: "כל הלקוחות",
-      emptyText: "עדיין אין לקוחות.",
-    });
+    els.clientsGrid.innerHTML = "";
+    for (const c of clientsList) {
+      els.clientsGrid.appendChild(buildCard(c));
+    }
   } catch {
     // not authenticated yet
   }
