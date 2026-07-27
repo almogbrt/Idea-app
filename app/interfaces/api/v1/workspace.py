@@ -39,6 +39,7 @@ from app.interfaces.api.schemas.workspace import (
     CreateTaskRequest,
     CreateThoughtRequest,
     DashboardSummaryView,
+    MonthlyTaskProgressView,
     NotificationView,
     ProjectView,
     SetTaskCategoryRequest,
@@ -363,6 +364,20 @@ async def list_tasks(
 ) -> list[TaskView]:
     tasks = await scope.manage_tasks.list_all(user.id)
     return [_task_view(t) for t in tasks]
+
+
+@router.get("/tasks/progress/monthly", response_model=MonthlyTaskProgressView)
+async def get_monthly_task_progress(
+    user: User = Depends(get_current_user),
+    scope: RequestScopedServices = Depends(get_request_scope),
+) -> MonthlyTaskProgressView:
+    progress = await scope.manage_tasks.get_monthly_progress(user.id)
+    return MonthlyTaskProgressView(
+        month=progress.month,
+        today_day=progress.today_day,
+        total_tasks=progress.total_tasks,
+        daily_completed=progress.daily_completed,
+    )
 
 
 def _task_view(task: Task) -> TaskView:

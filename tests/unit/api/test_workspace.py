@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -652,6 +652,32 @@ def test_set_task_category_classifies_an_uncategorized_task(client: TestClient) 
 
     assert response.status_code == 200
     assert response.json()["category"] == "managerial"
+
+
+def test_get_monthly_task_progress_reflects_completed_tasks(client: TestClient) -> None:
+    _install_scope(client)
+    now = datetime.now(UTC)
+    due = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    task = client.post(
+        "/api/v1/tasks",
+        json=_task_payload(
+            title="Finish report",
+            start_at=(due - timedelta(hours=1)).isoformat(),
+            due_at=due.isoformat(),
+        ),
+    ).json()
+
+    status_response = client.patch(f"/api/v1/tasks/{task['id']}/status", json={"status": "done"})
+    assert status_response.status_code == 200
+
+    response = client.get("/api/v1/tasks/progress/monthly")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["month"] == now.strftime("%Y-%m")
+    assert body["today_day"] == now.day
+    assert body["total_tasks"] == 1
+    assert body["daily_completed"][-1] == 1
 
 
 def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:

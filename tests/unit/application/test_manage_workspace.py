@@ -14,6 +14,7 @@ from app.application.use_cases.manage_workspace import (
     ManageProjectsUseCase,
     ManageTasksUseCase,
     ManageThoughtsUseCase,
+    compute_monthly_task_progress,
 )
 from app.core.exceptions import ExternalServiceError, NotFoundError, ValidationError
 from app.domain.entities import (
@@ -21,6 +22,7 @@ from app.domain.entities import (
     EmailSummary,
     ExecutionStatus,
     ProjectType,
+    Task,
     TaskCategory,
     TaskStatus,
 )
@@ -406,6 +408,61 @@ async def test_manage_tasks_create_rejects_missing_category(
 
     with pytest.raises(ValidationError):
         await use_case.create(user_id, "Prep summer menu", due_at=due, start_at=start)
+
+
+def _progress_task(
+    *, due_at: datetime | None, completed_at: datetime | None = None
+) -> Task:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    return Task(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        project_id=None,
+        title="t",
+        status=TaskStatus.DONE if completed_at else TaskStatus.OPEN,
+        created_at=now,
+        updated_at=now,
+        due_at=due_at,
+        completed_at=completed_at,
+    )
+
+
+def test_compute_monthly_task_progress_rolls_over_unfinished_tasks() -> None:
+    today = datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
+
+    due_this_month_completed_day5 = _progress_task(
+        due_at=datetime(2026, 7, 10, tzinfo=UTC),
+        completed_at=datetime(2026, 7, 5, 9, 0, tzinfo=UTC),
+    )
+    overdue_from_last_month_still_open = _progress_task(
+        due_at=datetime(2026, 6, 20, tzinfo=UTC)
+    )
+    finished_last_month_does_not_roll_over = _progress_task(
+        due_at=datetime(2026, 6, 5, tzinfo=UTC), completed_at=datetime(2026, 6, 6, tzinfo=UTC)
+    )
+    due_next_month_not_yet_relevant = _progress_task(due_at=datetime(2026, 8, 1, tzinfo=UTC))
+    no_due_date_excluded = _progress_task(due_at=None)
+
+    progress = compute_monthly_task_progress(
+        [
+            due_this_month_completed_day5,
+            overdue_from_last_month_still_open,
+            finished_last_month_does_not_roll_over,
+            due_next_month_not_yet_relevant,
+            no_due_date_excluded,
+        ],
+        today,
+    )
+
+    assert progress.month == "2026-07"
+    assert progress.today_day == 15
+    # Only the two tasks that still "belong" to July count: the one due (and
+    # done) in July, and the still-open one rolled over from June.
+    assert progress.total_tasks == 2
+    assert len(progress.daily_completed) == 15
+    assert progress.daily_completed[3] == 0  # day 4: not completed yet
+    assert progress.daily_completed[4] == 1  # day 5: the completed task counts
+    assert progress.daily_completed[14] == 1  # day 15: still just the one
 
 
 async def test_quick_capture_creates_task_without_schedule(

@@ -20,6 +20,11 @@ const els = {
   thoughtsShowAllBtn: document.getElementById("thoughts-show-all-btn"),
   navBadgeTasks: document.getElementById("nav-badge-tasks"),
   navBadgeClients: document.getElementById("nav-badge-clients"),
+  tasksProgressSummary: document.getElementById("tasks-progress-summary"),
+  tasksProgressChartWrap: document.getElementById("tasks-progress-chart-wrap"),
+  tasksProgressChart: document.getElementById("tasks-progress-chart"),
+  tasksProgressTooltip: document.getElementById("tasks-progress-tooltip"),
+  tasksProgressEmpty: document.getElementById("tasks-progress-empty"),
   tasksUncategorizedWindow: document.getElementById("tasks-uncategorized-window"),
   tasksUncategorizedList: document.getElementById("tasks-uncategorized-list"),
   tasksManagerialList: document.getElementById("tasks-managerial-list"),
@@ -1447,9 +1452,133 @@ async function loadTasks() {
     populateClientFilter(els.tasksManagerialClientFilter, clientsList);
     populateClientFilter(els.tasksOperationalClientFilter, clientsList);
     renderTasksList();
+    loadTasksProgress();
   } catch {
     // not authenticated yet
   }
+}
+
+async function loadTasksProgress() {
+  try {
+    const progress = await apiFetch("/tasks/progress/monthly");
+    renderTasksProgressChart(progress);
+  } catch {
+    // not authenticated yet
+  }
+}
+
+function attachProgressChartHover(svg, points, dailyCompleted, { paddingLeft, plotWidth, todayDay }) {
+  const VIEW_W = 600;
+  const VIEW_H = 220;
+  const hoverTarget = svg.querySelector(".progress-chart-hover-target");
+  if (!hoverTarget) return;
+
+  const crosshair = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  crosshair.setAttribute("class", "progress-chart-crosshair");
+  crosshair.setAttribute("y1", "0");
+  crosshair.setAttribute("y2", String(VIEW_H));
+  crosshair.style.display = "none";
+  svg.appendChild(crosshair);
+
+  hoverTarget.addEventListener("mousemove", (event) => {
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((event.clientX - rect.left) / rect.width) * VIEW_W;
+    const relative = (svgX - paddingLeft) / plotWidth;
+    const dayIndex = Math.round(relative * (todayDay - 1));
+    const clamped = Math.max(0, Math.min(todayDay - 1, dayIndex));
+    const [x, y] = points[clamped];
+
+    crosshair.setAttribute("x1", x.toFixed(1));
+    crosshair.setAttribute("x2", x.toFixed(1));
+    crosshair.style.display = "block";
+
+    els.tasksProgressTooltip.hidden = false;
+    els.tasksProgressTooltip.textContent = `יום ${clamped + 1}: ${dailyCompleted[clamped]} משימות הושלמו`;
+    els.tasksProgressTooltip.style.left = `${(x / VIEW_W) * rect.width}px`;
+    els.tasksProgressTooltip.style.top = `${(y / VIEW_H) * rect.height}px`;
+  });
+  hoverTarget.addEventListener("mouseleave", () => {
+    crosshair.style.display = "none";
+    els.tasksProgressTooltip.hidden = true;
+  });
+}
+
+function renderTasksProgressChart(progress) {
+  const { total_tasks: totalTasks, today_day: todayDay, daily_completed: dailyCompleted } = progress;
+
+  if (totalTasks === 0 || todayDay === 0) {
+    els.tasksProgressChartWrap.hidden = true;
+    els.tasksProgressSummary.hidden = true;
+    els.tasksProgressEmpty.hidden = false;
+    return;
+  }
+  els.tasksProgressEmpty.hidden = true;
+  els.tasksProgressChartWrap.hidden = false;
+  els.tasksProgressSummary.hidden = false;
+
+  const completedSoFar = dailyCompleted[dailyCompleted.length - 1] || 0;
+  els.tasksProgressSummary.textContent = `${completedSoFar} מתוך ${totalTasks} משימות הושלמו החודש`;
+
+  const width = 600;
+  const height = 220;
+  const paddingLeft = 34;
+  const paddingRight = 16;
+  const paddingTop = 16;
+  const paddingBottom = 28;
+  const plotWidth = width - paddingLeft - paddingRight;
+  const plotHeight = height - paddingTop - paddingBottom;
+  const maxY = Math.max(totalTasks, ...dailyCompleted, 1);
+
+  const xForDay = (day) => paddingLeft + ((day - 1) / Math.max(todayDay - 1, 1)) * plotWidth;
+  const yForValue = (value) => paddingTop + plotHeight - (value / maxY) * plotHeight;
+
+  const points = dailyCompleted.map((value, idx) => [xForDay(idx + 1), yForValue(value)]);
+  const linePath = points
+    .map(([x, y], idx) => `${idx === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
+
+  const targetY = yForValue(totalTasks);
+
+  const gridValues = [...new Set([0, Math.round(maxY / 2), maxY])];
+  const gridLines = gridValues
+    .map((v) => {
+      const y = yForValue(v).toFixed(1);
+      return `<line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" class="progress-chart-grid" />
+              <text x="${paddingLeft - 8}" y="${y}" class="progress-chart-axis-label" text-anchor="end" dominant-baseline="middle">${v}</text>`;
+    })
+    .join("");
+
+  const tickCount = Math.min(todayDay, 6);
+  const dayTicks = [...new Set(
+    Array.from({ length: tickCount }, (_, i) =>
+      Math.max(1, Math.round((i / Math.max(tickCount - 1, 1)) * (todayDay - 1)) + 1)
+    )
+  )];
+  const xAxisLabels = dayTicks
+    .map((day) => {
+      const x = xForDay(day).toFixed(1);
+      return `<text x="${x}" y="${height - 8}" class="progress-chart-axis-label" text-anchor="middle">${day}</text>`;
+    })
+    .join("");
+
+  const [lastX, lastY] = points[points.length - 1];
+
+  els.tasksProgressChart.innerHTML = `
+    <line x1="${paddingLeft}" y1="${targetY.toFixed(1)}" x2="${width - paddingRight}" y2="${targetY.toFixed(1)}" class="progress-chart-target" />
+    <text x="${width - paddingRight}" y="${(targetY - 6).toFixed(1)}" class="progress-chart-target-label" text-anchor="end">יעד: ${totalTasks}</text>
+    ${gridLines}
+    <path d="${linePath}" class="progress-chart-line" fill="none" />
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="5" class="progress-chart-end-dot" />
+    <text x="${lastX.toFixed(1)}" y="${(lastY - 12).toFixed(1)}" class="progress-chart-end-label" text-anchor="middle">${completedSoFar}</text>
+    ${xAxisLabels}
+    <rect x="${paddingLeft}" y="${paddingTop}" width="${plotWidth}" height="${plotHeight}" fill="transparent" class="progress-chart-hover-target" />
+  `;
+
+  attachProgressChartHover(els.tasksProgressChart, points, dailyCompleted, {
+    paddingLeft,
+    plotWidth,
+    todayDay,
+  });
 }
 
 function buildThoughtRow(thought) {

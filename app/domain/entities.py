@@ -236,6 +236,11 @@ class Task:
     lives in. `None` only for tasks created before this field existed (or
     via the Inbox quick-capture path); the dashboard shows those in a
     dedicated "needs classification" bucket until the user picks one."""
+    completed_at: datetime | None = None
+    """When the task's status last became `done` — cleared if it's reopened.
+    Distinct from `updated_at`, which changes on every edit; this is the
+    one timestamp the monthly progress chart can trust for "which day was
+    this actually finished on"."""
 
 
 @dataclass(slots=True)

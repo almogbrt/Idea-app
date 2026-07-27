@@ -381,6 +381,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         if task is None:
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         task.status = status
+        task.completed_at = datetime.now(UTC) if status == TaskStatus.DONE else None
         return task
 
     async def set_due_at(self, task_id: uuid.UUID, due_at: datetime | None) -> Task:

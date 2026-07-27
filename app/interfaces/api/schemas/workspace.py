@@ -122,6 +122,13 @@ class SetTaskCategoryRequest(BaseModel):
     category: TaskCategory
 
 
+class MonthlyTaskProgressView(BaseModel):
+    month: str
+    today_day: int
+    total_tasks: int
+    daily_completed: list[int]
+
+
 class ThoughtView(BaseModel):
     id: uuid.UUID
     content: str

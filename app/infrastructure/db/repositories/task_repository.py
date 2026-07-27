@@ -59,6 +59,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         if row is None:
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         row.status = status.value
+        row.completed_at = datetime.now(UTC) if status == TaskStatus.DONE else None
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -187,4 +188,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             goal_id=row.goal_id,
             next_step=row.next_step,
             category=TaskCategory(row.category) if row.category else None,
+            completed_at=row.completed_at,
         )

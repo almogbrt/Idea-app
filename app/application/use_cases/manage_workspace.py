@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.application.ports.agent_execution_repository import AgentExecutionRepositoryPort
 from app.application.ports.client_attachment_repository import ClientAttachmentRepositoryPort
@@ -303,6 +303,66 @@ class ManageTasksUseCase:
         if task is None:
             raise NotFoundError("Task not found", details={"task_id": str(task_id)})
         return task
+
+    async def get_monthly_progress(self, user_id: uuid.UUID) -> MonthlyTaskProgress:
+        tasks = await self._tasks.list_by_user(user_id)
+        return compute_monthly_task_progress(tasks, datetime.now(UTC))
+
+
+@dataclass(frozen=True, slots=True)
+class MonthlyTaskProgress:
+    month: str
+    """ISO "YYYY-MM" of the month being reported on (always the current one)."""
+    today_day: int
+    total_tasks: int
+    """Tasks that currently "belong" to this month per the rollover rule
+    below — the chart's target/denominator."""
+    daily_completed: list[int]
+    """Cumulative count of `total_tasks` completed by the end of each day,
+    index 0 = day 1, length == `today_day`."""
+
+
+def _current_month_bounds(today: datetime) -> tuple[datetime, datetime]:
+    start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_start = (
+        start.replace(year=start.year + 1, month=1)
+        if start.month == 12
+        else start.replace(month=start.month + 1)
+    )
+    return start, next_start
+
+
+def compute_monthly_task_progress(tasks: list[Task], today: datetime) -> MonthlyTaskProgress:
+    """A task "belongs" to a month by its due date — but if it's still not
+    done by the end of that month, Almog wants it to roll over and count
+    against the next month instead (and the next, until it's finally done).
+    So a task belongs to the CURRENT month if it isn't due in the future,
+    and — if already done — wasn't finished before this month began."""
+    month_start, next_month_start = _current_month_bounds(today)
+
+    def belongs_to_current_month(task: Task) -> bool:
+        if task.due_at is None or task.due_at >= next_month_start:
+            return False
+        return task.completed_at is None or task.completed_at >= month_start
+
+    relevant = [t for t in tasks if belongs_to_current_month(t)]
+    today_day = today.day
+    daily_completed = [
+        sum(
+            1
+            for t in relevant
+            if t.completed_at is not None
+            and t.completed_at <= month_start.replace(day=day, hour=23, minute=59, second=59)
+        )
+        for day in range(1, today_day + 1)
+    ]
+
+    return MonthlyTaskProgress(
+        month=month_start.strftime("%Y-%m"),
+        today_day=today_day,
+        total_tasks=len(relevant),
+        daily_completed=daily_completed,
+    )
 
 
 class ManageThoughtsUseCase:

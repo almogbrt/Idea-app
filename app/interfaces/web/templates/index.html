@@ -191,6 +191,18 @@
         <div id="thoughts-empty" class="empty-state" hidden>עדיין אין מחשבות שמורות.</div>
       </section>
 
+      <div id="tasks-progress-card" class="dashboard-window">
+        <div class="section-heading">
+          <h2>התקדמות משימות החודש</h2>
+        </div>
+        <div id="tasks-progress-summary" class="tasks-progress-summary"></div>
+        <div id="tasks-progress-chart-wrap" class="tasks-progress-chart-wrap">
+          <svg id="tasks-progress-chart" class="tasks-progress-chart" viewBox="0 0 600 220" preserveAspectRatio="none"></svg>
+          <div id="tasks-progress-tooltip" class="tasks-progress-tooltip" hidden></div>
+        </div>
+        <div id="tasks-progress-empty" class="empty-state" hidden>אין משימות עם תאריך יעד החודש.</div>
+      </div>
+
       <div id="tasks-section">
         <div class="tasks-section-toolbar">
           <button id="new-task-btn" class="btn btn--ghost">
