@@ -193,13 +193,17 @@
 
       <div id="tasks-progress-card" class="dashboard-window">
         <div class="section-heading">
-          <h2>התקדמות משימות החודש</h2>
+          <h2>עמידה ביעדים החודש</h2>
+        </div>
+        <div id="tasks-progress-gauge-wrap" class="tasks-progress-gauge-wrap">
+          <svg id="tasks-progress-gauge" class="tasks-progress-gauge" viewBox="0 0 300 210"></svg>
+          <div class="tasks-progress-gauge-legend">
+            <span class="gauge-legend-item"><span class="gauge-legend-dot gauge-legend-dot--danger"></span>מאחורי היעד</span>
+            <span class="gauge-legend-item"><span class="gauge-legend-dot gauge-legend-dot--warning"></span>בדרך ליעד</span>
+            <span class="gauge-legend-item"><span class="gauge-legend-dot gauge-legend-dot--good"></span>עומד ביעד</span>
+          </div>
         </div>
         <div id="tasks-progress-summary" class="tasks-progress-summary"></div>
-        <div id="tasks-progress-chart-wrap" class="tasks-progress-chart-wrap">
-          <svg id="tasks-progress-chart" class="tasks-progress-chart" viewBox="0 0 600 220" preserveAspectRatio="none"></svg>
-          <div id="tasks-progress-tooltip" class="tasks-progress-tooltip" hidden></div>
-        </div>
         <div id="tasks-progress-empty" class="empty-state" hidden>אין משימות עם תאריך יעד החודש.</div>
       </div>
 

@@ -610,85 +610,105 @@ input {
 .tasks-progress-summary {
   font-size: 13.5px;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  text-align: center;
+  margin-top: 4px;
 }
 
-.tasks-progress-chart-wrap {
-  position: relative;
+.tasks-progress-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.tasks-progress-chart {
+.tasks-progress-gauge {
   width: 100%;
-  height: 220px;
+  max-width: 300px;
+  height: auto;
   display: block;
   /* The page is RTL, but `direction` is inherited into SVG <text> and
-     flips what text-anchor="end"/"start" mean — pin the chart to LTR so
-     the axis labels land where their x/y coordinates actually say. */
+     flips what text-anchor="end"/"start" mean — pin the gauge to LTR so
+     the tick labels land where their x/y coordinates actually say. */
   direction: ltr;
 }
 
-.progress-chart-line {
-  stroke: var(--purple);
-  stroke-width: 2;
+.gauge-track-zone {
+  fill: none;
+  stroke-width: 22;
+  stroke-linecap: butt;
+}
+
+.gauge-zone-danger {
+  stroke: var(--danger);
+}
+
+.gauge-zone-warning {
+  stroke: var(--gold);
+}
+
+.gauge-zone-good {
+  stroke: var(--green);
+}
+
+.gauge-needle {
+  stroke: var(--text);
+  stroke-width: 4;
   stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
-.progress-chart-end-dot {
-  fill: var(--purple);
-  stroke: var(--panel-bg);
-  stroke-width: 2;
-}
-
-.progress-chart-end-label {
-  font-size: 12px;
-  font-weight: 700;
+.gauge-pivot {
   fill: var(--text);
 }
 
-.progress-chart-target {
-  stroke: var(--text-faint);
-  stroke-width: 1.5;
-  stroke-dasharray: 5 4;
-}
-
-.progress-chart-target-label {
-  font-size: 11px;
-  fill: var(--text-muted);
-}
-
-.progress-chart-grid {
-  stroke: var(--border);
-  stroke-width: 1;
-}
-
-.progress-chart-axis-label {
-  font-size: 10.5px;
+.gauge-tick-label {
+  font-size: 13px;
   fill: var(--text-faint);
 }
 
-.progress-chart-crosshair {
-  stroke: var(--text-faint);
-  stroke-width: 1;
-  stroke-dasharray: 3 3;
+.gauge-percent-value {
+  font-size: 40px;
+  font-weight: 800;
+  fill: var(--text);
 }
 
-.progress-chart-hover-target {
-  cursor: crosshair;
-  pointer-events: all;
+.gauge-percent-suffix {
+  font-size: 16px;
+  font-weight: 600;
+  fill: var(--text-muted);
 }
 
-.tasks-progress-tooltip {
-  position: absolute;
-  transform: translate(-50%, -130%);
-  background: var(--text);
-  color: #fff;
+.tasks-progress-gauge-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
   font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 10;
+  color: var(--text-muted);
+}
+
+.gauge-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gauge-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.gauge-legend-dot--danger {
+  background: var(--danger);
+}
+
+.gauge-legend-dot--warning {
+  background: var(--gold);
+}
+
+.gauge-legend-dot--good {
+  background: var(--green);
 }
 
 .clients-grid {
