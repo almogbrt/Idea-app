@@ -30,10 +30,12 @@ const els = {
   tasksManagerialEmpty: document.getElementById("tasks-managerial-empty"),
   tasksManagerialShowAllBtn: document.getElementById("tasks-managerial-show-all-btn"),
   tasksManagerialClientFilter: document.getElementById("tasks-managerial-client-filter"),
+  tasksManagerialUrgencyFilter: document.getElementById("tasks-managerial-urgency-filter"),
   tasksOperationalList: document.getElementById("tasks-operational-list"),
   tasksOperationalEmpty: document.getElementById("tasks-operational-empty"),
   tasksOperationalShowAllBtn: document.getElementById("tasks-operational-show-all-btn"),
   tasksOperationalClientFilter: document.getElementById("tasks-operational-client-filter"),
+  tasksOperationalUrgencyFilter: document.getElementById("tasks-operational-urgency-filter"),
   listModal: document.getElementById("list-modal"),
   listModalTitle: document.getElementById("list-modal-title"),
   listModalBody: document.getElementById("list-modal-body"),
@@ -72,6 +74,7 @@ const els = {
   clientModalNewTaskStartAt: document.getElementById("client-modal-new-task-start-at"),
   clientModalNewTaskDueAt: document.getElementById("client-modal-new-task-due-at"),
   clientModalNewTaskCategory: document.getElementById("client-modal-new-task-category"),
+  clientModalNewTaskUrgency: document.getElementById("client-modal-new-task-urgency"),
   clientModalNewTaskAdd: document.getElementById("client-modal-new-task-add"),
   newTaskBtn: document.getElementById("new-task-btn"),
   newTaskModal: document.getElementById("new-task-modal"),
@@ -79,6 +82,9 @@ const els = {
   newTaskStartAt: document.getElementById("new-task-start-at"),
   newTaskDueAt: document.getElementById("new-task-due-at"),
   newTaskCategory: document.getElementById("new-task-category"),
+  newTaskUrgency: document.getElementById("new-task-urgency"),
+  newTaskClient: document.getElementById("new-task-client"),
+  newTaskClientOptions: document.getElementById("new-task-client-options"),
   newTaskSave: document.getElementById("new-task-save"),
   newTaskCancel: document.getElementById("new-task-cancel"),
   editTaskModal: document.getElementById("edit-task-modal"),
@@ -89,6 +95,7 @@ const els = {
   editTaskClient: document.getElementById("edit-task-client"),
   editTaskClientOptions: document.getElementById("edit-task-client-options"),
   editTaskCategory: document.getElementById("edit-task-category"),
+  editTaskUrgency: document.getElementById("edit-task-urgency"),
   editTaskSave: document.getElementById("edit-task-save"),
   editTaskCancel: document.getElementById("edit-task-cancel"),
   editTaskDelete: document.getElementById("edit-task-delete"),
@@ -565,13 +572,25 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   });
 });
 
-els.newTaskBtn.addEventListener("click", () => {
+let newTaskClientsList = [];
+
+els.newTaskBtn.addEventListener("click", async () => {
   els.newTaskModal.hidden = false;
   els.newTaskTitle.value = "";
   els.newTaskStartAt.value = "";
   els.newTaskDueAt.value = "";
   els.newTaskCategory.value = "";
+  els.newTaskUrgency.value = "";
+  els.newTaskClient.value = "";
   els.newTaskTitle.focus();
+  try {
+    newTaskClientsList = await apiFetch("/clients");
+    els.newTaskClientOptions.innerHTML = newTaskClientsList
+      .map((c) => `<option value="${escapeHtml(c.name)}"></option>`)
+      .join("");
+  } catch {
+    // not authenticated yet
+  }
 });
 els.newTaskCancel.addEventListener("click", () => {
   els.newTaskModal.hidden = true;
@@ -591,6 +610,7 @@ els.newTaskSave.addEventListener("click", async () => {
     return;
   }
   try {
+    const clientId = await resolveClientIdByName(els.newTaskClient.value, newTaskClientsList);
     await apiFetch("/tasks", {
       method: "POST",
       body: JSON.stringify({
@@ -598,6 +618,8 @@ els.newTaskSave.addEventListener("click", async () => {
         start_at: new Date(startValue).toISOString(),
         due_at: new Date(dueValue).toISOString(),
         category,
+        urgency: els.newTaskUrgency.value || null,
+        client_id: clientId,
       }),
     });
     els.newTaskModal.hidden = true;
@@ -974,12 +996,14 @@ els.clientModalNewTaskAdd.addEventListener("click", async () => {
         start_at: new Date(startValue).toISOString(),
         due_at: new Date(dueValue).toISOString(),
         category,
+        urgency: els.clientModalNewTaskUrgency.value || null,
       }),
     });
     els.clientModalNewTaskTitle.value = "";
     els.clientModalNewTaskStartAt.value = "";
     els.clientModalNewTaskDueAt.value = "";
     els.clientModalNewTaskCategory.value = "";
+    els.clientModalNewTaskUrgency.value = "";
     loadTasks();
     loadDashboardSummary();
     openClientModal(currentClientId);
@@ -1343,6 +1367,12 @@ function buildTaskCard(task, clientNameById) {
     clientBadge.textContent = clientNameById.get(task.client_id);
     footer.appendChild(clientBadge);
   }
+  if (task.urgency) {
+    const urgencyBadge = document.createElement("span");
+    urgencyBadge.className = `task-urgency-badge task-urgency-badge--${task.urgency}`;
+    urgencyBadge.textContent = TASK_URGENCY_LABELS[task.urgency] || task.urgency;
+    footer.appendChild(urgencyBadge);
+  }
   const badge = dueDateBadge(task);
   footer.appendChild(badge || Object.assign(document.createElement("span"), {
     className: "task-due task-due--none",
@@ -1356,6 +1386,7 @@ function buildTaskCard(task, clientNameById) {
 let taskClientNameById = new Map();
 
 const TASK_CATEGORY_LABELS = { managerial: "ניהולי", operational: "תפעולי" };
+const TASK_URGENCY_LABELS = { tracking: "במעקב", urgent: "דחוף", not_urgent: "לא דחוף" };
 
 function buildUncategorizedTaskCard(task, clientNameById) {
   const card = buildTaskCard(task, clientNameById);
@@ -1394,14 +1425,17 @@ function populateClientFilter(selectEl, clientsList) {
   }
 }
 
-function renderTaskCategoryWindow(category, { listEl, emptyEl, showAllBtn, clientFilterEl, emptyLabel }) {
+function renderTaskCategoryWindow(
+  category,
+  { listEl, emptyEl, showAllBtn, clientFilterEl, urgencyFilterEl, emptyLabel }
+) {
   const filterClientId = clientFilterEl.value;
-  const categoryTasks = currentTasks.filter((t) => t.category === category);
-  const filteredTasks = filterClientId
-    ? categoryTasks.filter((t) => t.client_id === filterClientId)
-    : categoryTasks;
+  const filterUrgency = urgencyFilterEl.value;
+  let filteredTasks = currentTasks.filter((t) => t.category === category);
+  if (filterClientId) filteredTasks = filteredTasks.filter((t) => t.client_id === filterClientId);
+  if (filterUrgency) filteredTasks = filteredTasks.filter((t) => t.urgency === filterUrgency);
   emptyEl.hidden = filteredTasks.length > 0;
-  emptyEl.textContent = filterClientId ? "אין משימות ללקוח שנבחר." : emptyLabel;
+  emptyEl.textContent = filterClientId || filterUrgency ? "אין משימות מתאימות לסינון." : emptyLabel;
 
   const { open, done } = sortTasksForDisplay(filteredTasks);
   renderWithShowAll(
@@ -1429,6 +1463,7 @@ function renderTasksList() {
     emptyEl: els.tasksManagerialEmpty,
     showAllBtn: els.tasksManagerialShowAllBtn,
     clientFilterEl: els.tasksManagerialClientFilter,
+    urgencyFilterEl: els.tasksManagerialUrgencyFilter,
     emptyLabel: "עדיין אין משימות ניהוליות.",
   });
   renderTaskCategoryWindow("operational", {
@@ -1436,12 +1471,15 @@ function renderTasksList() {
     emptyEl: els.tasksOperationalEmpty,
     showAllBtn: els.tasksOperationalShowAllBtn,
     clientFilterEl: els.tasksOperationalClientFilter,
+    urgencyFilterEl: els.tasksOperationalUrgencyFilter,
     emptyLabel: "עדיין אין משימות תפעוליות.",
   });
 }
 
 els.tasksManagerialClientFilter.addEventListener("change", renderTasksList);
 els.tasksOperationalClientFilter.addEventListener("change", renderTasksList);
+els.tasksManagerialUrgencyFilter.addEventListener("change", renderTasksList);
+els.tasksOperationalUrgencyFilter.addEventListener("change", renderTasksList);
 
 async function loadTasks() {
   try {
@@ -1627,21 +1665,20 @@ async function openEditTaskModal(taskId) {
   els.editTaskProject.value = task.project_id || "";
   els.editTaskClient.value = currentClient ? currentClient.name : "";
   els.editTaskCategory.value = task.category || "";
+  els.editTaskUrgency.value = task.urgency || "";
   els.editTaskModal.hidden = false;
 }
 
-async function resolveClientIdByName(name) {
+async function resolveClientIdByName(name, clientsList) {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const existing = editTaskClientsList.find(
-    (c) => c.name.toLowerCase() === trimmed.toLowerCase()
-  );
+  const existing = clientsList.find((c) => c.name.toLowerCase() === trimmed.toLowerCase());
   if (existing) return existing.id;
   const created = await apiFetch("/clients", {
     method: "POST",
     body: JSON.stringify({ name: trimmed }),
   });
-  editTaskClientsList.push(created);
+  clientsList.push(created);
   return created.id;
 }
 
@@ -1664,7 +1701,7 @@ els.editTaskSave.addEventListener("click", async () => {
   try {
     const startValue = els.editTaskStartAt.value;
     const dueValue = els.editTaskDueAt.value;
-    const clientId = await resolveClientIdByName(els.editTaskClient.value);
+    const clientId = await resolveClientIdByName(els.editTaskClient.value, editTaskClientsList);
     await apiFetch(`/tasks/${currentEditTaskId}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -1674,6 +1711,7 @@ els.editTaskSave.addEventListener("click", async () => {
         project_id: els.editTaskProject.value || null,
         client_id: clientId,
         category: els.editTaskCategory.value || null,
+        urgency: els.editTaskUrgency.value || null,
       }),
     });
     els.editTaskModal.hidden = true;

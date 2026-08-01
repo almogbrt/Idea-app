@@ -25,6 +25,7 @@ from app.domain.entities import (
     Task,
     TaskCategory,
     TaskStatus,
+    TaskUrgency,
 )
 from tests.conftest import (
     FakeAgentExecutionRepository,
@@ -386,13 +387,19 @@ async def test_manage_tasks_create_list_and_update_status(
     start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
     due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
     task = await use_case.create(
-        user_id, "Prep summer menu", due_at=due, start_at=start, category=TaskCategory.OPERATIONAL
+        user_id,
+        "Prep summer menu",
+        due_at=due,
+        start_at=start,
+        category=TaskCategory.OPERATIONAL,
+        urgency=TaskUrgency.URGENT,
     )
     tasks = await use_case.list_all(user_id)
 
     assert tasks[0].id == task.id
     assert tasks[0].status == TaskStatus.OPEN
     assert tasks[0].category == TaskCategory.OPERATIONAL
+    assert tasks[0].urgency == TaskUrgency.URGENT
 
     updated = await use_case.update_status(task.id, TaskStatus.DONE)
     assert updated.status == TaskStatus.DONE
@@ -408,6 +415,56 @@ async def test_manage_tasks_create_rejects_missing_category(
 
     with pytest.raises(ValidationError):
         await use_case.create(user_id, "Prep summer menu", due_at=due, start_at=start)
+
+
+async def test_manage_tasks_create_allows_missing_urgency(
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    """Unlike category, urgency is optional — a task with no urgency set is
+    valid, and just shows no badge on the dashboard."""
+    use_case = ManageTasksUseCase(fake_task_repository)
+    user_id = uuid.uuid4()
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
+    due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+
+    task = await use_case.create(
+        user_id, "Prep summer menu", due_at=due, start_at=start, category=TaskCategory.OPERATIONAL
+    )
+
+    assert task.urgency is None
+
+
+async def test_manage_tasks_update_details_sets_and_clears_urgency(
+    fake_task_repository: FakeTaskRepository,
+) -> None:
+    use_case = ManageTasksUseCase(fake_task_repository)
+    user_id = uuid.uuid4()
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=UTC)
+    due = datetime(2026, 8, 1, 9, 0, tzinfo=UTC)
+    task = await use_case.create(
+        user_id,
+        "Prep summer menu",
+        due_at=due,
+        start_at=start,
+        category=TaskCategory.OPERATIONAL,
+    )
+
+    tracked = await use_case.update_details(
+        task.id,
+        task.title,
+        due,
+        None,
+        None,
+        start,
+        TaskCategory.OPERATIONAL,
+        TaskUrgency.TRACKING,
+    )
+    assert tracked.urgency == TaskUrgency.TRACKING
+
+    cleared = await use_case.update_details(
+        task.id, task.title, due, None, None, start, TaskCategory.OPERATIONAL, None
+    )
+    assert cleared.urgency is None
 
 
 def _progress_task(

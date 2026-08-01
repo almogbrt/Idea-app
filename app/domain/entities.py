@@ -49,6 +49,17 @@ class TaskCategory(StrEnum):
     OPERATIONAL = "operational"
 
 
+class TaskUrgency(StrEnum):
+    """An independent axis from `TaskCategory` — a task is always exactly
+    one of managerial/operational, and separately may be flagged as one of
+    these three, or left unset."""
+
+    TRACKING = "tracking"
+    """Needs no action right now, just periodic follow-up/checking."""
+    URGENT = "urgent"
+    NOT_URGENT = "not_urgent"
+
+
 class FocusExitReason(StrEnum):
     DONE = "done"
     STUCK = "stuck"
@@ -241,6 +252,10 @@ class Task:
     Distinct from `updated_at`, which changes on every edit; this is the
     one timestamp the monthly progress chart can trust for "which day was
     this actually finished on"."""
+    urgency: TaskUrgency | None = None
+    """Optional, independent of `category` — unlike category this is never
+    required, so existing tasks simply show no urgency badge until one is
+    set."""
 
 
 @dataclass(slots=True)

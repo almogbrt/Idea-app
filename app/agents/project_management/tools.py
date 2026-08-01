@@ -15,6 +15,7 @@ from app.domain.entities import (
     Task,
     TaskCategory,
     TaskStatus,
+    TaskUrgency,
     Thought,
     ToolResult,
 )
@@ -62,6 +63,7 @@ def _task_json(task: Task) -> dict[str, Any]:
         "due_at": task.due_at.isoformat() if task.due_at else None,
         "start_at": task.start_at.isoformat() if task.start_at else None,
         "category": task.category.value if task.category else None,
+        "urgency": task.urgency.value if task.urgency else None,
     }
 
 
@@ -338,6 +340,16 @@ class CreateTaskTool(Tool):
                     "operational, which decides which dashboard window it appears in."
                 ),
             },
+            "urgency": {
+                "type": "string",
+                "enum": [u.value for u in TaskUrgency],
+                "description": (
+                    "Optional urgency flag, independent of category — 'tracking' (just "
+                    "needs periodic follow-up/checking), 'urgent', or 'not_urgent'. Only "
+                    "set this if the user actually says something about urgency; leave it "
+                    "out otherwise."
+                ),
+            },
         },
         "required": ["title", "start_at", "due_at", "category"],
     }
@@ -347,6 +359,7 @@ class CreateTaskTool(Tool):
         self._service = service
 
     async def execute(self, arguments: dict[str, Any], context: ToolExecutionContext) -> ToolResult:
+        urgency = arguments.get("urgency")
         task = await self._service.create_task(
             context.user_id,
             arguments["title"],
@@ -355,6 +368,7 @@ class CreateTaskTool(Tool):
             arguments.get("client_name"),
             _parse_due_at(arguments.get("start_at")),
             TaskCategory(arguments["category"]),
+            TaskUrgency(urgency) if urgency else None,
         )
         return ToolResult(
             tool_call_id="", tool_name=self.name, content=json.dumps(_task_json(task))

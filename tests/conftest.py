@@ -65,6 +65,7 @@ from app.domain.entities import (
     TaskCategory,
     TaskImportance,
     TaskStatus,
+    TaskUrgency,
     Thought,
     ToolDefinition,
     User,
@@ -352,6 +353,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         now = datetime.now(UTC)
         task = Task(
@@ -366,6 +368,7 @@ class FakeTaskRepository(TaskRepositoryPort):
             client_id=client_id,
             start_at=start_at,
             category=category,
+            urgency=urgency,
         )
         self.tasks[task.id] = task
         return task
@@ -416,6 +419,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         task = self.tasks.get(task_id)
         if task is None:
@@ -426,6 +430,7 @@ class FakeTaskRepository(TaskRepositoryPort):
         task.client_id = client_id
         task.start_at = start_at
         task.category = category
+        task.urgency = urgency
         return task
 
     async def set_category(self, task_id: uuid.UUID, category: TaskCategory) -> Task:

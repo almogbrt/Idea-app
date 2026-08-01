@@ -398,6 +398,7 @@ def _task_view(task: Task) -> TaskView:
         goal_id=task.goal_id,
         next_step=task.next_step,
         category=task.category,
+        urgency=task.urgency,
     )
 
 
@@ -415,6 +416,7 @@ async def create_task(
         body.client_id,
         body.start_at,
         body.category,
+        body.urgency,
     )
     return _task_view(task)
 
@@ -473,6 +475,7 @@ async def update_task(
         body.client_id,
         body.start_at,
         body.category,
+        body.urgency,
     )
     return _task_view(updated)
 

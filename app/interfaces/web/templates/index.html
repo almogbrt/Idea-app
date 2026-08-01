@@ -229,6 +229,12 @@
               <select id="tasks-managerial-client-filter" class="tasks-client-filter">
                 <option value="">כל הלקוחות</option>
               </select>
+              <select id="tasks-managerial-urgency-filter" class="tasks-client-filter">
+                <option value="">כל הדחיפויות</option>
+                <option value="tracking">במעקב</option>
+                <option value="urgent">דחוף</option>
+                <option value="not_urgent">לא דחוף</option>
+              </select>
               <button id="tasks-managerial-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
             </div>
           </div>
@@ -242,6 +248,12 @@
             <div class="section-heading-actions">
               <select id="tasks-operational-client-filter" class="tasks-client-filter">
                 <option value="">כל הלקוחות</option>
+              </select>
+              <select id="tasks-operational-urgency-filter" class="tasks-client-filter">
+                <option value="">כל הדחיפויות</option>
+                <option value="tracking">במעקב</option>
+                <option value="urgent">דחוף</option>
+                <option value="not_urgent">לא דחוף</option>
               </select>
               <button id="tasks-operational-show-all-btn" class="btn btn--ghost btn--small" hidden>הצג הכל</button>
             </div>
@@ -477,6 +489,25 @@
           <option value="operational">תפעולי</option>
         </select>
       </label>
+      <label class="modal-field-label">דחיפות (לא חובה)
+        <select id="new-task-urgency">
+          <option value="">ללא דחיפות</option>
+          <option value="tracking">במעקב</option>
+          <option value="urgent">דחוף</option>
+          <option value="not_urgent">לא דחוף</option>
+        </select>
+      </label>
+      <label class="modal-field-label">שם העסק / לקוח (לא חובה)
+        <input
+          id="new-task-client"
+          type="text"
+          list="new-task-client-options"
+          maxlength="20"
+          placeholder="שם לקוח..."
+          autocomplete="off"
+        />
+        <datalist id="new-task-client-options"></datalist>
+      </label>
       <div class="modal-actions">
         <button id="new-task-cancel" class="btn btn--ghost">ביטול</button>
         <button id="new-task-save" class="btn btn--primary">צור משימה</button>
@@ -515,6 +546,14 @@
           <option value="">ללא סיווג</option>
           <option value="managerial">ניהולי</option>
           <option value="operational">תפעולי</option>
+        </select>
+      </label>
+      <label class="modal-field-label">דחיפות (לא חובה)
+        <select id="edit-task-urgency">
+          <option value="">ללא דחיפות</option>
+          <option value="tracking">במעקב</option>
+          <option value="urgent">דחוף</option>
+          <option value="not_urgent">לא דחוף</option>
         </select>
       </label>
       <div class="modal-actions modal-actions--split">
@@ -605,6 +644,12 @@
             <option value="" disabled selected>סוג...</option>
             <option value="managerial">ניהולי</option>
             <option value="operational">תפעולי</option>
+          </select>
+          <select id="client-modal-new-task-urgency" title="דחיפות (לא חובה)">
+            <option value="">ללא דחיפות</option>
+            <option value="tracking">במעקב</option>
+            <option value="urgent">דחוף</option>
+            <option value="not_urgent">לא דחוף</option>
           </select>
           <button id="client-modal-new-task-add" class="btn btn--ghost btn--small">הוספה</button>
         </div>

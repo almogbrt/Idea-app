@@ -35,6 +35,7 @@ from app.domain.entities import (
     Task,
     TaskCategory,
     TaskStatus,
+    TaskUrgency,
     Thought,
 )
 
@@ -152,11 +153,12 @@ class _FakeWorkspaceService:
         client_name: str | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         self.calls.append(
             (
                 "create_task",
-                (user_id, title, project_name, due_at, client_name, start_at, category),
+                (user_id, title, project_name, due_at, client_name, start_at, category, urgency),
             )
         )
         now = datetime.now(UTC)
@@ -172,6 +174,7 @@ class _FakeWorkspaceService:
             due_at=due_at,
             start_at=start_at,
             category=category,
+            urgency=urgency,
         )
 
     async def bulk_quick_capture_tasks(
@@ -420,6 +423,7 @@ async def test_create_task_tool_passes_project_name() -> None:
                 None,
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
                 TaskCategory.OPERATIONAL,
+                None,
             ),
         )
     ]
@@ -451,6 +455,7 @@ async def test_create_task_tool_parses_start_and_due_at() -> None:
                 None,
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
                 TaskCategory.MANAGERIAL,
+                None,
             ),
         )
     ]
@@ -485,10 +490,45 @@ async def test_create_task_tool_passes_client_name() -> None:
                 "Baron's",
                 datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
                 TaskCategory.OPERATIONAL,
+                None,
             ),
         )
     ]
     assert json.loads(result.content)["client_id"] is not None
+
+
+async def test_create_task_tool_passes_optional_urgency() -> None:
+    service = _FakeWorkspaceService()
+    tool = CreateTaskTool(service)
+    context = _context()
+
+    result = await tool.execute(
+        {
+            "title": "Chase up the contract",
+            "start_at": "2026-08-01T08:00:00+00:00",
+            "due_at": "2026-08-01T09:00:00+00:00",
+            "category": "operational",
+            "urgency": "tracking",
+        },
+        context,
+    )
+
+    assert service.calls == [
+        (
+            "create_task",
+            (
+                context.user_id,
+                "Chase up the contract",
+                None,
+                datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+                None,
+                datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+                TaskCategory.OPERATIONAL,
+                TaskUrgency.TRACKING,
+            ),
+        )
+    ]
+    assert json.loads(result.content)["urgency"] == "tracking"
 
 
 async def test_bulk_create_tasks_tool_parses_titles_and_due_dates() -> None:

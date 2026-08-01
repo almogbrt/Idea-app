@@ -11,6 +11,7 @@ from app.domain.entities import (
     TaskCategory,
     TaskImportance,
     TaskStatus,
+    TaskUrgency,
 )
 
 
@@ -84,6 +85,7 @@ class TaskView(BaseModel):
     goal_id: uuid.UUID | None = None
     next_step: str | None = None
     category: TaskCategory | None = None
+    urgency: TaskUrgency | None = None
 
 
 class CreateTaskRequest(BaseModel):
@@ -91,7 +93,8 @@ class CreateTaskRequest(BaseModel):
     is the single place that enforces both being required for new tasks, so
     every entry point (dashboard, chat) is held to the same rule. category
     is required here, at the schema level, since every new task must always
-    be classified up front."""
+    be classified up front. urgency is a separate, optional axis — never
+    required."""
 
     title: str = Field(..., min_length=1, max_length=500)
     project_id: uuid.UUID | None = None
@@ -99,6 +102,7 @@ class CreateTaskRequest(BaseModel):
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
     category: TaskCategory
+    urgency: TaskUrgency | None = None
 
 
 class UpdateTaskStatusRequest(BaseModel):
@@ -116,6 +120,7 @@ class UpdateTaskRequest(BaseModel):
     client_id: uuid.UUID | None = None
     start_at: datetime | None = None
     category: TaskCategory | None = None
+    urgency: TaskUrgency | None = None
 
 
 class SetTaskCategoryRequest(BaseModel):

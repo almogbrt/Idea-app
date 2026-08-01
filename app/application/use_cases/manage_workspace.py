@@ -35,6 +35,7 @@ from app.domain.entities import (
     Task,
     TaskCategory,
     TaskStatus,
+    TaskUrgency,
     Thought,
 )
 
@@ -232,6 +233,7 @@ class ManageTasksUseCase:
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         if start_at is None or due_at is None:
             raise ValidationError(
@@ -244,7 +246,7 @@ class ManageTasksUseCase:
         if category is None:
             raise ValidationError("A new task needs a category (managerial or operational).")
         return await self._tasks.create(
-            user_id, title, project_id, due_at, client_id, start_at, category
+            user_id, title, project_id, due_at, client_id, start_at, category, urgency
         )
 
     async def quick_capture(self, user_id: uuid.UUID, title: str) -> Task:
@@ -284,12 +286,13 @@ class ManageTasksUseCase:
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         """A full-form save — unlike `create`, editing an existing task does
         not force adding a start/end time (or a category) retroactively if
         it never had one."""
         return await self._tasks.update_details(
-            task_id, title, due_at, project_id, client_id, start_at, category
+            task_id, title, due_at, project_id, client_id, start_at, category, urgency
         )
 
     async def set_category(self, task_id: uuid.UUID, category: TaskCategory) -> Task:

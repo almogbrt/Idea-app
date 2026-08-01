@@ -680,6 +680,25 @@ def test_get_monthly_task_progress_reflects_completed_tasks(client: TestClient) 
     assert body["daily_completed"][-1] == 1
 
 
+def test_task_urgency_is_optional_and_can_be_set_and_cleared(client: TestClient) -> None:
+    _install_scope(client)
+    task = client.post(
+        "/api/v1/tasks", json=_task_payload(title="Chase up the contract")
+    ).json()
+    assert task["urgency"] is None
+
+    with_urgency = client.patch(
+        f"/api/v1/tasks/{task['id']}",
+        json={"title": "Chase up the contract", "urgency": "tracking"},
+    ).json()
+    assert with_urgency["urgency"] == "tracking"
+
+    cleared = client.patch(
+        f"/api/v1/tasks/{task['id']}", json={"title": "Chase up the contract"}
+    ).json()
+    assert cleared["urgency"] is None
+
+
 def test_create_task_with_due_at_and_update_details(client: TestClient) -> None:
     _install_scope(client)
     task = client.post(

@@ -221,6 +221,7 @@ class TaskModel(Base):
     next_step: Mapped[str | None] = mapped_column(nullable=True)
     category: Mapped[str | None] = mapped_column(String(20), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(_TIMESTAMPTZ, nullable=True)
+    urgency: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class ThoughtModel(Base):

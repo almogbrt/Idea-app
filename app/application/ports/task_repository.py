@@ -4,7 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus
+from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus, TaskUrgency
 
 
 class TaskRepositoryPort(ABC):
@@ -18,6 +18,7 @@ class TaskRepositoryPort(ABC):
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         raise NotImplementedError
 
@@ -59,6 +60,7 @@ class TaskRepositoryPort(ABC):
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         """A full-form save (edit modal), not a partial patch — every field
         is set exactly to what's given, `None` included, so clearing a

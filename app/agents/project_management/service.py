@@ -28,6 +28,7 @@ from app.domain.entities import (
     Task,
     TaskCategory,
     TaskStatus,
+    TaskUrgency,
     Thought,
 )
 from app.infrastructure.db.repositories.client_attachment_repository import (
@@ -168,6 +169,7 @@ class WorkspaceService:
         client_name: str | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         if start_at is None or due_at is None:
             raise ValidationError(
@@ -200,6 +202,7 @@ class WorkspaceService:
                 client_id=client_id,
                 start_at=start_at,
                 category=category,
+                urgency=urgency,
             )
             await session.commit()
             return task
@@ -272,6 +275,7 @@ class WorkspaceService:
                 client_id,
                 task.start_at,
                 task.category,
+                task.urgency,
             )
             await session.commit()
             return updated

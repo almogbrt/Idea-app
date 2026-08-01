@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.task_repository import TaskRepositoryPort
 from app.core.exceptions import NotFoundError
-from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus
+from app.domain.entities import Task, TaskCategory, TaskImportance, TaskStatus, TaskUrgency
 from app.infrastructure.db.models import TaskModel
 
 
@@ -25,6 +25,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         client_id: uuid.UUID | None = None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         row = TaskModel(
             user_id=user_id,
@@ -35,6 +36,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             client_id=client_id,
             start_at=start_at,
             category=category.value if category else None,
+            urgency=urgency.value if urgency else None,
         )
         self._session.add(row)
         await self._session.flush()
@@ -102,6 +104,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         client_id: uuid.UUID | None,
         start_at: datetime | None = None,
         category: TaskCategory | None = None,
+        urgency: TaskUrgency | None = None,
     ) -> Task:
         row = await self._session.get(TaskModel, task_id)
         if row is None:
@@ -112,6 +115,7 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
         row.client_id = client_id
         row.start_at = start_at
         row.category = category.value if category else None
+        row.urgency = urgency.value if urgency else None
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)
@@ -189,4 +193,5 @@ class SqlAlchemyTaskRepository(TaskRepositoryPort):
             next_step=row.next_step,
             category=TaskCategory(row.category) if row.category else None,
             completed_at=row.completed_at,
+            urgency=TaskUrgency(row.urgency) if row.urgency else None,
         )
