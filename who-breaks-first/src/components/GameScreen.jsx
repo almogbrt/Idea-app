@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import EnvelopeCard from './EnvelopeCard';
 import ChoiceModal from './ChoiceModal';
-import ConfirmModal from './ConfirmModal';
+import RestartLink from './RestartLink';
 import { ui } from '../data/content';
 import { giveUpCaption } from '../game/engine';
 import styles from './GameScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
 export default function GameScreen({ state, dispatch, currentEnvelope, remainingCount, resetGame }) {
-  const [showRestart, setShowRestart] = useState(false);
-
   const openedCount = state.openedIds.length;
   const caption = giveUpCaption(openedCount, ui);
 
@@ -35,9 +32,7 @@ export default function GameScreen({ state, dispatch, currentEnvelope, remaining
     <div className={`${styles.wrap} ${tensionClass}`}>
       <div className={styles.header}>
         <span className={styles.progress}>{progressText}</span>
-        <button className={styles.restartBtn} onClick={() => setShowRestart(true)}>
-          {ui.restart}
-        </button>
+        <RestartLink onRestart={resetGame} />
       </div>
 
       <div className={styles.stage}>
@@ -109,20 +104,6 @@ export default function GameScreen({ state, dispatch, currentEnvelope, remaining
         </button>
         {caption && <span className={styles.breakCaption}>{caption}</span>}
       </div>
-
-      {showRestart && (
-        <ConfirmModal
-          title={ui.confirmRestartTitle}
-          body={ui.confirmRestartBody}
-          confirmLabel={ui.confirmRestartYes}
-          cancelLabel={ui.confirmRestartNo}
-          onConfirm={() => {
-            setShowRestart(false);
-            resetGame();
-          }}
-          onCancel={() => setShowRestart(false)}
-        />
-      )}
     </div>
   );
 }

@@ -6,6 +6,11 @@
   gap: var(--space-3);
 }
 
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .title {
   text-align: center;
   font-size: 1.5rem;

@@ -1,4 +1,5 @@
 import CardChooser from './CardChooser';
+import RestartLink from './RestartLink';
 import { loserCards, ui } from '../data/content';
 import styles from './LoserEnvelope.module.css';
 import buttons from '../styles/buttons.module.css';
@@ -6,6 +7,12 @@ import buttons from '../styles/buttons.module.css';
 export default function LoserEnvelope({ selectedId, onSelect, onRestart }) {
   return (
     <div className={styles.wrap}>
+      {!selectedId && (
+        <div className={styles.topBar}>
+          <RestartLink onRestart={onRestart} />
+        </div>
+      )}
+
       <h1 className={styles.title}>מעטפת המפסיד</h1>
 
       <CardChooser cards={loserCards} selectedId={selectedId} onSelect={onSelect} />

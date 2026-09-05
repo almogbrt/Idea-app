@@ -1,10 +1,15 @@
 import { finalScreen } from '../data/content';
+import RestartLink from './RestartLink';
 import styles from './FinalScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
-export default function FinalScreen({ onContinue }) {
+export default function FinalScreen({ onContinue, onRestart }) {
   return (
     <div className={styles.wrap}>
+      <div className={styles.topBar}>
+        <RestartLink onRestart={onRestart} />
+      </div>
+
       <h1 className={styles.title}>{finalScreen.title}</h1>
 
       <div className={styles.section}>

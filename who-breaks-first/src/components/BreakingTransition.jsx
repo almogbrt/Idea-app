@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { breaking } from '../data/content';
 import { vibrate } from '../utils/vibrate';
+import RestartLink from './RestartLink';
 import styles from './BreakingTransition.module.css';
 import buttons from '../styles/buttons.module.css';
 
-export default function BreakingTransition({ onContinue }) {
+export default function BreakingTransition({ onContinue, onRestart }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function BreakingTransition({ onContinue }) {
           </button>
         )}
       </div>
+      {step >= 1 && <RestartLink onRestart={onRestart} className={styles.restartDark} />}
     </div>
   );
 }

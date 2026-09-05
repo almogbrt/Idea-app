@@ -1,10 +1,15 @@
 import { rules } from '../data/content';
+import RestartLink from './RestartLink';
 import styles from './RulesScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
-export default function RulesScreen({ onContinue }) {
+export default function RulesScreen({ onContinue, onRestart }) {
   return (
     <div className={styles.wrap}>
+      <div className={styles.topBar}>
+        <RestartLink onRestart={onRestart} />
+      </div>
+
       <h1 className={styles.title}>{rules.title}</h1>
 
       <ul className={styles.list}>
