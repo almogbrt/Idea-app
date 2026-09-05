@@ -7,6 +7,18 @@
   overflow-y: auto;
 }
 
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.iconRow {
+  display: flex;
+  justify-content: center;
+  color: var(--color-gold);
+  margin-bottom: var(--space-1);
+}
+
 .title {
   font-size: 1.7rem;
   text-align: center;
@@ -66,7 +78,7 @@
   font-size: 0.94rem;
   color: var(--text-on-cream);
   padding: var(--space-2) 0;
-  border-top: 1px dashed rgba(92, 21, 36, 0.18);
+  border-top: 1px dashed rgba(20, 16, 14, 0.18);
 }
 
 .prompt:first-of-type {

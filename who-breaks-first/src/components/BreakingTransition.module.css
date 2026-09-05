@@ -32,6 +32,19 @@
   gap: var(--space-4);
 }
 
+.icon {
+  color: var(--color-gold);
+  opacity: 0;
+  animation: lineIn 0.8s ease forwards;
+}
+
+.restartDark {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  color: var(--text-on-dark-muted) !important;
+}
+
 @keyframes candleFlicker {
   0%,
   100% {

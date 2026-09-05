@@ -13,7 +13,9 @@ export default function App() {
     <div className="app-shell">
       {state.screen === 'intro' && <IntroScreen onStart={() => dispatch({ type: 'GO_RULES' })} />}
 
-      {state.screen === 'rules' && <RulesScreen onContinue={() => dispatch({ type: 'START_GAME' })} />}
+      {state.screen === 'rules' && (
+        <RulesScreen onContinue={() => dispatch({ type: 'START_GAME' })} onRestart={resetGame} />
+      )}
 
       {state.screen === 'game' && (
         <GameScreen
@@ -26,9 +28,13 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'breaking' && <BreakingTransition onContinue={() => dispatch({ type: 'BREAKING_DONE' })} />}
+      {state.screen === 'breaking' && (
+        <BreakingTransition onContinue={() => dispatch({ type: 'BREAKING_DONE' })} onRestart={resetGame} />
+      )}
 
-      {state.screen === 'final' && <FinalScreen onContinue={() => dispatch({ type: 'FINAL_DONE' })} />}
+      {state.screen === 'final' && (
+        <FinalScreen onContinue={() => dispatch({ type: 'FINAL_DONE' })} onRestart={resetGame} />
+      )}
 
       {state.screen === 'loser' && (
         <LoserEnvelope
