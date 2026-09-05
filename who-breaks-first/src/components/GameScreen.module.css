@@ -52,10 +52,99 @@
 
 .stage {
   flex: 1;
+  position: relative;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: var(--space-3);
+}
+
+.riskConfirm {
+  text-align: center;
+  font-size: 1.2rem;
+  color: var(--color-wine);
+  padding: var(--space-5) var(--space-3);
+}
+
+.feedbackPanel {
+  background: var(--color-cream-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+}
+
+.feedbackQuestion {
+  font-size: 1.1rem;
+  color: var(--color-wine);
+  margin-bottom: var(--space-3);
+}
+
+.feedbackOptions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.riskPanel {
+  text-align: center;
+}
+
+.riskPrompt {
+  font-size: 1.2rem;
+  color: var(--color-wine);
+  margin-bottom: var(--space-3);
+}
+
+.riskCards {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.safeCard,
+.riskCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-2);
+  min-height: 150px;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.safeCard:active,
+.riskCard:active {
+  transform: scale(0.97);
+}
+
+.safeCard {
+  background: var(--color-cream-soft);
+  border: 1.4px solid rgba(20, 16, 14, 0.15);
+}
+
+.safeCardLabel {
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.riskCard {
+  background: linear-gradient(160deg, rgba(107, 18, 32, 0.08), rgba(107, 18, 32, 0.14));
+  border: 1.4px solid var(--color-danger-wine);
+}
+
+.riskCardLabel {
+  font-weight: 600;
+  color: var(--color-danger-wine);
+}
+
+.riskCardBody {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .idleTile {

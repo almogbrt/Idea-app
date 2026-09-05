@@ -1,0 +1,70 @@
+.wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3) var(--space-5);
+  gap: var(--space-4);
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.progress {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.privacyNote {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 300px;
+}
+
+.instruction {
+  font-size: 0.95rem;
+  color: var(--color-wine);
+  font-weight: 500;
+}
+
+.handoffName {
+  font-size: 1.6rem;
+  color: var(--color-wine);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 320px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.option {
+  background: var(--color-cream-soft);
+  border: 1.4px solid rgba(20, 16, 14, 0.15);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  font-size: 1.05rem;
+  color: var(--text-on-cream);
+  font-weight: 500;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.option:active {
+  transform: scale(0.97);
+  border-color: var(--color-gold);
+}
