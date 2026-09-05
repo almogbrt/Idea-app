@@ -27,8 +27,8 @@ export default function BreakingTransition({ onContinue, onRestart }) {
             <SealIcon size={28} />
           </div>
         )}
-        {step >= 1 && <p className={styles.line}>{breaking.lines[0]}</p>}
-        {step >= 2 && <p className={`${styles.line} ${styles.gold}`}>{breaking.lines[1]}</p>}
+        {step >= 1 && <p className={`${styles.line} serifTitle`}>{breaking.lines[0]}</p>}
+        {step >= 2 && <p className={`${styles.line} ${styles.gold} serifTitle`}>{breaking.lines[1]}</p>}
         {step >= 3 && (
           <button className={`${buttons.gold} ${styles.cta}`} onClick={onContinue}>
             {breaking.cta}

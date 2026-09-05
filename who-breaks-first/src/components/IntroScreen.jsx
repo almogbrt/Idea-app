@@ -9,7 +9,7 @@ export default function IntroScreen({ onStart }) {
       <div className={styles.iconRow}>
         <EnvelopeIcon size={36} />
       </div>
-      <h1 className={styles.title}>{intro.title}</h1>
+      <h1 className={`${styles.title} serifTitle`}>{intro.title}</h1>
       <div className={styles.divider} />
       <p className={styles.subtitle}>{intro.subtitle}</p>
       <p className={styles.body}>{intro.body}</p>

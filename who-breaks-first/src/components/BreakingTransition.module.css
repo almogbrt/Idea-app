@@ -71,7 +71,6 @@
 
 .line {
   font-size: 1.5rem;
-  font-family: var(--font-display);
   color: var(--color-cream-soft);
   opacity: 0;
   animation: lineIn 0.8s ease forwards;

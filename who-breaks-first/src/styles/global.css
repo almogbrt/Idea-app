@@ -63,6 +63,13 @@ p {
   margin: 0;
 }
 
+/* שמור לכותרות של רגעי שיא דרמטיים בלבד (פתיחה, שבירה, סיום) — לא לכותרות תפעוליות */
+.serifTitle {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;

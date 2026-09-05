@@ -22,12 +22,12 @@ export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip })
     vibrate(15);
 
     timeouts.current.push(
-      setTimeout(() => setPhase('opening'), 400),
-      setTimeout(() => setPhase('pause'), 900),
+      setTimeout(() => setPhase('opening'), 450),
+      setTimeout(() => setPhase('pause'), 1050),
       setTimeout(() => {
         setPhase('revealed');
         onRevealed();
-      }, 1500)
+      }, 1750)
     );
 
     return () => timeouts.current.forEach(clearTimeout);
