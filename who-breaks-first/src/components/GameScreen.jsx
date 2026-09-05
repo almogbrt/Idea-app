@@ -96,7 +96,7 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
           </div>
         ) : state.climaxTriggered ? (
           <div className={styles.climaxPanel}>
-            <h2 className={styles.climaxTitle}>{ui.climaxTitle}</h2>
+            <h2 className={`${styles.climaxTitle} serifTitle`}>{ui.climaxTitle}</h2>
             <p className={styles.climaxSubtitle}>{ui.climaxSubtitle}</p>
             <div className={styles.climaxButtons}>
               {remainingCount > 0 && (

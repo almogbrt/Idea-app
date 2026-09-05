@@ -15,7 +15,7 @@ export default function FinalScreen({ onContinue, onRestart }) {
         <KeyIcon size={30} />
       </div>
 
-      <h1 className={styles.title}>{finalScreen.title}</h1>
+      <h1 className={`${styles.title} serifTitle`}>{finalScreen.title}</h1>
 
       <div className={styles.section}>
         {finalScreen.prompts.map((prompt) => (
@@ -25,7 +25,7 @@ export default function FinalScreen({ onContinue, onRestart }) {
         ))}
       </div>
 
-      <p className={styles.kissLine}>{finalScreen.kissLine}</p>
+      <p className={`${styles.kissLine} serifTitle`}>{finalScreen.kissLine}</p>
       <p className={styles.closing}>{finalScreen.closingText}</p>
 
       <div className={styles.footer}>

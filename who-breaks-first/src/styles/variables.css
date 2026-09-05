@@ -21,6 +21,8 @@
 
   --font-display: 'Rubik', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Rubik', 'Segoe UI', system-ui, sans-serif;
+  /* סריף עדין, שמור לרגעי השיא הדרמטיים בלבד (פתיחה, שבירה, סיום) */
+  --font-serif: 'Frank Ruhl Libre', 'David Libre', Georgia, serif;
 
   --radius-lg: 26px;
   --radius-md: 18px;

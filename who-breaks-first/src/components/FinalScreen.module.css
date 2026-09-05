@@ -50,7 +50,6 @@
 
 .kissLine {
   text-align: center;
-  font-family: var(--font-display);
   font-size: 1.4rem;
   color: var(--color-gold);
   margin: var(--space-1) 0;
