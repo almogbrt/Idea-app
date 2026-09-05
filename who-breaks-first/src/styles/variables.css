@@ -10,6 +10,9 @@
   --color-gold: #c9a24b;
   --color-gold-light: #e4cfa0;
   --color-gold-soft: rgba(201, 162, 75, 0.16);
+  /* accent ייעודי ל-RISK בלבד — לא חלק מלוח הצבעים הכללי */
+  --color-danger-wine: #6b1220;
+  --color-danger-wine-soft: rgba(107, 18, 32, 0.08);
 
   --text-on-cream: var(--color-black);
   --text-muted: rgba(20, 16, 14, 0.6);

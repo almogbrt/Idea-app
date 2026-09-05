@@ -30,11 +30,47 @@ export const rules = {
   cta: 'ערבבו את המעטפות',
 };
 
+export const defaultPlayers = {
+  p1: 'אני',
+  p2: 'בן/בת הזוג',
+};
+
+export const playersScreen = {
+  title: 'מי משחק?',
+  label1: 'שחקן 1',
+  label2: 'שחקן 2',
+  cta: 'המשך',
+};
+
+// שאלון פרטי — לומד מה עובד על כל אחד מהמשתתפים, בלי לחשוף תשובות לצד השני
+export const desireQuiz = {
+  intro: {
+    title: 'מה עובד עליך?',
+    privacyNote: 'התשובות נשמרות רק במכשיר הזה ומשמשות את המשחק הנוכחי.',
+  },
+  handoff: (name) => `העבירו את הטלפון ל${name}.`,
+  startInstruction: 'ענה/י בלי להראות לצד השני.',
+  questions: [
+    { id: 'q1', tagA: 'words', labelA: 'מילים', tagB: 'touch', labelB: 'מגע' },
+    { id: 'q2', tagA: 'eyeContact', labelA: 'קשר עין', tagB: 'proximity', labelB: 'קרבה' },
+    { id: 'q3', tagA: 'leading', labelA: 'להוביל', tagB: 'beingLed', labelB: 'להיות מובל/ת' },
+    { id: 'q4', tagA: 'anticipation', labelA: 'לדעת מה עומד לקרות', tagB: 'surprise', labelB: 'להיות מופתע/ת' },
+    { id: 'q5', tagA: 'slowBuild', labelA: 'מתח שנבנה לאט', tagB: 'spontaneous', labelB: 'ספונטניות' },
+    { id: 'q6', tagA: 'pampering', labelA: 'פינוק', tagB: 'seduction', labelB: 'פיתוי' },
+    { id: 'q7', tagA: 'proximity', labelA: 'להתקרב', tagB: 'teasing', labelB: 'להיות קרוב אבל לא לגעת' },
+  ],
+  done: {
+    text: 'המשחק למד מספיק.',
+    cta: 'תמשיכו.',
+  },
+};
+
 // type משמש לאיזון push/pull (לא לחזור פעמיים ברצף על אותו סוג חוויה)
 // level הוא הרמה הנסתרת שמנהלת את עקומת המתח (1=חימום ... 4=נקודת שבירה)
 export const envelopes = [
   {
     id: 'too-close',
+    desireTags: ['proximity', 'touch', 'teasing'],
     level: 2,
     type: 'close',
     duration: 60,
@@ -43,6 +79,7 @@ export const envelopes = [
   },
   {
     id: 'ninety-seconds',
+    desireTags: ['proximity', 'touch', 'anticipation', 'slowBuild'],
     level: 3,
     type: 'close',
     duration: 90,
@@ -51,6 +88,7 @@ export const envelopes = [
   },
   {
     id: 'no-hands',
+    desireTags: ['beingLed', 'leading', 'touch', 'anticipation'],
     level: 2,
     type: 'pause',
     duration: 180,
@@ -59,6 +97,7 @@ export const envelopes = [
   },
   {
     id: 'the-gaze',
+    desireTags: ['eyeContact', 'anticipation'],
     level: 1,
     type: 'reflect',
     duration: 60,
@@ -67,6 +106,7 @@ export const envelopes = [
   },
   {
     id: 'private-message',
+    desireTags: ['words', 'anticipation'],
     level: 1,
     type: 'reflect',
     duration: 600,
@@ -75,6 +115,7 @@ export const envelopes = [
   },
   {
     id: 'pick-one',
+    desireTags: ['surprise', 'anticipation'],
     level: 3,
     type: 'close',
     special: 'choice',
@@ -83,6 +124,7 @@ export const envelopes = [
   },
   {
     id: 'ceasefire',
+    desireTags: ['slowBuild', 'proximity'],
     level: 3,
     type: 'pause',
     duration: 300,
@@ -91,6 +133,7 @@ export const envelopes = [
   },
   {
     id: 'no-touching',
+    desireTags: ['words', 'anticipation', 'proximity'],
     level: 2,
     type: 'pause',
     duration: 180,
@@ -99,6 +142,7 @@ export const envelopes = [
   },
   {
     id: 'stop-now',
+    desireTags: ['anticipation', 'proximity'],
     level: 3,
     type: 'pause',
     duration: 120,
@@ -107,6 +151,7 @@ export const envelopes = [
   },
   {
     id: 'surprise-me',
+    desireTags: ['surprise', 'spontaneous'],
     level: 2,
     type: 'close',
     duration: 180,
@@ -115,6 +160,7 @@ export const envelopes = [
   },
   {
     id: 'who-knows-me',
+    desireTags: ['words', 'anticipation'],
     level: 2,
     type: 'reflect',
     title: 'מי מכיר אותי באמת?',
@@ -122,6 +168,7 @@ export const envelopes = [
   },
   {
     id: 'no-shame',
+    desireTags: ['words', 'seduction'],
     level: 2,
     type: 'reflect',
     title: 'בלי להתבייש',
@@ -129,6 +176,7 @@ export const envelopes = [
   },
   {
     id: 'unasked',
+    desireTags: ['words'],
     level: 2,
     type: 'reflect',
     title: 'משהו שלא ביקשתי',
@@ -136,6 +184,7 @@ export const envelopes = [
   },
   {
     id: 'still-want-you',
+    desireTags: ['words'],
     level: 1,
     type: 'reflect',
     title: 'אני עדיין רוצה אותך כי...',
@@ -143,6 +192,7 @@ export const envelopes = [
   },
   {
     id: 'still-falling',
+    desireTags: ['words'],
     level: 1,
     type: 'reflect',
     title: 'אני עדיין מתאהב/ת בך כש...',
@@ -150,6 +200,7 @@ export const envelopes = [
   },
   {
     id: 'just-us',
+    desireTags: ['words', 'slowBuild'],
     level: 1,
     type: 'reflect',
     title: 'רק אנחנו',
@@ -157,6 +208,7 @@ export const envelopes = [
   },
   {
     id: 'afraid-to-lose',
+    desireTags: ['words'],
     level: 1,
     type: 'reflect',
     title: 'מה אני מפחד/ת שנאבד?',
@@ -164,6 +216,7 @@ export const envelopes = [
   },
   {
     id: 'memory',
+    desireTags: ['words', 'anticipation'],
     level: 1,
     type: 'reflect',
     title: 'זיכרון',
@@ -171,6 +224,7 @@ export const envelopes = [
   },
   {
     id: 'why-you',
+    desireTags: ['words', 'eyeContact'],
     level: 1,
     type: 'reflect',
     title: 'למה דווקא את/ה?',
@@ -178,6 +232,7 @@ export const envelopes = [
   },
   {
     id: 'the-director',
+    desireTags: ['leading', 'beingLed', 'seduction', 'anticipation'],
     level: 3,
     type: 'close',
     duration: 300,
@@ -186,6 +241,7 @@ export const envelopes = [
   },
   {
     id: 'closest-distance',
+    desireTags: ['proximity', 'anticipation', 'slowBuild'],
     level: 3,
     type: 'close',
     title: 'המרחק הקטן ביותר',
@@ -193,6 +249,7 @@ export const envelopes = [
   },
   {
     id: 'almost-broke',
+    desireTags: ['words', 'anticipation'],
     level: 3,
     type: 'reflect',
     special: 'almost-broke',
@@ -201,6 +258,7 @@ export const envelopes = [
   },
   {
     id: 'five-minutes-mine',
+    desireTags: ['pampering', 'beingLed', 'leading'],
     level: 3,
     type: 'close',
     duration: 300,
@@ -209,6 +267,7 @@ export const envelopes = [
   },
   {
     id: 'the-duel',
+    desireTags: ['teasing', 'seduction', 'surprise'],
     level: 4,
     type: 'close',
     duration: 180,
@@ -217,6 +276,7 @@ export const envelopes = [
   },
   {
     id: 'second-before',
+    desireTags: ['proximity', 'anticipation', 'slowBuild'],
     level: 4,
     type: 'close',
     title: 'שנייה לפני',
@@ -224,6 +284,7 @@ export const envelopes = [
   },
   {
     id: 'emotional-truth',
+    desireTags: ['words'],
     level: 1,
     type: 'reflect',
     title: 'האמת הרגשית',
@@ -231,6 +292,7 @@ export const envelopes = [
   },
   {
     id: 'thanks-unsaid',
+    desireTags: ['words'],
     level: 1,
     type: 'reflect',
     title: 'תודה שלא אמרתי',
@@ -238,6 +300,7 @@ export const envelopes = [
   },
   {
     id: 'next-year',
+    desireTags: ['words', 'slowBuild'],
     level: 1,
     type: 'reflect',
     title: 'אנחנו בעוד שנה',
@@ -245,6 +308,7 @@ export const envelopes = [
   },
   {
     id: 'dangerous-to-continue',
+    desireTags: ['anticipation'],
     level: 4,
     type: 'special',
     special: 'danger-check',
@@ -257,18 +321,21 @@ export const envelopes = [
 export const choiceCards = [
   {
     id: 'pamper-me',
+    desireTags: ['pampering', 'touch', 'slowBuild'],
     title: 'תפנק/י אותי',
     duration: 300,
     body: '5 דקות.\n\nאני מקבל/ת.\nאת/ה מפנק/ת אותי בדרך שלך.\n\nאני רשאי/ת להגיד:\nיותר,\nפחות,\nאו ככה בדיוק.\n\nכשהזמן נגמר — עוצרים.',
   },
   {
     id: 'tempt-me',
+    desireTags: ['seduction', 'teasing', 'surprise'],
     title: 'תפתה/י אותי',
     duration: 180,
     body: 'יש לך 3 דקות לגרום לי לשקול ברצינות להגיד "נשברתי".\n\nתשתמש/י בכל מה שאת/ה יודע/ת עליי.\n\nאין נשיקה בשפתיים.\n\nכשהטיימר מצלצל — חייבים לעצור, בדיוק במקום שבו הייתם.',
   },
   {
     id: 'in-your-hands',
+    desireTags: ['leading', 'beingLed', 'touch'],
     title: 'אני בידיים שלך',
     duration: 180,
     body: '3 דקות.\n\nאת/ה מוביל/ה את האווירה, הקרבה והקצב.\n\nאפשר לבחור:\nמוזיקה,\nשתיקה או דיבור,\nעיניים פתוחות או עצומות,\nקרוב או רחוק.\n\nהכול בתוך הגבולות של שנינו.',
@@ -318,6 +385,35 @@ export const loserCards = [
   },
 ];
 
+export const riskChoice = {
+  prompt: 'מה אתם בוחרים?',
+  safeLabel: 'נשארים בטוח',
+  safeBody: 'פתחו מעטפה מהרמה הנוכחית.',
+  riskLabel: 'לקחת סיכון',
+  riskBody: 'פתחו מעטפה מרמה אחת מעל.',
+  confirmLine: 'אתם ביקשתם את זה.',
+};
+
+export const doubleOrNothing = {
+  title: 'דאבל או כלום',
+  subtitle: 'יש לכם הזדמנות להעלות את המשחק רמה.',
+  declineLabel: 'לא הפעם',
+  declineHint: 'חוזרים למעטפה רגילה.',
+  acceptLabel: 'אנחנו בפנים',
+  acceptHint: 'שניכם נכנסים למשימה.',
+};
+
+export const feedbackPrompt = {
+  question: 'זה עבד?',
+  options: [
+    { id: 'a-lot', label: 'מאוד', delta: 0.15 },
+    { id: 'a-bit', label: 'קצת', delta: 0.05 },
+    { id: 'not-really', label: 'לא ממש', delta: -0.1 },
+  ],
+};
+
+export const advantageNote = 'יש לכם יתרון קטן במעטפה הבאה.';
+
 export const ui = {
   envelopesLeft: (n) => `נשארו ${n} מעטפות`,
   oneEnvelopeLeft: 'נשארה מעטפה אחת',
@@ -328,6 +424,7 @@ export const ui = {
   giveUpCaptionLate: 'בטוח/ה שעוד מעטפה?',
   skip: 'דלג/י',
   nextEnvelopeAfterSkip: 'פתח/י מעטפה נוספת',
+  doubleDone: 'סיימנו, חזרה למשחק',
   closedEnvelopeHint: 'לחצו לפתיחה',
   climaxTitle: 'עוד מעטפה?',
   climaxSubtitle: 'או שמישהו כבר מוכן להודות שהוא נשבר?',
