@@ -11,6 +11,13 @@
   justify-content: flex-end;
 }
 
+.iconRow {
+  display: flex;
+  justify-content: center;
+  color: var(--color-gold);
+  margin-bottom: var(--space-1);
+}
+
 .title {
   text-align: center;
   font-size: 1.5rem;

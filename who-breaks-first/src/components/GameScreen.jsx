@@ -1,6 +1,7 @@
 import EnvelopeCard from './EnvelopeCard';
 import ChoiceModal from './ChoiceModal';
 import RestartLink from './RestartLink';
+import { EnvelopeIcon } from './icons';
 import { ui } from '../data/content';
 import { giveUpCaption } from '../game/engine';
 import styles from './GameScreen.module.css';
@@ -59,7 +60,10 @@ export default function GameScreen({ state, dispatch, currentEnvelope, remaining
             </div>
           </div>
         ) : (
-          <div className={styles.idleTile}>{ui.closedEnvelopeHint}</div>
+          <div className={styles.idleTile}>
+            <EnvelopeIcon size={26} />
+            <span>{ui.closedEnvelopeHint}</span>
+          </div>
         )}
 
         {isChoiceCard && state.choiceModal && (

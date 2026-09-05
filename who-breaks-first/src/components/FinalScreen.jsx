@@ -1,5 +1,6 @@
 import { finalScreen } from '../data/content';
 import RestartLink from './RestartLink';
+import { KeyIcon } from './icons';
 import styles from './FinalScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
@@ -8,6 +9,10 @@ export default function FinalScreen({ onContinue, onRestart }) {
     <div className={styles.wrap}>
       <div className={styles.topBar}>
         <RestartLink onRestart={onRestart} />
+      </div>
+
+      <div className={styles.iconRow}>
+        <KeyIcon size={30} />
       </div>
 
       <h1 className={styles.title}>{finalScreen.title}</h1>

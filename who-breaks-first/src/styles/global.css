@@ -19,8 +19,8 @@ html {
 body {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 12% 15%, rgba(92, 21, 36, 0.055), transparent 42%),
-    radial-gradient(circle at 88% 82%, rgba(201, 162, 75, 0.07), transparent 46%),
+    radial-gradient(circle at 12% 15%, rgba(20, 16, 14, 0.045), transparent 42%),
+    radial-gradient(circle at 88% 82%, rgba(201, 162, 75, 0.09), transparent 46%),
     var(--color-cream);
   color: var(--text-on-cream);
   font-family: var(--font-body);
@@ -54,7 +54,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
   letter-spacing: 0.01em;
 }

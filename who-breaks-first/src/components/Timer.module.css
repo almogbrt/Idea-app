@@ -5,7 +5,7 @@
   gap: var(--space-2);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: 1px solid rgba(92, 21, 36, 0.12);
+  border-top: 1px solid rgba(20, 16, 14, 0.12);
 }
 
 .clock {

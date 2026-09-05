@@ -12,6 +12,13 @@
   justify-content: flex-end;
 }
 
+.iconRow {
+  display: flex;
+  justify-content: center;
+  color: var(--color-gold);
+  margin-bottom: var(--space-1);
+}
+
 .title {
   font-size: 1.4rem;
   text-align: center;
@@ -33,7 +40,7 @@
   font-size: 0.96rem;
   color: var(--text-on-cream);
   padding-bottom: var(--space-2);
-  border-bottom: 1px dashed rgba(92, 21, 36, 0.18);
+  border-bottom: 1px dashed rgba(20, 16, 14, 0.18);
 }
 
 .prompt:last-child {

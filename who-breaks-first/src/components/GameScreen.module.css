@@ -15,7 +15,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 1.4s ease;
-  background: radial-gradient(circle at 50% 30%, rgba(92, 21, 36, 0.16), transparent 62%);
+  background: radial-gradient(circle at 50% 30%, rgba(20, 16, 14, 0.16), transparent 62%);
 }
 
 .tensionWarm::before {
@@ -60,12 +60,20 @@
 
 .idleTile {
   background: var(--color-cream-soft);
-  border: 1.5px dashed rgba(92, 21, 36, 0.25);
+  border: 1.5px dashed rgba(20, 16, 14, 0.25);
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   text-align: center;
   color: var(--text-muted);
   font-size: 0.92rem;
+}
+
+.idleTile svg {
+  color: var(--color-gold);
 }
 
 .actions {
