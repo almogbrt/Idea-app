@@ -1,0 +1,35 @@
+:root {
+  --color-cream: #f4ecdf;
+  --color-cream-soft: #faf6ee;
+  --color-black: #14100e;
+  --color-black-soft: #221c18;
+  --color-wine: #5c1524;
+  --color-wine-deep: #3a0e18;
+  --color-wine-soft: rgba(92, 21, 36, 0.08);
+  --color-gold: #c9a24b;
+  --color-gold-light: #e4cfa0;
+  --color-gold-soft: rgba(201, 162, 75, 0.16);
+
+  --text-on-cream: var(--color-black);
+  --text-muted: rgba(20, 16, 14, 0.6);
+  --text-on-dark: var(--color-cream-soft);
+  --text-on-dark-muted: rgba(244, 236, 223, 0.65);
+
+  --font-display: 'Frank Ruhl Libre', 'David Libre', Georgia, serif;
+  --font-body: 'Heebo', 'Segoe UI', system-ui, sans-serif;
+
+  --radius-lg: 26px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+
+  --shadow-soft: 0 12px 32px rgba(20, 16, 14, 0.08);
+  --shadow-card: 0 18px 48px rgba(20, 16, 14, 0.14);
+
+  --space-1: 6px;
+  --space-2: 12px;
+  --space-3: 20px;
+  --space-4: 28px;
+  --space-5: 40px;
+
+  --max-width: 440px;
+}

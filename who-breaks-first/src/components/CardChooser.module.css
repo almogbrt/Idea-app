@@ -1,0 +1,94 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.gridFour {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.card {
+  position: relative;
+  aspect-ratio: 3 / 4.4;
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 0;
+  background: linear-gradient(155deg, var(--color-black-soft), var(--color-black));
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold);
+  transition: transform 0.18s ease, opacity 0.25s ease;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(201, 162, 75, 0.45);
+  border-radius: calc(var(--radius-md) - 8px);
+}
+
+.card:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.card:disabled {
+  cursor: default;
+}
+
+.cardHidden {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.chosen {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  background: var(--color-cream-soft);
+  color: var(--text-on-cream);
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: center;
+  padding: var(--space-4) var(--space-3);
+  animation: reveal 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.chosen::before {
+  border-color: rgba(92, 21, 36, 0.16);
+}
+
+.chosenTitle {
+  font-size: 1.3rem;
+  color: var(--color-wine);
+  margin-bottom: var(--space-2);
+}
+
+.chosenBody {
+  white-space: pre-line;
+  font-size: 0.98rem;
+  color: var(--text-on-cream);
+}
+
+.hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin-bottom: var(--space-3);
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: rotateY(35deg) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0) scale(1);
+  }
+}
