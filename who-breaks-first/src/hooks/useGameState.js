@@ -42,6 +42,8 @@ function freshInitialState() {
     advantageAvailable: false,
     feedbackPending: null,
     feedbackHistory: [],
+    restaurantMode: false,
+    restaurantModeExhausted: false,
   };
 }
 
@@ -57,12 +59,20 @@ function computeIdleFlags(state) {
     return { doublePending: false, riskOfferPending: true, advantageAvailable: false };
   }
 
-  const offerDouble = shouldTriggerDoubleOrNothing({ openedCount, doubleEventsUsed: state.doubleEventsUsed });
+  const offerDouble = shouldTriggerDoubleOrNothing({
+    openedCount,
+    doubleEventsUsed: state.doubleEventsUsed,
+    restaurantMode: state.restaurantMode,
+  });
   if (offerDouble) {
     return { doublePending: true, riskOfferPending: false, advantageAvailable: false, doubleEventsUsed: state.doubleEventsUsed + 1 };
   }
 
-  const offerRisk = shouldOfferRiskChoice({ openedCount, lastWasRiskChoice: state.lastWasRiskChoice });
+  const offerRisk = shouldOfferRiskChoice({
+    openedCount,
+    lastWasRiskChoice: state.lastWasRiskChoice,
+    restaurantMode: state.restaurantMode,
+  });
   return { doublePending: false, riskOfferPending: offerRisk, advantageAvailable: false };
 }
 
@@ -75,6 +85,7 @@ function drawEnvelopeId(state, forcedLevel) {
     desireProfiles: state.desireProfiles,
     tagWeights: state.tagWeights,
     forcedLevel,
+    restaurantMode: state.restaurantMode,
   });
   return envelope ?? null;
 }
@@ -120,10 +131,17 @@ function reducer(state, action) {
     case 'START_GAME':
       return { ...state, screen: 'game', ...computeIdleFlags(state) };
 
+    case 'TOGGLE_RESTAURANT_MODE': {
+      const nextState = { ...state, restaurantMode: !state.restaurantMode, restaurantModeExhausted: false };
+      return { ...nextState, ...computeIdleFlags(nextState) };
+    }
+
     case 'DRAW_ENVELOPE': {
       const envelope = drawEnvelopeId(state);
-      if (!envelope) return state;
-      return { ...state, current: { id: envelope.id, revealed: false } };
+      if (!envelope) {
+        return state.restaurantMode ? { ...state, restaurantModeExhausted: true } : state;
+      }
+      return { ...state, current: { id: envelope.id, revealed: false }, restaurantModeExhausted: false };
     }
 
     case 'CHOOSE_SAFE': {
@@ -343,6 +361,8 @@ function sanitizeState(saved) {
       feedbackHistory: Array.isArray(saved.feedbackHistory) ? saved.feedbackHistory : [],
       usedDoubleIds: Array.isArray(saved.usedDoubleIds) ? saved.usedDoubleIds : [],
       doubleEventsUsed: typeof saved.doubleEventsUsed === 'number' ? saved.doubleEventsUsed : 0,
+      restaurantMode: Boolean(saved.restaurantMode),
+      restaurantModeExhausted: Boolean(saved.restaurantModeExhausted),
       quiz:
         saved.quiz && typeof saved.quiz === 'object'
           ? { phase: saved.quiz.phase || 'p1', questionIndex: Number(saved.quiz.questionIndex) || 0 }

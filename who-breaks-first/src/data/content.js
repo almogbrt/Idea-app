@@ -106,6 +106,7 @@ export const envelopes = [
   },
   {
     id: 'private-message',
+    restaurantSafe: true,
     desireTags: ['words', 'anticipation'],
     level: 1,
     type: 'reflect',
@@ -160,6 +161,7 @@ export const envelopes = [
   },
   {
     id: 'who-knows-me',
+    restaurantSafe: true,
     desireTags: ['words', 'anticipation'],
     level: 2,
     type: 'reflect',
@@ -168,6 +170,7 @@ export const envelopes = [
   },
   {
     id: 'no-shame',
+    restaurantSafe: true,
     desireTags: ['words', 'seduction'],
     level: 2,
     type: 'reflect',
@@ -176,6 +179,7 @@ export const envelopes = [
   },
   {
     id: 'unasked',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 2,
     type: 'reflect',
@@ -184,6 +188,7 @@ export const envelopes = [
   },
   {
     id: 'still-want-you',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 1,
     type: 'reflect',
@@ -192,6 +197,7 @@ export const envelopes = [
   },
   {
     id: 'still-falling',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 1,
     type: 'reflect',
@@ -200,6 +206,7 @@ export const envelopes = [
   },
   {
     id: 'just-us',
+    restaurantSafe: true,
     desireTags: ['words', 'slowBuild'],
     level: 1,
     type: 'reflect',
@@ -208,6 +215,7 @@ export const envelopes = [
   },
   {
     id: 'afraid-to-lose',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 1,
     type: 'reflect',
@@ -216,6 +224,7 @@ export const envelopes = [
   },
   {
     id: 'memory',
+    restaurantSafe: true,
     desireTags: ['words', 'anticipation'],
     level: 1,
     type: 'reflect',
@@ -224,6 +233,7 @@ export const envelopes = [
   },
   {
     id: 'why-you',
+    restaurantSafe: true,
     desireTags: ['words', 'eyeContact'],
     level: 1,
     type: 'reflect',
@@ -249,6 +259,7 @@ export const envelopes = [
   },
   {
     id: 'almost-broke',
+    restaurantSafe: true,
     desireTags: ['words', 'anticipation'],
     level: 3,
     type: 'reflect',
@@ -284,6 +295,7 @@ export const envelopes = [
   },
   {
     id: 'emotional-truth',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 1,
     type: 'reflect',
@@ -292,6 +304,7 @@ export const envelopes = [
   },
   {
     id: 'thanks-unsaid',
+    restaurantSafe: true,
     desireTags: ['words'],
     level: 1,
     type: 'reflect',
@@ -300,6 +313,7 @@ export const envelopes = [
   },
   {
     id: 'next-year',
+    restaurantSafe: true,
     desireTags: ['words', 'slowBuild'],
     level: 1,
     type: 'reflect',
@@ -314,6 +328,62 @@ export const envelopes = [
     special: 'danger-check',
     title: 'מסוכן להמשיך',
     body: 'בלי לחשוב יותר מדי, ובלי לשקר לעצמכם:\n\nמ-1 עד 10 — כמה קרוב/ה את/ה להישבר ממש עכשיו?\n\nספרו עד שלוש ואמרו את המספר יחד, בקול.\n\nאם אחד מכם 8 ומעלה:\n\nבחרו יחד:\n\nעוד מעטפה\n\nאו\n\nמעטפת הסיום.',
+  },
+
+  // משימות משיכה סודיות — דיסקרטיות לגמרי, מתאימות לשולחן במסעדה או כל מקום ציבורי
+  {
+    id: 'passing-glance',
+    restaurantSafe: true,
+    desireTags: ['eyeContact', 'anticipation'],
+    level: 1,
+    type: 'reflect',
+    title: 'מבט חולף',
+    body: 'בשלב כלשהו הערב, בלי שיהיה קשור לכלום, תפסו שנייה אחת והביטו זה בזו בלי לחייך.\n\nלא להסביר.\n\nלא להגיב.\n\nרק שנייה אחת, ואז חוזרים לשיחה כאילו כלום לא קרה.',
+  },
+  {
+    id: 'text-under-the-table',
+    restaurantSafe: true,
+    desireTags: ['words', 'anticipation', 'surprise'],
+    level: 2,
+    type: 'reflect',
+    title: 'הודעה מתחת לשולחן',
+    body: 'בלי שהשני יבחין, שלחו הודעה שמתחילה:\n\n"כשנגיע הביתה הלילה, אני רוצה..."\n\nאל תגידו עליה מילה.\n\nתנו לזה לשבת שם עד שתעזבו את המקום.',
+  },
+  {
+    id: 'foot-under-the-table',
+    restaurantSafe: true,
+    desireTags: ['touch', 'teasing', 'proximity'],
+    level: 2,
+    type: 'reflect',
+    title: 'רגל מתחת לשולחן',
+    body: 'בלי מילים ובלי שינוי בהבעת הפנים.\n\nנגיעה אחת, מתחת לשולחן.\n\nמי שמרגיש אותה — ממשיך/ה בשיחה כרגיל.\n\nכאילו לא קרה כלום.',
+  },
+  {
+    id: 'secret-word',
+    restaurantSafe: true,
+    desireTags: ['anticipation', 'slowBuild'],
+    level: 1,
+    type: 'reflect',
+    title: 'המילה הסודית',
+    body: 'בחרו יחד מילה רגילה שסביר שתיאמר הערב — "בטח", "יין", "טוב".\n\nבכל פעם שהיא נאמרת, תנו למבט להישאר רגע אחד יותר מהרגיל.\n\nזהו כל החוק.',
+  },
+  {
+    id: 'shared-plate',
+    restaurantSafe: true,
+    desireTags: ['slowBuild', 'proximity'],
+    level: 1,
+    type: 'reflect',
+    title: 'המנה המשותפת',
+    body: 'הזמינו יחד דבר אחד לשתף.\n\nאכלו ממנו לאט.\n\nבלי טלפונים על השולחן עד שהוא נגמר.',
+  },
+  {
+    id: 'whispered-plan',
+    restaurantSafe: true,
+    desireTags: ['words', 'anticipation', 'seduction'],
+    level: 2,
+    type: 'reflect',
+    title: 'התוכנית הלחושה',
+    body: 'בלחישה, לא בקול רגיל, כל אחד אומר לשני דבר אחד קטן שהוא רוצה שיקרה ברגע שתחזרו הביתה.\n\nלא חוזרים על זה בקול רם.\n\nרק שניכם יודעים.',
   },
 ];
 
@@ -425,6 +495,11 @@ export const ui = {
   skip: 'דלג/י',
   nextEnvelopeAfterSkip: 'פתח/י מעטפה נוספת',
   doubleDone: 'סיימנו, חזרה למשחק',
+  restaurantModeOn: 'יצאנו למסעדה',
+  restaurantModeOff: 'חזרנו הביתה',
+  restaurantModeBadge: 'מצב דיסקרטי',
+  restaurantModeEmptyTitle: 'נגמרו המשימות הדיסקרטיות',
+  restaurantModeEmptyBody: 'אפשר לחזור למאגר המלא כשתרצו — או לשמור את השאר לפעם הבאה.',
   closedEnvelopeHint: 'לחצו לפתיחה',
   climaxTitle: 'עוד מעטפה?',
   climaxSubtitle: 'או שמישהו כבר מוכן להודות שהוא נשבר?',
