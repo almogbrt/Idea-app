@@ -132,8 +132,10 @@ export function pickNextEnvelope({
   desireProfiles,
   tagWeights,
   forcedLevel,
+  restaurantMode,
 }) {
-  const unopened = envelopes.filter((e) => !openedIds.includes(e.id));
+  let unopened = envelopes.filter((e) => !openedIds.includes(e.id));
+  if (restaurantMode) unopened = unopened.filter((e) => e.restaurantSafe);
   if (unopened.length === 0) return null;
 
   const openedCount = openedIds.length;
@@ -193,7 +195,8 @@ const RISK_WINDOWS = [
  * קובע אם להציע SAFE/RISK לפני פתיחת המעטפה הבאה (openedCount = כמה כבר נפתחו).
  * לעולם לא פעמיים ברצף, כדי שהבחירה "מסוכן" תרגיש מיוחדת ולא שגרתית.
  */
-export function shouldOfferRiskChoice({ openedCount, lastWasRiskChoice }) {
+export function shouldOfferRiskChoice({ openedCount, lastWasRiskChoice, restaurantMode }) {
+  if (restaurantMode) return false;
   if (lastWasRiskChoice) return false;
   const nextEnvelopeNumber = openedCount + 1;
   const window = RISK_WINDOWS.find((w) => nextEnvelopeNumber >= w.min && nextEnvelopeNumber <= w.max);
@@ -205,7 +208,8 @@ export function shouldOfferRiskChoice({ openedCount, lastWasRiskChoice }) {
  * קובע אם להפעיל "דאבל או כלום". רק אחרי מתח מספק, לא יותר מפעמיים במשחק,
  * והסיכוי גדל ככל שנפתחו יותר מעטפות.
  */
-export function shouldTriggerDoubleOrNothing({ openedCount, doubleEventsUsed }) {
+export function shouldTriggerDoubleOrNothing({ openedCount, doubleEventsUsed, restaurantMode }) {
+  if (restaurantMode) return false;
   if (doubleEventsUsed >= 2) return false;
   if (openedCount < 8) return false;
   const chance = Math.min(0.08 + (openedCount - 8) * 0.03, 0.35);

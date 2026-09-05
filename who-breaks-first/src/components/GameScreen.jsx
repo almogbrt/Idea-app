@@ -35,6 +35,7 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
   const handleDoubleRevealed = () => dispatch({ type: 'MARK_DOUBLE_REVEALED' });
   const handleDoubleDone = () => dispatch({ type: 'DOUBLE_DONE' });
   const handleFeedback = (option) => dispatch({ type: 'GIVE_FEEDBACK', optionId: option.id, delta: option.delta });
+  const handleToggleRestaurantMode = () => dispatch({ type: 'TOGGLE_RESTAURANT_MODE' });
 
   // רטט קצר כשמופיע "דאבל או כלום" — רגע נבדל מפתיחת מעטפה רגילה
   useEffect(() => {
@@ -64,6 +65,16 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
       <div className={styles.header}>
         <span className={styles.progress}>{progressText}</span>
         <RestartLink onRestart={resetGame} />
+      </div>
+
+      <div className={styles.restaurantRow}>
+        <button
+          className={`${styles.restaurantToggle} ${state.restaurantMode ? styles.restaurantToggleActive : ''}`}
+          onClick={handleToggleRestaurantMode}
+        >
+          {state.restaurantMode ? ui.restaurantModeOff : ui.restaurantModeOn}
+        </button>
+        {state.restaurantMode && <span className={styles.restaurantBadge}>{ui.restaurantModeBadge}</span>}
       </div>
 
       <div className={styles.stage}>
@@ -123,6 +134,12 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
               </button>
             </div>
           </div>
+        ) : state.restaurantModeExhausted ? (
+          <div className={styles.idleTile}>
+            <EnvelopeIcon size={26} />
+            <span>{ui.restaurantModeEmptyTitle}</span>
+            <span className={styles.restaurantEmptyBody}>{ui.restaurantModeEmptyBody}</span>
+          </div>
         ) : (
           <div className={styles.idleTile}>
             <EnvelopeIcon size={26} />
@@ -175,7 +192,8 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
         !state.climaxTriggered &&
         !state.riskOfferPending &&
         !state.riskConfirmPendingId &&
-        !state.feedbackPending && (
+        !state.feedbackPending &&
+        !state.restaurantModeExhausted && (
           <div className={styles.actions}>
             <button className={buttons.primary} onClick={handleDraw} disabled={remainingCount === 0}>
               {ui.openEnvelope}
