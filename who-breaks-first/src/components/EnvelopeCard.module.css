@@ -1,0 +1,134 @@
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  perspective: 900px;
+}
+
+.envelope {
+  width: 190px;
+  height: 130px;
+  position: relative;
+}
+
+.envelopeBody {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, var(--color-black-soft), var(--color-black));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.envelopeBody::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(201, 162, 75, 0.4);
+  border-radius: calc(var(--radius-md) - 8px);
+}
+
+.envelopeFlap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: linear-gradient(200deg, var(--color-wine), var(--color-wine-deep));
+  clip-path: polygon(0 0, 100% 0, 50% 78%);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transform-origin: top center;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.3, 1);
+}
+
+.seal {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--color-gold-light), var(--color-gold));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-black);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.shaking {
+  animation: shake 0.4s ease;
+}
+
+.opening .envelopeFlap,
+.pause .envelopeFlap {
+  transform: rotateX(-165deg);
+}
+
+.opening .seal,
+.pause .seal {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+}
+
+.closedHint {
+  margin-top: var(--space-3);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.card {
+  width: 100%;
+  background: var(--color-cream-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-3);
+  box-shadow: var(--shadow-card);
+  animation: cardIn 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  color: var(--color-wine);
+  text-align: center;
+  margin-bottom: var(--space-3);
+}
+
+.cardBody {
+  white-space: pre-line;
+  font-size: 1rem;
+  color: var(--text-on-cream);
+  text-align: center;
+}
+
+.skipRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  25% {
+    transform: translateX(-4px) rotate(-1.5deg);
+  }
+  75% {
+    transform: translateX(4px) rotate(1.5deg);
+  }
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,0 +1,52 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 14, 0.68);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  z-index: 50;
+  animation: fadeIn 0.25s ease;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-cream-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-3);
+  box-shadow: var(--shadow-card);
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+
+.title {
+  text-align: center;
+  color: var(--color-wine);
+  font-size: 1.35rem;
+  margin-bottom: var(--space-1);
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: var(--space-3);
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
