@@ -49,7 +49,7 @@ class SqlAlchemyProjectRepository(ProjectRepositoryPort):
                 .order_by(TaskModel.project_id, TaskModel.updated_at.desc())
             )
             task_rows = (await self._session.execute(task_stmt)).all()
-            last_tasks = {row[0]: row[1] for row in task_rows}
+            last_tasks = {row[0]: row[1] for row in task_rows if row[0] is not None}
 
         return [
             ProjectSummary(
