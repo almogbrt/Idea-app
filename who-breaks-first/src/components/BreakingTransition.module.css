@@ -70,11 +70,12 @@
 }
 
 .line {
-  font-size: 1.5rem;
+  font-size: var(--fs-statement);
+  line-height: 1.2;
   color: var(--color-cream-soft);
   opacity: 0;
   animation: lineIn 0.8s ease forwards;
-  min-height: 1.6em;
+  min-height: 1.2em;
 }
 
 .gold {

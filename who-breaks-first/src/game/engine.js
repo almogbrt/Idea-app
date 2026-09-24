@@ -216,6 +216,18 @@ export function shouldTriggerDoubleOrNothing({ openedCount, doubleEventsUsed, re
   return Math.random() < chance;
 }
 
+/**
+ * קובע אם להציג FakeOut (fade to dark, "לא." / "עוד לא.") לפני חשיפת המעטפה
+ * שנבחרה. הסתברות נמוכה בכוונה, לעולם לא פעמיים ברצף, ולא במצב מסעדה —
+ * הדרמה הזו לא מתאימה להקשר דיסקרטי וציבורי.
+ */
+export function shouldTriggerFakeOut({ openedCount, lastWasFakeOut, restaurantMode }) {
+  if (restaurantMode) return false;
+  if (lastWasFakeOut) return false;
+  if (openedCount < 2) return false;
+  return Math.random() < 0.14;
+}
+
 /** מעדכן משקל תגית בעקבות משוב "זה עבד?" — לעולם לא מסיר קטגוריה לגמרי. */
 export function applyFeedback(tagWeights, tags, delta) {
   const next = { ...tagWeights };
