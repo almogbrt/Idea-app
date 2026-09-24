@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Timer from './Timer';
 import ProgressiveReveal from './ProgressiveReveal';
+import OurPhoto from './OurPhoto';
+import { ENVELOPE_PHOTO } from '../data/photos';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { ui } from '../data/content';
 import { vibrate } from '../utils/vibrate';
@@ -65,6 +67,7 @@ export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip })
   return (
     <div className={styles.card}>
       <h2 className={styles.cardTitle}>{envelope.title}</h2>
+      {ENVELOPE_PHOTO[envelope.id] && <OurPhoto slot={ENVELOPE_PHOTO[envelope.id]} variant="card" />}
       {bodyVisible && (
         <div className={reducedMotion ? '' : styles.bodyIn}>
           {envelope.revealSteps ? (

@@ -1,6 +1,7 @@
 import { finalScreen } from '../data/content';
 import RestartLink from './RestartLink';
 import { KeyIcon } from './icons';
+import OurPhoto from './OurPhoto';
 import styles from './FinalScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
@@ -25,6 +26,7 @@ export default function FinalScreen({ onContinue, onRestart }) {
         ))}
       </div>
 
+      <OurPhoto slot="final" variant="final" />
       <p className={`${styles.kissLine} serifTitle`}>{finalScreen.kissLine}</p>
       <p className={styles.closing}>{finalScreen.closingText}</p>
 

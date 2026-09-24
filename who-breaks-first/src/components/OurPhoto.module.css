@@ -1,0 +1,47 @@
+.frame {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gold-soft);
+  box-shadow: var(--shadow-soft);
+  animation: photoIn 1.4s ease;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* פתיחה — דיוקן, הכניסה איטית במיוחד */
+.intro {
+  width: min(230px, 62vw);
+  aspect-ratio: 4 / 5;
+  animation-duration: 2.2s;
+}
+
+/* בתוך מעטפה — רחב ונמוך, לא משתלט על המשימה */
+.card {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+/* סיום */
+.final {
+  width: min(280px, 78vw);
+  aspect-ratio: 4 / 5;
+  margin: 0 auto;
+  animation-duration: 2s;
+}
+
+@keyframes photoIn {
+  from {
+    opacity: 0;
+    filter: saturate(0.2);
+  }
+  to {
+    opacity: 1;
+    filter: saturate(1);
+  }
+}
