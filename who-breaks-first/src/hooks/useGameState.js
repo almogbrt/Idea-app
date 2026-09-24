@@ -27,7 +27,7 @@ import { resolveInteractionMode } from '../data/interactionModes';
 import { secretMissions as SECRET_MISSIONS } from '../data/secretMissions';
 import { loadState, saveState, clearState } from '../utils/storage';
 
-const VALID_SCREENS = ['intro', 'players', 'quiz', 'rules', 'game', 'breaking', 'final', 'loser'];
+const VALID_SCREENS = ['intro', 'players', 'photos', 'quiz', 'rules', 'game', 'breaking', 'final', 'loser'];
 const FEEDBACK_CHANCE = 0.3;
 
 function freshInitialState() {
@@ -183,6 +183,12 @@ function reducer(state, action) {
       const name = (action.name || '').trim();
       return { ...state, players: { ...state.players, [action.player]: name || defaultPlayers[action.player] } };
     }
+
+    case 'GO_PHOTOS':
+      return { ...state, screen: 'photos' };
+
+    case 'PHOTOS_DONE':
+      return { ...state, screen: 'players' };
 
     case 'GO_QUIZ':
       return { ...state, screen: 'quiz', quiz: { phase: 'p1', questionIndex: 0 } };

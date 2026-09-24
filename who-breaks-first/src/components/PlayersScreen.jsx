@@ -1,9 +1,10 @@
 import { playersScreen } from '../data/content';
+import { photosCopy } from '../data/photos';
 import RestartLink from './RestartLink';
 import styles from './PlayersScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
-export default function PlayersScreen({ players, onSetName, onContinue, onRestart }) {
+export default function PlayersScreen({ players, onSetName, onContinue, onPhotos, onRestart }) {
   return (
     <div className={styles.wrap}>
       <div className={styles.topBar}>
@@ -45,6 +46,9 @@ export default function PlayersScreen({ players, onSetName, onContinue, onRestar
       <div className={styles.footer}>
         <button className={buttons.primary} onClick={onContinue}>
           {playersScreen.cta}
+        </button>
+        <button className={buttons.ghost} onClick={onPhotos}>
+          {photosCopy.entry}
         </button>
       </div>
     </div>

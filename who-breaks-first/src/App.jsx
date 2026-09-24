@@ -1,6 +1,7 @@
 import { useGameState } from './hooks/useGameState';
 import IntroScreen from './components/IntroScreen';
 import PlayersScreen from './components/PlayersScreen';
+import PhotosScreen from './components/PhotosScreen';
 import DesireQuizScreen from './components/DesireQuizScreen';
 import RulesScreen from './components/RulesScreen';
 import GameScreen from './components/GameScreen';
@@ -21,9 +22,12 @@ export default function App() {
           players={state.players}
           onSetName={(player, name) => dispatch({ type: 'SET_PLAYER_NAME', player, name })}
           onContinue={() => dispatch({ type: 'GO_QUIZ' })}
+          onPhotos={() => dispatch({ type: 'GO_PHOTOS' })}
           onRestart={resetGame}
         />
       )}
+
+      {state.screen === 'photos' && <PhotosScreen onDone={() => dispatch({ type: 'PHOTOS_DONE' })} />}
 
       {state.screen === 'quiz' && (
         <DesireQuizScreen
