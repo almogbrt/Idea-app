@@ -9,7 +9,7 @@ import FinalScreen from './components/FinalScreen';
 import LoserEnvelope from './components/LoserEnvelope';
 
 export default function App() {
-  const { state, dispatch, currentEnvelope, currentDoubleCard, remainingCount, totalCount, resetGame } =
+  const { state, dispatch, currentEnvelope, currentDoubleCard, remainingCount, totalCount, resetGame, visualIntensity } =
     useGameState();
 
   return (
@@ -49,6 +49,7 @@ export default function App() {
           remainingCount={remainingCount}
           totalCount={totalCount}
           resetGame={resetGame}
+          visualIntensity={visualIntensity}
         />
       )}
 

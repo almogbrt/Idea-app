@@ -11,9 +11,17 @@ import { vibrate } from '../utils/vibrate';
 import styles from './GameScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
-export default function GameScreen({ state, dispatch, currentEnvelope, currentDoubleCard, remainingCount, resetGame }) {
+export default function GameScreen({
+  state,
+  dispatch,
+  currentEnvelope,
+  currentDoubleCard,
+  remainingCount,
+  resetGame,
+  visualIntensity,
+}) {
   const openedCount = state.openedIds.length;
-  const caption = giveUpCaption(openedCount, ui);
+  const caption = giveUpCaption(openedCount, ui, visualIntensity);
 
   const progressText =
     remainingCount === 0 ? ui.noEnvelopesLeft : remainingCount === 1 ? ui.oneEnvelopeLeft : ui.envelopesLeft(remainingCount);
@@ -54,16 +62,10 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
   const isDangerCard = currentEnvelope?.special === 'danger-check' && state.current?.revealed;
   const isChoiceCard = currentEnvelope?.special === 'choice';
 
-  const tensionClass = state.climaxTriggered
-    ? styles.tensionDeep
-    : openedCount >= 5
-      ? styles.tensionWarm
-      : '';
-
   const doubleCardForView = currentDoubleCard ? { ...currentDoubleCard, duration: currentDoubleCard.timerSeconds } : null;
 
   return (
-    <div className={`${styles.wrap} ${tensionClass}`}>
+    <div className={styles.wrap} data-intensity={visualIntensity}>
       <div className={styles.header}>
         <span className={styles.progress}>{progressText}</span>
         <RestartLink onRestart={resetGame} />

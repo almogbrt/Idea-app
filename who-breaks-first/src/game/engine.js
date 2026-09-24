@@ -7,6 +7,9 @@
 // 3. בתוך הרמה שנבחרה — ניקוד משוקלל לכל קלף (baseWeight + desireMatch +
 //    varietyBonus + contextBonus) ואז weighted random — לא תמיד הניקוד הגבוה ביותר.
 
+import { resolveInteractionMode } from '../data/interactionModes';
+import { microcopy } from '../data/microcopy';
+
 export const ALL_TAGS = [
   'words',
   'touch',
@@ -94,6 +97,17 @@ function varietyBonus(card, recentTypes) {
   return 0.3;
 }
 
+/**
+ * מעדיף מצב אינטראקציה שונה מהאחרון (Push/Pull) — לא עונש חריף כמו
+ * varietyBonus, רק הטיה עדינה כדי ליצור שינויי קצב (approach→hold→emotion...)
+ * במקום רצף חד-גוני (approach→approach→approach).
+ */
+function interactionVarietyBonus(card, lastInteractionMode) {
+  if (!lastInteractionMode) return 0;
+  const mode = resolveInteractionMode(card.id);
+  return mode === lastInteractionMode ? -0.25 : 0.15;
+}
+
 function contextBonus(card, flags) {
   let bonus = 0;
   if (flags?.almostBroke && card.level === 3) bonus += 0.4;
@@ -101,12 +115,13 @@ function contextBonus(card, flags) {
   return bonus;
 }
 
-function scoreCard(card, { flags, recentTypes, desireProfiles, tagWeights }) {
+function scoreCard(card, { flags, recentTypes, desireProfiles, tagWeights, lastInteractionMode }) {
   const base = 1;
   const desire = desireMatchScore(card, desireProfiles, tagWeights);
   const variety = varietyBonus(card, recentTypes);
   const context = contextBonus(card, flags);
-  return Math.max(base + desire + variety + context, 0.05);
+  const interaction = interactionVarietyBonus(card, lastInteractionMode);
+  return Math.max(base + desire + variety + context + interaction, 0.05);
 }
 
 function weightedPickCard(pool, ctx) {
@@ -133,6 +148,7 @@ export function pickNextEnvelope({
   tagWeights,
   forcedLevel,
   restaurantMode,
+  lastInteractionMode,
 }) {
   let unopened = envelopes.filter((e) => !openedIds.includes(e.id));
   if (restaurantMode) unopened = unopened.filter((e) => e.restaurantSafe);
@@ -158,14 +174,14 @@ export function pickNextEnvelope({
 
   if (pool.length === 0) pool = unopened;
 
-  return weightedPickCard(pool, { flags, recentTypes, desireProfiles, tagWeights });
+  return weightedPickCard(pool, { flags, recentTypes, desireProfiles, tagWeights, lastInteractionMode });
 }
 
 /** אותה לוגיקת ניקוד, על מאגר משימות ה-Double — בלי הגבלת רמה. */
-export function pickDoubleCard({ doubleCards, usedIds = [], desireProfiles, tagWeights }) {
+export function pickDoubleCard({ doubleCards, usedIds = [], desireProfiles, tagWeights, lastInteractionMode }) {
   const available = doubleCards.filter((c) => !usedIds.includes(c.id));
   const pool = available.length > 0 ? available : doubleCards;
-  return weightedPickCard(pool, { flags: {}, recentTypes: [], desireProfiles, tagWeights });
+  return weightedPickCard(pool, { flags: {}, recentTypes: [], desireProfiles, tagWeights, lastInteractionMode });
 }
 
 /**
@@ -177,10 +193,67 @@ export function shouldTriggerClimax({ openedCount, totalCount, flags, lastLevel 
   return remaining <= 4 || lastLevel === 4 || flags.dangerHigh;
 }
 
-export function giveUpCaption(openedCount, texts) {
+/**
+ * ב-intensity גבוה מחליפים את הכיתוב ההסברתי בשורות קצרות מ-microcopy.lateGame —
+ * בחירה דטרמיניסטית (לפי openedCount) כדי שלא תהבהב בין רינדורים.
+ */
+export function giveUpCaption(openedCount, texts, intensity) {
+  if (intensity === 'intense' || intensity === 'critical') {
+    const pool = microcopy.lateGame;
+    return pool[openedCount % pool.length];
+  }
   if (openedCount >= 15) return texts.giveUpCaptionLate;
   if (openedCount >= 5) return texts.giveUpCaptionMid;
   return null;
+}
+
+// --- Heat Engine ----------------------------------------------------------
+// heatScore הוא מספר פנימי (0–100) שלעולם לא מוצג למשתמש. הוא מניע את
+// getVisualIntensity, שקובעת עד כמה שקטה/כהה/אינטנסיבית התצוגה — בהדרגה,
+// לא בהבהוב.
+
+const LEVEL_HEAT = { 1: 3, 2: 5, 3: 8, 4: 12 };
+
+export function clampHeat(value) {
+  return Math.max(0, Math.min(100, value));
+}
+
+/** כמה heat מוסיפה (או מורידה) פתיחת מעטפה נתונה. קלפי pause משחררים מתח בכוונה. */
+export function computeHeatDelta(envelope) {
+  const base = LEVEL_HEAT[envelope.level] ?? 4;
+  return envelope.type === 'pause' ? base - 6 : base;
+}
+
+export const HEAT_EVENT_DELTA = {
+  risk: 6,
+  doubleAccept: 10,
+  fakeOut: 4,
+};
+
+const INTENSITY_ORDER = ['calm', 'warm', 'tense', 'intense', 'critical'];
+
+function rawVisualIntensity(heatScore) {
+  if (heatScore < 25) return 'calm';
+  if (heatScore < 50) return 'warm';
+  if (heatScore < 70) return 'tense';
+  if (heatScore < 85) return 'intense';
+  return 'critical';
+}
+
+/**
+ * העוצמה החזותית הנוכחית. אחרי Point of No Return (ראו למטה) העוצמה לעולם
+ * לא חוזרת מתחת ל-"intense", גם אם ה-heatScore עצמו יורד זמנית.
+ */
+export function getVisualIntensity(heatScore, pastPointOfNoReturn) {
+  const raw = rawVisualIntensity(heatScore);
+  if (!pastPointOfNoReturn) return raw;
+  const floor = INTENSITY_ORDER.indexOf('intense');
+  return INTENSITY_ORDER[Math.max(INTENSITY_ORDER.indexOf(raw), floor)];
+}
+
+/** האם המשחק חצה את "נקודת האל-חזור" — ברגע שהעוצמה הגולמית מגיעה ל-critical בפעם הראשונה. */
+export function hasCrossedPointOfNoReturn(heatScore) {
+  return rawVisualIntensity(heatScore) === 'critical';
 }
 
 // חלונות מוגדרים-מראש שבהם SAFE/RISK רשאי להופיע (אינדקס מעטפה, 1-מבוסס)
