@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import Timer from './Timer';
+import ProgressiveReveal from './ProgressiveReveal';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { ui } from '../data/content';
 import { vibrate } from '../utils/vibrate';
 import styles from './EnvelopeCard.module.css';
 import buttons from '../styles/buttons.module.css';
 
 export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip }) {
+  const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState(revealed ? 'revealed' : 'shaking');
+  const [bodyVisible, setBodyVisible] = useState(revealed || reducedMotion);
   const timeouts = useRef([]);
 
   useEffect(() => {
@@ -15,10 +19,19 @@ export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip })
 
     if (revealed) {
       setPhase('revealed');
-      return;
+      setBodyVisible(true);
+      return undefined;
+    }
+
+    if (reducedMotion) {
+      setPhase('revealed');
+      setBodyVisible(true);
+      onRevealed();
+      return undefined;
     }
 
     setPhase('shaking');
+    setBodyVisible(false);
     vibrate(15);
 
     timeouts.current.push(
@@ -27,12 +40,13 @@ export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip })
       setTimeout(() => {
         setPhase('revealed');
         onRevealed();
-      }, 1750)
+      }, 1800),
+      setTimeout(() => setBodyVisible(true), 2150)
     );
 
     return () => timeouts.current.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [envelope.id]);
+  }, [envelope.id, reducedMotion]);
 
   if (phase !== 'revealed') {
     return (
@@ -51,14 +65,24 @@ export default function EnvelopeCard({ envelope, revealed, onRevealed, onSkip })
   return (
     <div className={styles.card}>
       <h2 className={styles.cardTitle}>{envelope.title}</h2>
-      {envelope.body && <p className={styles.cardBody}>{envelope.body}</p>}
-      {envelope.instruction && <p className={styles.cardBody}>{envelope.instruction}</p>}
-      {envelope.duration ? <Timer durationSeconds={envelope.duration} /> : null}
-      {envelope.special !== 'choice' && envelope.special !== 'danger-check' && (
-        <div className={styles.skipRow}>
-          <button className={buttons.ghost} onClick={onSkip}>
-            {ui.skip}
-          </button>
+      {bodyVisible && (
+        <div className={reducedMotion ? '' : styles.bodyIn}>
+          {envelope.revealSteps ? (
+            <ProgressiveReveal steps={envelope.revealSteps} />
+          ) : (
+            <>
+              {envelope.body && <p className={styles.cardBody}>{envelope.body}</p>}
+              {envelope.instruction && <p className={styles.cardBody}>{envelope.instruction}</p>}
+            </>
+          )}
+          {envelope.duration ? <Timer durationSeconds={envelope.duration} mode={envelope.timerMode || 'exact'} /> : null}
+          {envelope.special !== 'choice' && envelope.special !== 'danger-check' && (
+            <div className={styles.skipRow}>
+              <button className={buttons.ghost} onClick={onSkip}>
+                {ui.skip}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

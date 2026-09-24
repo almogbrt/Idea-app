@@ -7,6 +7,7 @@ import {
   shouldTriggerClimax,
   shouldOfferRiskChoice,
   shouldTriggerDoubleOrNothing,
+  shouldTriggerFakeOut,
   currentStageLevel,
   createDefaultDesireProfile,
   createDefaultTagWeights,
@@ -44,6 +45,9 @@ function freshInitialState() {
     feedbackHistory: [],
     restaurantMode: false,
     restaurantModeExhausted: false,
+    fakeOutPending: false,
+    lastWasFakeOut: false,
+    fakeOutHistory: [],
   };
 }
 
@@ -141,8 +145,23 @@ function reducer(state, action) {
       if (!envelope) {
         return state.restaurantMode ? { ...state, restaurantModeExhausted: true } : state;
       }
-      return { ...state, current: { id: envelope.id, revealed: false }, restaurantModeExhausted: false };
+      const triggerFakeOut = shouldTriggerFakeOut({
+        openedCount: state.openedIds.length,
+        lastWasFakeOut: state.lastWasFakeOut,
+        restaurantMode: state.restaurantMode,
+      });
+      return {
+        ...state,
+        current: { id: envelope.id, revealed: false },
+        restaurantModeExhausted: false,
+        fakeOutPending: triggerFakeOut,
+        lastWasFakeOut: triggerFakeOut,
+        fakeOutHistory: triggerFakeOut ? [...state.fakeOutHistory, envelope.id] : state.fakeOutHistory,
+      };
     }
+
+    case 'FAKE_OUT_DONE':
+      return { ...state, fakeOutPending: false };
 
     case 'CHOOSE_SAFE': {
       const level = currentStageLevel(state.openedIds.length);
@@ -363,6 +382,10 @@ function sanitizeState(saved) {
       doubleEventsUsed: typeof saved.doubleEventsUsed === 'number' ? saved.doubleEventsUsed : 0,
       restaurantMode: Boolean(saved.restaurantMode),
       restaurantModeExhausted: Boolean(saved.restaurantModeExhausted),
+      // fakeOutPending הוא מצב מעבר חזותי חולף — לעולם לא ישרוד רענון עמוד
+      fakeOutPending: false,
+      lastWasFakeOut: Boolean(saved.lastWasFakeOut),
+      fakeOutHistory: Array.isArray(saved.fakeOutHistory) ? saved.fakeOutHistory : [],
       quiz:
         saved.quiz && typeof saved.quiz === 'object'
           ? { phase: saved.quiz.phase || 'p1', questionIndex: Number(saved.quiz.questionIndex) || 0 }

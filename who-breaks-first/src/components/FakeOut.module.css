@@ -1,0 +1,56 @@
+.overlay {
+  flex: 1;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  background: var(--color-black);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-3);
+  animation: fadeToDark 0.5s ease;
+}
+
+.line {
+  font-size: var(--fs-statement);
+  color: var(--text-on-dark);
+  opacity: 0;
+}
+
+.lineIn {
+  animation: lineIn 0.6s ease forwards;
+}
+
+.bridge {
+  font-size: 1rem;
+  color: var(--text-on-dark-muted);
+  opacity: 0;
+}
+
+.cta {
+  margin-top: var(--space-2);
+  opacity: 0;
+  animation: lineIn 0.6s ease forwards;
+}
+
+@keyframes fadeToDark {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lineIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

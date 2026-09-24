@@ -24,3 +24,30 @@
   font-size: 0.78rem;
   color: var(--text-muted);
 }
+
+.ringWrap {
+  width: 100px;
+  height: 100px;
+}
+
+.ring {
+  transform: rotate(-90deg);
+}
+
+.ringTrack {
+  fill: none;
+  stroke: rgba(20, 16, 14, 0.12);
+  stroke-width: 6;
+}
+
+.ringProgress {
+  fill: none;
+  stroke: var(--color-wine);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.ringDone {
+  stroke: var(--color-gold);
+}

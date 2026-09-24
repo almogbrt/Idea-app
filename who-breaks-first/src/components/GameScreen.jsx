@@ -3,6 +3,7 @@ import EnvelopeCard from './EnvelopeCard';
 import ChoiceModal from './ChoiceModal';
 import RestartLink from './RestartLink';
 import DoubleOrNothing from './DoubleOrNothing';
+import FakeOut from './FakeOut';
 import { EnvelopeIcon } from './icons';
 import { ui, riskChoice, feedbackPrompt } from '../data/content';
 import { giveUpCaption } from '../game/engine';
@@ -36,6 +37,7 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
   const handleDoubleDone = () => dispatch({ type: 'DOUBLE_DONE' });
   const handleFeedback = (option) => dispatch({ type: 'GIVE_FEEDBACK', optionId: option.id, delta: option.delta });
   const handleToggleRestaurantMode = () => dispatch({ type: 'TOGGLE_RESTAURANT_MODE' });
+  const handleFakeOutDone = () => dispatch({ type: 'FAKE_OUT_DONE' });
 
   // רטט קצר כשמופיע "דאבל או כלום" — רגע נבדל מפתיחת מעטפה רגילה
   useEffect(() => {
@@ -85,6 +87,8 @@ export default function GameScreen({ state, dispatch, currentEnvelope, currentDo
             onRevealed={handleDoubleRevealed}
             onSkip={handleDoubleDone}
           />
+        ) : state.fakeOutPending ? (
+          <FakeOut onDone={handleFakeOutDone} />
         ) : currentEnvelope ? (
           <EnvelopeCard
             envelope={currentEnvelope}
