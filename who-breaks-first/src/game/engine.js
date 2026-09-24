@@ -301,6 +301,24 @@ export function shouldTriggerFakeOut({ openedCount, lastWasFakeOut, restaurantMo
   return Math.random() < 0.14;
 }
 
+/**
+ * קובע אם להציע משימה סודית לפני חזרה למעטפה רגילה. תדירות נמוכה-בינונית,
+ * עולה מעט ככל שנעשה שימוש בפחות מהמאגר, ונעצרת כשהמאגר מוצה.
+ */
+export function shouldTriggerSecretMission({ openedCount, usedCount, totalMissions }) {
+  if (usedCount >= totalMissions) return false;
+  if (openedCount < 3) return false;
+  const chance = Math.min(0.06 + usedCount * 0.02, 0.18);
+  return Math.random() < chance;
+}
+
+/** בוחר משימה סודית שלא נעשה בה שימוש עדיין. */
+export function pickSecretMission(missions, usedIds) {
+  const available = missions.filter((m) => !usedIds.includes(m.id));
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
 /** מעדכן משקל תגית בעקבות משוב "זה עבד?" — לעולם לא מסיר קטגוריה לגמרי. */
 export function applyFeedback(tagWeights, tags, delta) {
   const next = { ...tagWeights };

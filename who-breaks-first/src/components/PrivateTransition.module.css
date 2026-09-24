@@ -1,0 +1,45 @@
+.overlay {
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  background: var(--color-black);
+  color: var(--text-on-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-3);
+  animation: fadeToBlack 0.9s ease;
+}
+
+.line {
+  color: var(--text-on-dark);
+  font-size: var(--fs-statement);
+  line-height: 1.25;
+}
+
+.cta {
+  margin-top: var(--space-2);
+  opacity: 0;
+  animation: fadeIn 0.6s ease forwards;
+}
+
+@keyframes fadeToBlack {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

@@ -8,6 +8,8 @@ import {
   shouldOfferRiskChoice,
   shouldTriggerDoubleOrNothing,
   shouldTriggerFakeOut,
+  shouldTriggerSecretMission,
+  pickSecretMission,
   currentStageLevel,
   createDefaultDesireProfile,
   createDefaultTagWeights,
@@ -19,6 +21,7 @@ import {
   getVisualIntensity,
 } from '../game/engine';
 import { resolveInteractionMode } from '../data/interactionModes';
+import { secretMissions as SECRET_MISSIONS } from '../data/secretMissions';
 import { loadState, saveState, clearState } from '../utils/storage';
 
 const VALID_SCREENS = ['intro', 'players', 'quiz', 'rules', 'game', 'breaking', 'final', 'loser'];
@@ -57,19 +60,27 @@ function freshInitialState() {
     heatScore: 0,
     lastInteractionMode: null,
     pointOfNoReturn: false,
+    secretMissionActive: null,
+    secretMissionsUsed: [],
+    privateTransitionPending: false,
   };
 }
 
 /** מחליט מה להציג במסך ההמתנה (idle) הבא: דאבל, סיכון, או כלום מיוחד. */
 function computeIdleFlags(state) {
   if (state.climaxTriggered) {
-    return { doublePending: false, riskOfferPending: false, advantageAvailable: state.advantageAvailable };
+    return {
+      doublePending: false,
+      riskOfferPending: false,
+      secretMissionActive: null,
+      advantageAvailable: state.advantageAvailable,
+    };
   }
 
   const openedCount = state.openedIds.length;
 
   if (state.advantageAvailable) {
-    return { doublePending: false, riskOfferPending: true, advantageAvailable: false };
+    return { doublePending: false, riskOfferPending: true, secretMissionActive: null, advantageAvailable: false };
   }
 
   const offerDouble = shouldTriggerDoubleOrNothing({
@@ -78,7 +89,13 @@ function computeIdleFlags(state) {
     restaurantMode: state.restaurantMode,
   });
   if (offerDouble) {
-    return { doublePending: true, riskOfferPending: false, advantageAvailable: false, doubleEventsUsed: state.doubleEventsUsed + 1 };
+    return {
+      doublePending: true,
+      riskOfferPending: false,
+      secretMissionActive: null,
+      advantageAvailable: false,
+      doubleEventsUsed: state.doubleEventsUsed + 1,
+    };
   }
 
   const offerRisk = shouldOfferRiskChoice({
@@ -86,7 +103,29 @@ function computeIdleFlags(state) {
     lastWasRiskChoice: state.lastWasRiskChoice,
     restaurantMode: state.restaurantMode,
   });
-  return { doublePending: false, riskOfferPending: offerRisk, advantageAvailable: false };
+  if (offerRisk) {
+    return { doublePending: false, riskOfferPending: true, secretMissionActive: null, advantageAvailable: false };
+  }
+
+  const offerSecretMission = shouldTriggerSecretMission({
+    openedCount,
+    usedCount: state.secretMissionsUsed.length,
+    totalMissions: SECRET_MISSIONS.length,
+  });
+  if (offerSecretMission) {
+    const mission = pickSecretMission(SECRET_MISSIONS, state.secretMissionsUsed);
+    if (mission) {
+      return {
+        doublePending: false,
+        riskOfferPending: false,
+        advantageAvailable: false,
+        secretMissionActive: { id: mission.id, forPlayer: Math.random() < 0.5 ? 'p1' : 'p2' },
+        secretMissionsUsed: [...state.secretMissionsUsed, mission.id],
+      };
+    }
+  }
+
+  return { doublePending: false, riskOfferPending: false, secretMissionActive: null, advantageAvailable: false };
 }
 
 function drawEnvelopeId(state, forcedLevel) {
@@ -149,6 +188,22 @@ function reducer(state, action) {
       const nextState = { ...state, restaurantMode: !state.restaurantMode, restaurantModeExhausted: false };
       return { ...nextState, ...computeIdleFlags(nextState) };
     }
+
+    case 'START_PRIVATE_TRANSITION':
+      return { ...state, privateTransitionPending: true };
+
+    case 'PRIVATE_TRANSITION_DONE': {
+      const nextState = {
+        ...state,
+        privateTransitionPending: false,
+        restaurantMode: false,
+        restaurantModeExhausted: false,
+      };
+      return { ...nextState, ...computeIdleFlags(nextState) };
+    }
+
+    case 'SECRET_MISSION_ACK':
+      return { ...state, secretMissionActive: null };
 
     case 'DRAW_ENVELOPE': {
       const envelope = drawEnvelopeId(state);
@@ -418,6 +473,10 @@ function sanitizeState(saved) {
       heatScore: typeof saved.heatScore === 'number' && Number.isFinite(saved.heatScore) ? clampHeat(saved.heatScore) : 0,
       lastInteractionMode: typeof saved.lastInteractionMode === 'string' ? saved.lastInteractionMode : null,
       pointOfNoReturn: Boolean(saved.pointOfNoReturn),
+      // secretMissionActive/privateTransitionPending הם מצבי מעבר חולפים — לא שורדים רענון
+      secretMissionActive: null,
+      secretMissionsUsed: Array.isArray(saved.secretMissionsUsed) ? saved.secretMissionsUsed : [],
+      privateTransitionPending: false,
       quiz:
         saved.quiz && typeof saved.quiz === 'object'
           ? { phase: saved.quiz.phase || 'p1', questionIndex: Number(saved.quiz.questionIndex) || 0 }
