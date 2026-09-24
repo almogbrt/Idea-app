@@ -21,6 +21,7 @@
 }
 
 .title {
+  white-space: pre-line;
   font-size: 1.4rem;
   text-align: center;
   color: var(--color-wine);

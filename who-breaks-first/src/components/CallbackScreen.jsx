@@ -14,7 +14,7 @@ export default function CallbackScreen({ item, speakerName, onDone }) {
   const steps = useMemo(
     () => [
       { text: callbackCopy.opener, delay: 0 },
-      { text: item.publicMode ? callbackCopy.leadPublic : callbackCopy.leadPrivate(speakerName), delay: 1300 },
+      { text: item.publicMode ? callbackCopy.leadPublic : callbackCopy.leadPrivate(speakerName, item.playerId), delay: 1300 },
       { text: `"${item.text}"`, delay: 2900 },
       { text: callbackCopy.closer, delay: 4700 },
     ],

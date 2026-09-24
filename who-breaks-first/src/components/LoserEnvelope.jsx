@@ -19,7 +19,7 @@ export default function LoserEnvelope({ selectedId, onSelect, onRestart }) {
         <HandcuffsIcon size={48} />
       </div>
 
-      <h1 className={styles.title}>מעטפת המפסיד</h1>
+      <h1 className={styles.title}>מעטפת ההפסד</h1>
 
       <CardChooser cards={loserCards} selectedId={selectedId} onSelect={onSelect} />
 

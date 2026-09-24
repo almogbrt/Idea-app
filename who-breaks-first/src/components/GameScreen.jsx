@@ -11,7 +11,7 @@ import VaultCapture from './VaultCapture';
 import CallbackScreen from './CallbackScreen';
 import { EnvelopeIcon, WineIcon } from './icons';
 import { ui, riskChoice, feedbackPrompt } from '../data/content';
-import { secretMissions } from '../data/secretMissions';
+import { missionFor } from '../data/secretMissions';
 import { VAULT_PROMPTS, anticipationCopy } from '../data/vault';
 import { giveUpCaption } from '../game/engine';
 import { vibrate } from '../utils/vibrate';
@@ -139,7 +139,7 @@ export default function GameScreen({
           />
         ) : state.secretMissionActive ? (
           <SecretMission
-            mission={secretMissions.find((m) => m.id === state.secretMissionActive.id)}
+            mission={missionFor(state.secretMissionActive.id, state.secretMissionActive.forPlayer)}
             playerName={state.players[state.secretMissionActive.forPlayer]}
             onAck={handleSecretMissionAck}
           />

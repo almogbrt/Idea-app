@@ -26,7 +26,7 @@ export default function DesireQuizScreen({ quiz, players, onAnswer, onHandoffCon
         <div className={styles.center}>
           <LockIcon size={28} />
           <p className={styles.instruction}>{desireQuiz.handoff(players.p2)}</p>
-          <h2 className={styles.handoffName}>{desireQuiz.startInstruction}</h2>
+          <h2 className={styles.handoffName}>{desireQuiz.startInstruction.p2}</h2>
           <button className={buttons.primary} onClick={onHandoffContinue}>
             {desireQuiz.done.cta}
           </button>
@@ -59,7 +59,7 @@ function QuestionView({ phase, questionIndex, playerName, onAnswer }) {
         <>
           <h1>{desireQuiz.intro.title}</h1>
           <p className={styles.privacyNote}>{desireQuiz.intro.privacyNote}</p>
-          <p className={styles.instruction}>{desireQuiz.startInstruction}</p>
+          <p className={styles.instruction}>{desireQuiz.startInstruction[phase]}</p>
         </>
       )}
 

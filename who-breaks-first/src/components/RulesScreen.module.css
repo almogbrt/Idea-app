@@ -35,6 +35,7 @@
 }
 
 .list li {
+  white-space: pre-line;
   position: relative;
   padding-inline-start: 22px;
   font-size: 0.96rem;

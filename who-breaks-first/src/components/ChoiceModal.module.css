@@ -30,6 +30,7 @@
 }
 
 .subtitle {
+  white-space: pre-line;
   text-align: center;
   color: var(--text-muted);
   font-size: 0.9rem;

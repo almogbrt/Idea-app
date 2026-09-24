@@ -1,6 +1,8 @@
 // משימות "דאבל או כלום" — מערבות את שני המשתתפים בו-זמנית.
 // עריכת נוסח נעשית רק כאן, באותה רוח כמו src/data/content.js.
 
+import { HER, HIM } from './content';
+
 export const doubleCards = [
   {
     id: 'who-blinks-first',
@@ -8,7 +10,7 @@ export const doubleCards = [
     level: 2,
     timerSeconds: null,
     desireTags: ['eyeContact', 'anticipation', 'teasing'],
-    body: 'שבו קרוב.\n\nהסתכלו אחד לשנייה בעיניים.\n\nאסור לדבר.\n\nאסור להתנשק.\n\nהראשון שמסיט את המבט מפסיד.',
+    body: `שבו קרוב.\n\nהסתכלו זה לזו בעיניים.\n\nאסור לדבר.\n\nאסור להתנשק.\n\n${HER} מסיטה את המבט ראשונה? ${HIM} ניצח.\n${HIM} מסיט ראשון? ${HER} ניצחה.`,
   },
   {
     id: 'double-duel',
@@ -16,7 +18,7 @@ export const doubleCards = [
     level: 4,
     timerSeconds: 180,
     desireTags: ['teasing', 'seduction', 'surprise'],
-    body: '3 דקות.\n\nשניכם משחקים בו-זמנית.\n\nאין תורות.\n\nכל אחד מנסה לגרום לשני לרצות להגיד:\n\n"נשברתי".\n\nהשתמשו במה שלמדתם אחד על השנייה הערב.\n\nאין נשיקה בשפתיים.',
+    body: `3 דקות.\n\nשניכם משחקים בו-זמנית.\n\nאין תורות.\n\n${HER} מנסה לגרום ל${HIM} לרצות להגיד "נשברתי".\n${HIM} מנסה לגרום לזה ל${HER}.\n\nהשתמשו במה שלמדתם זה על זו הערב.\n\nאין נשיקה בשפתיים.`,
   },
   {
     id: 'close-not-enough',
@@ -24,7 +26,7 @@ export const doubleCards = [
     level: 3,
     timerSeconds: 90,
     desireTags: ['proximity', 'teasing', 'anticipation'],
-    body: 'עמדו קרוב מאוד.\n\nמותר לדבר.\n\nמותר ללחוש.\n\nמותר להתקרב.\n\nאבל למשך 90 שניות אסור לאף אחד לגעת בשני.\n\nבסיום:\n\nכל אחד אומר מה היה לו הכי קשה לא לעשות.',
+    body: `עמדו קרוב מאוד.\n\nמותר לדבר.\n\nמותר ללחוש.\n\nמותר להתקרב.\n\nאבל למשך 90 שניות אסור לגעת — לא ${HER} ב${HIM}, ולא ${HIM} ב${HER}.\n\nבסיום:\n\nשניכם אומרים מה היה הכי קשה לא לעשות.`,
   },
   {
     id: 'who-knows-weakness',
@@ -32,7 +34,7 @@ export const doubleCards = [
     level: 3,
     timerSeconds: null,
     desireTags: ['words', 'anticipation'],
-    body: 'כל אחד כותב בסתר:\n\n"אני חושב/ת שהדבר שהכי משפיע עליך הערב הוא..."\n\nחשפו יחד.\n\nאם צדקתם — מותר להשתמש במידע במשימה הבאה.',
+    body: 'שניכם כותבים בסתר:\n\n"נראה לי שהדבר שהכי משפיע עליך הערב הוא..."\n\nחשפו יחד.\n\nאם צדקתם — מותר להשתמש במידע במשימה הבאה.',
   },
   {
     id: 'one-more-minute',
@@ -40,6 +42,6 @@ export const doubleCards = [
     level: 2,
     timerSeconds: 60,
     desireTags: ['anticipation', 'slowBuild', 'spontaneous'],
-    body: 'הפעילו טיימר של 60 שניות.\n\nשניכם מנסים לגרום לשני לרצות שהדקה לא תיגמר.\n\nאין מנצח רשמי.\n\nכשהטיימר נגמר — עוצרים מיד.',
+    body: 'הפעילו טיימר של 60 שניות.\n\nשניכם מנסים לגרום לדקה הזאת להרגיש קצרה מדי.\n\nאין מנצח רשמי.\n\nכשהטיימר נגמר — עוצרים מיד.',
   },
 ];
