@@ -8,7 +8,7 @@ import styles from './ProgressiveReveal.module.css';
  *
  * steps: [{ text, delay }]
  */
-export default function ProgressiveReveal({ steps }) {
+export default function ProgressiveReveal({ steps, stepClassName = '' }) {
   const reducedMotion = useReducedMotion();
   const [visibleCount, setVisibleCount] = useState(reducedMotion ? steps.length : 0);
 
@@ -26,7 +26,7 @@ export default function ProgressiveReveal({ steps }) {
   return (
     <div className={styles.wrap}>
       {steps.slice(0, visibleCount).map((step, i) => (
-        <p key={i} className={`${styles.step} ${reducedMotion ? '' : styles.stepIn}`}>
+        <p key={i} className={`${styles.step} ${stepClassName} ${reducedMotion ? '' : styles.stepIn}`}>
           {step.text}
         </p>
       ))}

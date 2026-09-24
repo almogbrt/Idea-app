@@ -1,11 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import EnvelopeCard from './EnvelopeCard';
 import ChoiceModal from './ChoiceModal';
+import ConfirmModal from './ConfirmModal';
 import RestartLink from './RestartLink';
 import DoubleOrNothing from './DoubleOrNothing';
 import FakeOut from './FakeOut';
+import PrivateTransition from './PrivateTransition';
+import SecretMission from './SecretMission';
 import { EnvelopeIcon } from './icons';
 import { ui, riskChoice, feedbackPrompt } from '../data/content';
+import { secretMissions } from '../data/secretMissions';
 import { giveUpCaption } from '../game/engine';
 import { vibrate } from '../utils/vibrate';
 import styles from './GameScreen.module.css';
@@ -44,7 +48,20 @@ export default function GameScreen({
   const handleDoubleRevealed = () => dispatch({ type: 'MARK_DOUBLE_REVEALED' });
   const handleDoubleDone = () => dispatch({ type: 'DOUBLE_DONE' });
   const handleFeedback = (option) => dispatch({ type: 'GIVE_FEEDBACK', optionId: option.id, delta: option.delta });
-  const handleToggleRestaurantMode = () => dispatch({ type: 'TOGGLE_RESTAURANT_MODE' });
+  const [showPrivateConfirm, setShowPrivateConfirm] = useState(false);
+
+  // הכיוון PUBLIC→PRIVATE (כיבוי מצב מסעדה) עובר דרך אישור וטרנזישן דרמטי;
+  // הכיוון ההפוך (יציאה למסעדה) נשאר מיידי, בלי טקס.
+  const handleToggleRestaurantMode = () => {
+    if (state.restaurantMode) setShowPrivateConfirm(true);
+    else dispatch({ type: 'TOGGLE_RESTAURANT_MODE' });
+  };
+  const handleConfirmPrivate = () => {
+    setShowPrivateConfirm(false);
+    dispatch({ type: 'START_PRIVATE_TRANSITION' });
+  };
+  const handlePrivateTransitionDone = () => dispatch({ type: 'PRIVATE_TRANSITION_DONE' });
+  const handleSecretMissionAck = () => dispatch({ type: 'SECRET_MISSION_ACK' });
   const handleFakeOutDone = () => dispatch({ type: 'FAKE_OUT_DONE' });
 
   // רטט קצר כשמופיע "דאבל או כלום" — רגע נבדל מפתיחת מעטפה רגילה
@@ -75,6 +92,7 @@ export default function GameScreen({
         <button
           className={`${styles.restaurantToggle} ${state.restaurantMode ? styles.restaurantToggleActive : ''}`}
           onClick={handleToggleRestaurantMode}
+          disabled={state.privateTransitionPending || Boolean(state.secretMissionActive)}
         >
           {state.restaurantMode ? ui.restaurantModeOff : ui.restaurantModeOn}
         </button>
@@ -82,7 +100,15 @@ export default function GameScreen({
       </div>
 
       <div className={styles.stage}>
-        {doubleCardForView ? (
+        {state.privateTransitionPending ? (
+          <PrivateTransition onDone={handlePrivateTransitionDone} />
+        ) : state.secretMissionActive ? (
+          <SecretMission
+            mission={secretMissions.find((m) => m.id === state.secretMissionActive.id)}
+            playerName={state.players[state.secretMissionActive.forPlayer]}
+            onAck={handleSecretMissionAck}
+          />
+        ) : doubleCardForView ? (
           <EnvelopeCard
             envelope={doubleCardForView}
             revealed={Boolean(state.doubleCurrent?.revealed)}
@@ -199,7 +225,9 @@ export default function GameScreen({
         !state.riskOfferPending &&
         !state.riskConfirmPendingId &&
         !state.feedbackPending &&
-        !state.restaurantModeExhausted && (
+        !state.restaurantModeExhausted &&
+        !state.privateTransitionPending &&
+        !state.secretMissionActive && (
           <div className={styles.actions}>
             <button className={buttons.primary} onClick={handleDraw} disabled={remainingCount === 0}>
               {ui.openEnvelope}
@@ -213,6 +241,17 @@ export default function GameScreen({
         </button>
         {caption && <span className={styles.breakCaption}>{caption}</span>}
       </div>
+
+      {showPrivateConfirm && (
+        <ConfirmModal
+          title={ui.privateModeConfirmTitle}
+          body={ui.privateModeConfirmBody}
+          confirmLabel={ui.privateModeConfirmYes}
+          cancelLabel={ui.privateModeConfirmNo}
+          onConfirm={handleConfirmPrivate}
+          onCancel={() => setShowPrivateConfirm(false)}
+        />
+      )}
     </div>
   );
 }
