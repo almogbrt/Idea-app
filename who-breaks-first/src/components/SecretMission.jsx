@@ -30,7 +30,7 @@ export default function SecretMission({ mission, playerName, onAck }) {
   if (phase === 'handoff') {
     return (
       <div className={styles.overlay}>
-        <MaskIcon size={30} className={styles.icon} />
+        <MaskIcon size={52} />
         <p className={styles.name}>{playerName}</p>
         <p className={styles.instruction}>{secretMissionCopy.nextScreenNote}</p>
         <button className={buttons.gold} onClick={() => setPhase('ready')}>

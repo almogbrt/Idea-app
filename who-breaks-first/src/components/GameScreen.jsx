@@ -120,7 +120,7 @@ export default function GameScreen({
         </button>
         {state.restaurantMode && (
           <span className={styles.restaurantBadge}>
-            <WineIcon size={16} />
+            <WineIcon size={16} plain />
             {ui.restaurantModeBadge}
           </span>
         )}

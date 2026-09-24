@@ -15,8 +15,8 @@ export default function LoserEnvelope({ selectedId, onSelect, onRestart }) {
       )}
 
       <div className={styles.iconRow}>
-        <HandcuffsIcon size={28} />
-        <WineIcon size={28} />
+        <WineIcon size={48} />
+        <HandcuffsIcon size={48} />
       </div>
 
       <h1 className={styles.title}>מעטפת המפסיד</h1>

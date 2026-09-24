@@ -15,8 +15,8 @@
 }
 
 .mask {
-  color: var(--color-gold-light);
-  opacity: 0.85;
+  color: var(--cream);
+  opacity: 0.92;
   animation: fadeIn 1.6s ease;
 }
 

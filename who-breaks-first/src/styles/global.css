@@ -97,6 +97,11 @@ svg {
   color: var(--color-wine);
 }
 
+/* איורי גיר — זהב עמוק יותר על רקע בהיר, כדי שהקו הדק עם הגרגר יישאר קריא */
+:where(.chalkArt) {
+  color: var(--muted-gold);
+}
+
 /* רשת ביטחון גלובלית — אף אנימציה/מעבר לא צריכים לשרוד אם המשתמש ביקש פחות תנועה */
 @media (prefers-reduced-motion: reduce) {
   *,

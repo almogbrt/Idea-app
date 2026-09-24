@@ -27,7 +27,7 @@ export default function PrivateTransition({ onDone }) {
 
   return (
     <div className={styles.overlay}>
-      <MaskIcon size={34} className={styles.mask} />
+      <MaskIcon size={60} className={styles.mask} />
       <ProgressiveReveal steps={STEPS} stepClassName={styles.line} />
       {ctaVisible && (
         <button className={`${buttons.gold} ${styles.cta}`} onClick={onDone}>

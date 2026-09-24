@@ -8,6 +8,7 @@ import GameScreen from './components/GameScreen';
 import BreakingTransition from './components/BreakingTransition';
 import FinalScreen from './components/FinalScreen';
 import LoserEnvelope from './components/LoserEnvelope';
+import { ChalkFilterDefs } from './components/icons';
 
 export default function App() {
   const { state, dispatch, currentEnvelope, currentDoubleCard, remainingCount, totalCount, resetGame, visualIntensity } =
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <ChalkFilterDefs />
       {state.screen === 'intro' && <IntroScreen onStart={() => dispatch({ type: 'GO_PLAYERS' })} />}
 
       {state.screen === 'players' && (

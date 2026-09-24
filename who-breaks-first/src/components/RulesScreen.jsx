@@ -12,7 +12,7 @@ export default function RulesScreen({ onContinue, onRestart }) {
       </div>
 
       <div className={styles.iconRow}>
-        <HandcuffsIcon size={32} />
+        <HandcuffsIcon size={56} />
       </div>
 
       <h1 className={styles.title}>{rules.title}</h1>

@@ -13,8 +13,8 @@ export default function FinalScreen({ onContinue, onRestart }) {
       </div>
 
       <div className={styles.iconRow}>
-        <LaceIcon size={28} />
-        <BriefsIcon size={28} />
+        <LaceIcon size={52} />
+        <BriefsIcon size={52} />
       </div>
 
       <h1 className={`${styles.title} serifTitle`}>{finalScreen.title}</h1>
