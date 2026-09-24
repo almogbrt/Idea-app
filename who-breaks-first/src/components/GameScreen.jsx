@@ -9,7 +9,7 @@ import PrivateTransition from './PrivateTransition';
 import SecretMission from './SecretMission';
 import VaultCapture from './VaultCapture';
 import CallbackScreen from './CallbackScreen';
-import { EnvelopeIcon } from './icons';
+import { EnvelopeIcon, WineIcon } from './icons';
 import { ui, riskChoice, feedbackPrompt } from '../data/content';
 import { secretMissions } from '../data/secretMissions';
 import { VAULT_PROMPTS, anticipationCopy } from '../data/vault';
@@ -118,7 +118,12 @@ export default function GameScreen({
         >
           {state.restaurantMode ? ui.restaurantModeOff : ui.restaurantModeOn}
         </button>
-        {state.restaurantMode && <span className={styles.restaurantBadge}>{ui.restaurantModeBadge}</span>}
+        {state.restaurantMode && (
+          <span className={styles.restaurantBadge}>
+            <WineIcon size={16} />
+            {ui.restaurantModeBadge}
+          </span>
+        )}
       </div>
 
       {anticipationLine && !callbackItem && <p className={styles.anticipation}>{anticipationLine}</p>}

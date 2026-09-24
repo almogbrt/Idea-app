@@ -1,6 +1,6 @@
 import CardChooser from './CardChooser';
 import RestartLink from './RestartLink';
-import { CardIcon } from './icons';
+import { HandcuffsIcon, WineIcon } from './icons';
 import { loserCards, ui } from '../data/content';
 import styles from './LoserEnvelope.module.css';
 import buttons from '../styles/buttons.module.css';
@@ -15,7 +15,8 @@ export default function LoserEnvelope({ selectedId, onSelect, onRestart }) {
       )}
 
       <div className={styles.iconRow}>
-        <CardIcon size={30} />
+        <HandcuffsIcon size={28} />
+        <WineIcon size={28} />
       </div>
 
       <h1 className={styles.title}>מעטפת המפסיד</h1>
