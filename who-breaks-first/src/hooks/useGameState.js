@@ -12,7 +12,13 @@ import {
   createDefaultDesireProfile,
   createDefaultTagWeights,
   applyFeedback,
+  computeHeatDelta,
+  clampHeat,
+  HEAT_EVENT_DELTA,
+  hasCrossedPointOfNoReturn,
+  getVisualIntensity,
 } from '../game/engine';
+import { resolveInteractionMode } from '../data/interactionModes';
 import { loadState, saveState, clearState } from '../utils/storage';
 
 const VALID_SCREENS = ['intro', 'players', 'quiz', 'rules', 'game', 'breaking', 'final', 'loser'];
@@ -48,6 +54,9 @@ function freshInitialState() {
     fakeOutPending: false,
     lastWasFakeOut: false,
     fakeOutHistory: [],
+    heatScore: 0,
+    lastInteractionMode: null,
+    pointOfNoReturn: false,
   };
 }
 
@@ -90,6 +99,7 @@ function drawEnvelopeId(state, forcedLevel) {
     tagWeights: state.tagWeights,
     forcedLevel,
     restaurantMode: state.restaurantMode,
+    lastInteractionMode: state.lastInteractionMode,
   });
   return envelope ?? null;
 }
@@ -157,6 +167,7 @@ function reducer(state, action) {
         fakeOutPending: triggerFakeOut,
         lastWasFakeOut: triggerFakeOut,
         fakeOutHistory: triggerFakeOut ? [...state.fakeOutHistory, envelope.id] : state.fakeOutHistory,
+        heatScore: triggerFakeOut ? clampHeat(state.heatScore + HEAT_EVENT_DELTA.fakeOut) : state.heatScore,
       };
     }
 
@@ -186,6 +197,7 @@ function reducer(state, action) {
         riskOfferPending: false,
         lastWasRiskChoice: true,
         riskHistory: [...state.riskHistory, { choice: 'risk', level }],
+        heatScore: clampHeat(state.heatScore + HEAT_EVENT_DELTA.risk),
       };
     }
 
@@ -213,6 +225,8 @@ function reducer(state, action) {
         });
 
       const autoOpenChoice = envelope.special === 'choice';
+      const heatScore = clampHeat(state.heatScore + computeHeatDelta(envelope));
+      const pointOfNoReturn = state.pointOfNoReturn || hasCrossedPointOfNoReturn(heatScore);
 
       return {
         ...state,
@@ -222,6 +236,9 @@ function reducer(state, action) {
         climaxTriggered,
         current: { ...state.current, revealed: true },
         choiceModal: autoOpenChoice ? { source: 'pick-one', selectedId: null } : state.choiceModal,
+        heatScore,
+        pointOfNoReturn,
+        lastInteractionMode: resolveInteractionMode(envelope.id),
       };
     }
 
@@ -278,6 +295,7 @@ function reducer(state, action) {
         usedIds: state.usedDoubleIds,
         desireProfiles: state.desireProfiles,
         tagWeights: state.tagWeights,
+        lastInteractionMode: state.lastInteractionMode,
       });
       if (!card) return { ...state, doublePending: false };
       return {
@@ -285,12 +303,23 @@ function reducer(state, action) {
         doublePending: false,
         doubleCurrent: { id: card.id, revealed: false },
         usedDoubleIds: [...state.usedDoubleIds, card.id],
+        heatScore: clampHeat(state.heatScore + HEAT_EVENT_DELTA.doubleAccept),
       };
     }
 
-    case 'MARK_DOUBLE_REVEALED':
+    case 'MARK_DOUBLE_REVEALED': {
       if (!state.doubleCurrent || state.doubleCurrent.revealed) return state;
-      return { ...state, doubleCurrent: { ...state.doubleCurrent, revealed: true } };
+      const card = DOUBLE_CARDS.find((c) => c.id === state.doubleCurrent.id);
+      const heatScore = clampHeat(state.heatScore + computeHeatDelta(card));
+      const pointOfNoReturn = state.pointOfNoReturn || hasCrossedPointOfNoReturn(heatScore);
+      return {
+        ...state,
+        doubleCurrent: { ...state.doubleCurrent, revealed: true },
+        heatScore,
+        pointOfNoReturn,
+        lastInteractionMode: resolveInteractionMode(card.id),
+      };
+    }
 
     case 'DOUBLE_DONE': {
       const nextState = { ...state, doubleCurrent: null, advantageAvailable: true };
@@ -386,6 +415,9 @@ function sanitizeState(saved) {
       fakeOutPending: false,
       lastWasFakeOut: Boolean(saved.lastWasFakeOut),
       fakeOutHistory: Array.isArray(saved.fakeOutHistory) ? saved.fakeOutHistory : [],
+      heatScore: typeof saved.heatScore === 'number' && Number.isFinite(saved.heatScore) ? clampHeat(saved.heatScore) : 0,
+      lastInteractionMode: typeof saved.lastInteractionMode === 'string' ? saved.lastInteractionMode : null,
+      pointOfNoReturn: Boolean(saved.pointOfNoReturn),
       quiz:
         saved.quiz && typeof saved.quiz === 'object'
           ? { phase: saved.quiz.phase || 'p1', questionIndex: Number(saved.quiz.questionIndex) || 0 }
@@ -421,6 +453,11 @@ export function useGameState() {
     [state.doubleCurrent]
   );
 
+  const visualIntensity = useMemo(
+    () => getVisualIntensity(state.heatScore, state.pointOfNoReturn),
+    [state.heatScore, state.pointOfNoReturn]
+  );
+
   const resetGame = useCallback(() => {
     clearState();
     dispatch({ type: 'RESET' });
@@ -434,5 +471,6 @@ export function useGameState() {
     remainingCount,
     totalCount,
     resetGame,
+    visualIntensity,
   };
 }
