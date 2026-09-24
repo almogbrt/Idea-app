@@ -7,9 +7,12 @@ import DoubleOrNothing from './DoubleOrNothing';
 import FakeOut from './FakeOut';
 import PrivateTransition from './PrivateTransition';
 import SecretMission from './SecretMission';
+import VaultCapture from './VaultCapture';
+import CallbackScreen from './CallbackScreen';
 import { EnvelopeIcon } from './icons';
 import { ui, riskChoice, feedbackPrompt } from '../data/content';
 import { secretMissions } from '../data/secretMissions';
+import { VAULT_PROMPTS, anticipationCopy } from '../data/vault';
 import { giveUpCaption } from '../game/engine';
 import { vibrate } from '../utils/vibrate';
 import styles from './GameScreen.module.css';
@@ -63,6 +66,25 @@ export default function GameScreen({
   const handlePrivateTransitionDone = () => dispatch({ type: 'PRIVATE_TRANSITION_DONE' });
   const handleSecretMissionAck = () => dispatch({ type: 'SECRET_MISSION_ACK' });
   const handleFakeOutDone = () => dispatch({ type: 'FAKE_OUT_DONE' });
+  const handleVaultSave = ({ source, playerId, text }) => dispatch({ type: 'VAULT_ADD', source, playerId, text });
+  const handleCallbackDone = () => dispatch({ type: 'CALLBACK_DONE' });
+
+  const callbackItem = state.callbackActive
+    ? state.anticipationQueue.find((q) => q.id === state.callbackActive.id)
+    : null;
+
+  // "משהו מחכה לכם" — רק כמות, לעולם לא התוכן. הניסוח מתחלף לפי מספר המעטפות (לא אקראי, כדי שלא יהבהב).
+  const pendingCount = state.anticipationQueue.filter((q) => !q.revealed).length;
+  const anticipationLine =
+    pendingCount === 0
+      ? null
+      : openedCount % 3 === 2
+        ? anticipationCopy.unreturned
+        : pendingCount === 1
+          ? anticipationCopy.one
+          : anticipationCopy.many(pendingCount);
+
+  const canVault = Boolean(currentEnvelope && state.current?.revealed && VAULT_PROMPTS[currentEnvelope.id]);
 
   // רטט קצר כשמופיע "דאבל או כלום" — רגע נבדל מפתיחת מעטפה רגילה
   useEffect(() => {
@@ -92,16 +114,24 @@ export default function GameScreen({
         <button
           className={`${styles.restaurantToggle} ${state.restaurantMode ? styles.restaurantToggleActive : ''}`}
           onClick={handleToggleRestaurantMode}
-          disabled={state.privateTransitionPending || Boolean(state.secretMissionActive)}
+          disabled={state.privateTransitionPending || Boolean(state.secretMissionActive) || Boolean(callbackItem)}
         >
           {state.restaurantMode ? ui.restaurantModeOff : ui.restaurantModeOn}
         </button>
         {state.restaurantMode && <span className={styles.restaurantBadge}>{ui.restaurantModeBadge}</span>}
       </div>
 
+      {anticipationLine && !callbackItem && <p className={styles.anticipation}>{anticipationLine}</p>}
+
       <div className={styles.stage}>
         {state.privateTransitionPending ? (
           <PrivateTransition onDone={handlePrivateTransitionDone} />
+        ) : callbackItem ? (
+          <CallbackScreen
+            item={callbackItem}
+            speakerName={state.players[callbackItem.playerId]}
+            onDone={handleCallbackDone}
+          />
         ) : state.secretMissionActive ? (
           <SecretMission
             mission={secretMissions.find((m) => m.id === state.secretMissionActive.id)}
@@ -202,6 +232,15 @@ export default function GameScreen({
 
       {currentEnvelope && state.current?.revealed && !isChoiceCard && (
         <div className={styles.actions}>
+          {canVault && (
+            <VaultCapture
+              key={currentEnvelope.id}
+              source={currentEnvelope.id}
+              players={state.players}
+              alreadySaved={state.vaultedSources.includes(currentEnvelope.id)}
+              onSave={handleVaultSave}
+            />
+          )}
           {isDangerCard ? (
             <div className={styles.dangerButtons}>
               <button className={buttons.primary} onClick={handleNext}>
@@ -227,7 +266,8 @@ export default function GameScreen({
         !state.feedbackPending &&
         !state.restaurantModeExhausted &&
         !state.privateTransitionPending &&
-        !state.secretMissionActive && (
+        !state.secretMissionActive &&
+        !callbackItem && (
           <div className={styles.actions}>
             <button className={buttons.primary} onClick={handleDraw} disabled={remainingCount === 0}>
               {ui.openEnvelope}

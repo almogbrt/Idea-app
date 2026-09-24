@@ -19,7 +19,10 @@ import {
   HEAT_EVENT_DELTA,
   hasCrossedPointOfNoReturn,
   getVisualIntensity,
+  createAnticipationItem,
+  pickCallback,
 } from '../game/engine';
+import { VAULT_PROMPTS, VAULT_TEXT_MAX } from '../data/vault';
 import { resolveInteractionMode } from '../data/interactionModes';
 import { secretMissions as SECRET_MISSIONS } from '../data/secretMissions';
 import { loadState, saveState, clearState } from '../utils/storage';
@@ -63,11 +66,39 @@ function freshInitialState() {
     secretMissionActive: null,
     secretMissionsUsed: [],
     privateTransitionPending: false,
+    anticipationQueue: [],
+    vaultedSources: [],
+    callbackActive: null,
   };
 }
 
-/** מחליט מה להציג במסך ההמתנה (idle) הבא: דאבל, סיכון, או כלום מיוחד. */
+/**
+ * מחליט מה להציג במסך ההמתנה (idle) הבא. Callback (משהו שנשמר ב-Vault וחוזר)
+ * קודם לכל השאר — אבל רק כשפריט הבשיל, ובהסתברות, לא ברגע שהוא זמין.
+ */
 function computeIdleFlags(state) {
+  if (!state.climaxTriggered) {
+    const item = pickCallback(state.anticipationQueue, {
+      openedCount: state.openedIds.length,
+      heatScore: state.heatScore,
+      restaurantMode: state.restaurantMode,
+    });
+    if (item) {
+      return {
+        doublePending: false,
+        riskOfferPending: false,
+        secretMissionActive: null,
+        advantageAvailable: state.advantageAvailable,
+        callbackActive: { id: item.id },
+        anticipationQueue: state.anticipationQueue.map((q) => (q.id === item.id ? { ...q, revealed: true } : q)),
+      };
+    }
+  }
+  return { callbackActive: null, ...computeEventFlags(state) };
+}
+
+/** דאבל, סיכון, משימה סודית, או כלום מיוחד. */
+function computeEventFlags(state) {
   if (state.climaxTriggered) {
     return {
       doublePending: false,
@@ -204,6 +235,30 @@ function reducer(state, action) {
 
     case 'SECRET_MISSION_ACK':
       return { ...state, secretMissionActive: null };
+
+    case 'VAULT_ADD': {
+      const text = (action.text || '').trim().slice(0, VAULT_TEXT_MAX);
+      if (!text || !VAULT_PROMPTS[action.source] || state.vaultedSources.includes(action.source)) return state;
+      const playerId = action.playerId === 'p2' ? 'p2' : 'p1';
+      const item = createAnticipationItem({
+        text,
+        playerId,
+        source: action.source,
+        openedCount: state.openedIds.length,
+        heatScore: state.heatScore,
+        publicMode: state.restaurantMode,
+      });
+      return {
+        ...state,
+        anticipationQueue: [...state.anticipationQueue, item],
+        vaultedSources: [...state.vaultedSources, action.source],
+      };
+    }
+
+    case 'CALLBACK_DONE': {
+      const nextState = { ...state, callbackActive: null, heatScore: clampHeat(state.heatScore + 5) };
+      return { ...nextState, ...computeEventFlags(nextState) };
+    }
 
     case 'DRAW_ENVELOPE': {
       const envelope = drawEnvelopeId(state);
@@ -411,6 +466,28 @@ function sanitizeTagMap(value) {
   return merged;
 }
 
+function sanitizeQueue(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item) =>
+        item &&
+        typeof item === 'object' &&
+        typeof item.id === 'string' &&
+        typeof item.text === 'string' &&
+        item.text.trim() &&
+        Number.isFinite(item.unlockAfterCards) &&
+        Number.isFinite(item.minimumHeat)
+    )
+    .map((item) => ({
+      ...item,
+      text: item.text.slice(0, VAULT_TEXT_MAX),
+      playerId: item.playerId === 'p2' ? 'p2' : 'p1',
+      revealed: Boolean(item.revealed),
+      publicMode: Boolean(item.publicMode),
+    }));
+}
+
 /** מוודא שמצב שנטען מ-localStorage תקין, גם אם הוא ישן/חלקי/פגום — אף פעם לא קורס. */
 function sanitizeState(saved) {
   const fresh = freshInitialState();
@@ -477,6 +554,10 @@ function sanitizeState(saved) {
       secretMissionActive: null,
       secretMissionsUsed: Array.isArray(saved.secretMissionsUsed) ? saved.secretMissionsUsed : [],
       privateTransitionPending: false,
+      anticipationQueue: sanitizeQueue(saved.anticipationQueue),
+      vaultedSources: Array.isArray(saved.vaultedSources) ? saved.vaultedSources.filter((s) => typeof s === 'string') : [],
+      // Callback שהיה על המסך ברענון לא חוזר — הפריט כבר סומן revealed ולא ישמש שוב
+      callbackActive: null,
       quiz:
         saved.quiz && typeof saved.quiz === 'object'
           ? { phase: saved.quiz.phase || 'p1', questionIndex: Number(saved.quiz.questionIndex) || 0 }
