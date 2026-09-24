@@ -319,6 +319,42 @@ export function pickSecretMission(missions, usedIds) {
   return available[Math.floor(Math.random() * available.length)];
 }
 
+// --- Anticipation Queue / Callback Engine -------------------------------
+
+/** יוצר פריט לתור הציפייה. לא נחשף עד שנפתחו מספיק מעטפות וגם ה-heat גבוה מספיק. */
+export function createAnticipationItem({ text, playerId, source, openedCount, heatScore, publicMode }) {
+  return {
+    id: `${source}-${openedCount}-${Math.random().toString(36).slice(2, 7)}`,
+    playerId,
+    source,
+    type: 'vault',
+    text,
+    publicMode: Boolean(publicMode),
+    createdAt: openedCount,
+    unlockAfterCards: openedCount + 3 + Math.floor(Math.random() * 3),
+    minimumHeat: Math.min(heatScore + 15, 70),
+    revealed: false,
+  };
+}
+
+export function eligibleCallbacks(queue, { openedCount, heatScore }) {
+  return queue.filter((item) => !item.revealed && openedCount >= item.unlockAfterCards && heatScore >= item.minimumHeat);
+}
+
+/**
+ * לא חושף באופן דטרמיניסטי ברגע שפריט הופך eligible — הסתברות שעולה ככל
+ * שהפריט מחכה יותר זמן מעבר לסף. לא במצב דיסקרטי (מסעדה).
+ */
+export function pickCallback(queue, { openedCount, heatScore, restaurantMode }) {
+  if (restaurantMode) return null;
+  const eligible = eligibleCallbacks(queue, { openedCount, heatScore });
+  if (eligible.length === 0) return null;
+  const oldest = eligible.reduce((a, b) => (a.unlockAfterCards <= b.unlockAfterCards ? a : b));
+  const overdue = openedCount - oldest.unlockAfterCards;
+  const chance = Math.min(0.3 + overdue * 0.15, 0.85);
+  return Math.random() < chance ? oldest : null;
+}
+
 /** מעדכן משקל תגית בעקבות משוב "זה עבד?" — לעולם לא מסיר קטגוריה לגמרי. */
 export function applyFeedback(tagWeights, tags, delta) {
   const next = { ...tagWeights };

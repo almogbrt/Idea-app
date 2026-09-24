@@ -1,0 +1,43 @@
+.overlay {
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  background: var(--color-wine-deep);
+  color: var(--text-on-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-3);
+  animation: fadeIn 0.9s ease;
+}
+
+.overlay .line {
+  color: var(--text-on-dark);
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+
+/* השורה השלישית — המשפט עצמו — היא הרגע. היא לבד מקבלת גודל של משפט-שיא. */
+.overlay .line:nth-child(3) {
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 7.5vw, 40px);
+  color: var(--color-gold-light);
+  overflow-wrap: anywhere;
+}
+
+.cta {
+  opacity: 0;
+  animation: fadeIn 0.6s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
