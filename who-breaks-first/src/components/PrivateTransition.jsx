@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ProgressiveReveal from './ProgressiveReveal';
+import { MaskIcon } from './icons';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { ui } from '../data/content';
 import { microcopy } from '../data/microcopy';
@@ -26,6 +27,7 @@ export default function PrivateTransition({ onDone }) {
 
   return (
     <div className={styles.overlay}>
+      <MaskIcon size={60} className={styles.mask} />
       <ProgressiveReveal steps={STEPS} stepClassName={styles.line} />
       {ctaVisible && (
         <button className={`${buttons.gold} ${styles.cta}`} onClick={onDone}>

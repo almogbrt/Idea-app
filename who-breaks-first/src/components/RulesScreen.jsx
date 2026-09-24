@@ -1,6 +1,6 @@
 import { rules } from '../data/content';
 import RestartLink from './RestartLink';
-import { LockIcon } from './icons';
+import { HandcuffsIcon } from './icons';
 import styles from './RulesScreen.module.css';
 import buttons from '../styles/buttons.module.css';
 
@@ -12,7 +12,7 @@ export default function RulesScreen({ onContinue, onRestart }) {
       </div>
 
       <div className={styles.iconRow}>
-        <LockIcon size={30} />
+        <HandcuffsIcon size={56} />
       </div>
 
       <h1 className={styles.title}>{rules.title}</h1>

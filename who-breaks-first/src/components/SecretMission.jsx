@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { secretMissionCopy } from '../data/secretMissions';
-import { LockIcon } from './icons';
+import { MaskIcon } from './icons';
 import styles from './SecretMission.module.css';
 import buttons from '../styles/buttons.module.css';
 
@@ -30,7 +30,7 @@ export default function SecretMission({ mission, playerName, onAck }) {
   if (phase === 'handoff') {
     return (
       <div className={styles.overlay}>
-        <LockIcon size={26} />
+        <MaskIcon size={52} />
         <p className={styles.name}>{playerName}</p>
         <p className={styles.instruction}>{secretMissionCopy.nextScreenNote}</p>
         <button className={buttons.gold} onClick={() => setPhase('ready')}>

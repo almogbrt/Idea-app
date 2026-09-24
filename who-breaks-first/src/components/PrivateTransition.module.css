@@ -14,6 +14,12 @@
   animation: fadeToBlack 0.9s ease;
 }
 
+.mask {
+  color: var(--cream);
+  opacity: 0.92;
+  animation: fadeIn 1.6s ease;
+}
+
 .line {
   color: var(--text-on-dark);
   font-size: var(--fs-statement);

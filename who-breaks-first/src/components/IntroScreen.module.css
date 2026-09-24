@@ -11,9 +11,13 @@
 }
 
 .iconRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   color: var(--color-gold);
   margin-bottom: var(--space-1);
 }
+
 
 .title {
   font-size: 2.3rem;

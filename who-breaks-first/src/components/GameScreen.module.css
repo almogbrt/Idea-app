@@ -88,6 +88,9 @@
 }
 
 .restaurantBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.72rem;
   color: var(--color-gold);
   letter-spacing: 0.03em;

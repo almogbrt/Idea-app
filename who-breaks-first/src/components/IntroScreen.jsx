@@ -1,4 +1,4 @@
-import { EnvelopeIcon } from './icons';
+import { MaskIcon, WineIcon } from './icons';
 import OurPhoto from './OurPhoto';
 import { intro } from '../data/content';
 import styles from './IntroScreen.module.css';
@@ -9,7 +9,8 @@ export default function IntroScreen({ onStart }) {
     <div className={styles.wrap}>
       <OurPhoto slot="intro" variant="intro" />
       <div className={styles.iconRow}>
-        <EnvelopeIcon size={36} />
+        <MaskIcon size={52} />
+        <WineIcon size={52} />
       </div>
       <h1 className={`${styles.title} serifTitle`}>{intro.title}</h1>
       <div className={styles.divider} />
