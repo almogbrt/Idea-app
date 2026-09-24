@@ -1,3 +1,5 @@
+import { HER, HIM } from './content';
+
 // שלושה רגעים שבהם המשחק יכול להציג תמונה שלכם. כל אחד אופציונלי.
 
 export const PHOTO_SLOTS = [
@@ -26,5 +28,5 @@ export const photosCopy = {
   confirmDeleteYes: 'כן, למחוק',
   confirmDeleteNo: 'ביטול',
   done: 'סיימנו',
-  alt: 'שנינו',
+  alt: `${HER} ו${HIM}`,
 };

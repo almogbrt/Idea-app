@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
-import { envelopes as ENVELOPES, defaultPlayers, desireQuiz } from '../data/content';
+import { envelopes as ENVELOPES, defaultPlayers, legacyDefaultPlayers, desireQuiz } from '../data/content';
 import { doubleCards as DOUBLE_CARDS } from '../data/doubleCards';
 import {
   pickNextEnvelope,
@@ -505,10 +505,12 @@ function sanitizeState(saved) {
 
     const screen = VALID_SCREENS.includes(saved.screen) ? saved.screen : 'intro';
 
-    const players = {
-      p1: typeof saved.players?.p1 === 'string' && saved.players.p1.trim() ? saved.players.p1 : fresh.players.p1,
-      p2: typeof saved.players?.p2 === 'string' && saved.players.p2.trim() ? saved.players.p2 : fresh.players.p2,
+    // שם ריק, או שם ברירת מחדל ישן ("אני" / "בן/בת הזוג"), מוחלף בשמות האמיתיים
+    const savedName = (id) => {
+      const name = saved.players?.[id];
+      return typeof name === 'string' && name.trim() && name !== legacyDefaultPlayers[id] ? name : fresh.players[id];
     };
+    const players = { p1: savedName('p1'), p2: savedName('p2') };
 
     const desireProfiles = {
       p1: sanitizeTagMap(saved.desireProfiles?.p1),

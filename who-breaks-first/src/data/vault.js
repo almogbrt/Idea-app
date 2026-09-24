@@ -2,8 +2,10 @@
 // מה שנשמר נכנס ל-Anticipation Queue ויחזור מאוחר יותר כ-Callback.
 // המשחק לעולם לא ממציא תוכן — חוזר רק מה ששחקן/ית הקלידו בעצמם.
 
+import { HER, HIM } from './content';
+
 export const VAULT_PROMPTS = {
-  'the-gaze': 'מה כל אחד אמר שהוא הכי היה רוצה?',
+  'the-gaze': `מה ${HER} ו${HIM} אמרו שהיו הכי רוצים?`,
   'no-touching': 'מה הכי רציתם לעשות בשלוש הדקות האלה?',
   'stop-now': 'מה הכי קשה לא לעשות עכשיו?',
   unasked: 'מה הדבר שקשה לבקש?',
@@ -30,7 +32,7 @@ export const anticipationCopy = {
 export const callbackCopy = {
   opener: 'הגיע הזמן.',
   leadPublic: 'זוכרים מה נאמר במסעדה?',
-  leadPrivate: (name) => `מוקדם יותר הערב, ${name} אמר/ה...`,
+  leadPrivate: (name, playerId) => `מוקדם יותר הערב, ${name} ${playerId === 'p2' ? 'אמרה' : 'אמר'}...`,
   closer: 'עכשיו זה חוזר למשחק.',
   cta: 'להמשיך',
 };

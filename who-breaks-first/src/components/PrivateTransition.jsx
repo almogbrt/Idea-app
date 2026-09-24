@@ -7,7 +7,7 @@ import { microcopy } from '../data/microcopy';
 import styles from './PrivateTransition.module.css';
 import buttons from '../styles/buttons.module.css';
 
-// ההשהיה לפני השורה האחרונה ("ועכשיו — גם אתם לבד") ארוכה קצת יותר מהאחרות בכוונה.
+// ההשהיה לפני השורה האחרונה ("ועכשיו — רעות ואלמוג לבד") ארוכה קצת יותר מהאחרות בכוונה.
 const STEP_DELAYS = [0, 1400, 2800, 4600];
 const STEPS = microcopy.privateTransition.map((text, i) => ({ text, delay: STEP_DELAYS[i] ?? i * 1400 }));
 const LAST_STEP_DELAY = STEPS[STEPS.length - 1].delay;
