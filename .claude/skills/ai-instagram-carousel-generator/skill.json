@@ -1,0 +1,18 @@
+{
+  "appSlug": "skill-ai-instagram-carousel-generator",
+  "workflowId": "cmvadu8bg0003lb08en8c4hls",
+  "model": "Seedream 5 Lite (generate:bytedance_seedream_v5_lite) x6, image_size portrait_4_3 (3:4); slide 1 text-to-image, slides 2 to 6 are edits of slide 1 on image1",
+  "inputs": {
+    "brand_style": "text, one paragraph shared by all six slides: background, text and accent colours, headline font feel, icon style, footer handle in quotes",
+    "slide_1": "text, the cover: headline and small line in quotes, a visual, the slide number in quotes",
+    "slide_2": "text, headline and body line in quotes, a wordless visual, the slide number in quotes",
+    "slide_3": "text, headline and body line in quotes, a wordless visual, the slide number in quotes",
+    "slide_4": "text, headline and body line in quotes, a wordless visual, the slide number in quotes",
+    "slide_5": "text, headline and body line in quotes, a wordless visual, the slide number in quotes",
+    "slide_6": "text, the call to action: headline and small line in quotes, a visual, the slide number in quotes"
+  },
+  "creditsPerRun": 60,
+  "outputsPerRun": 6,
+  "priceCheckedAt": "2026-10-16",
+  "testedAt": "2026-10-16"
+}

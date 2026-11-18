@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ai-fashion-model-photos-for-ecommerce",
+  "workflowId": "cmv93h2qp0003la06264bhke2",
+  "model": "Nano Banana Lite (generate:nano_banana_lite) x3, image-to-image with the garment as reference, 3:4",
+  "inputs": {
+    "garment_photo": "image, https URL of one garment, flat lay or ghost mannequin",
+    "model": "text, up to 2000 characters, who wears it and the plain items that complete the outfit",
+    "lifestyle_setting": "text, up to 2000 characters, place, light and mood for the lifestyle shot"
+  },
+  "creditsPerRun": 48,
+  "outputsPerRun": 3,
+  "priceCheckedAt": "2026-10-15",
+  "testedAt": "2026-10-15"
+}

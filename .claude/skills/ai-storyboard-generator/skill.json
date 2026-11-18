@@ -1,0 +1,19 @@
+{
+  "appSlug": "skill-ai-storyboard-generator",
+  "workflowId": "cmvhizh16003vl207z7xw3ln0",
+  "model": "Seedream 5 Lite (generate:bytedance_seedream_v5_lite) x6, image_size landscape_16_9; panel 1 text-to-image, panels 2 to 6 use panel 1 on image1 as the character and style reference",
+  "inputs": {
+    "style": "text, one paragraph shared by all six frames: medium, palette, line and light",
+    "character": "text, the hero as they look in every frame: age, face, hair, skin, build, outfit with colours",
+    "panel_1": "text, the opening shot: distance, angle, action, setting, light, hero's face visible",
+    "panel_2": "text, one shot: distance, angle, action, setting, light",
+    "panel_3": "text, one shot: distance, angle, action, setting, light",
+    "panel_4": "text, one shot: distance, angle, action, setting, light",
+    "panel_5": "text, one shot: distance, angle, action, setting, light",
+    "panel_6": "text, the end shot: distance, angle, action, setting, light"
+  },
+  "creditsPerRun": 60,
+  "outputsPerRun": 6,
+  "priceCheckedAt": "2026-10-21",
+  "testedAt": "2026-10-21"
+}

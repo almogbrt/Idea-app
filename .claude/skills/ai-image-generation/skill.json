@@ -1,0 +1,12 @@
+{
+  "appSlug": "skill-ai-image-generation",
+  "workflowId": "cmuyrvkpx0004nh0606sz0d3k",
+  "model": "Flux Pro Ultra v1.1 (generate:flux_pro_v1_1_ultra)",
+  "inputs": {
+    "prompt": "text, up to 2000 characters",
+    "aspect_ratio": "21:9 | 16:9 | 4:3 | 3:2 | 1:1 | 2:3 | 3:4 | 9:16 | 9:21"
+  },
+  "creditsPerRun": 19,
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

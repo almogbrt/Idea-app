@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ai-voiceover-for-ugc-ads",
+  "workflowId": "cmvoo81wd000eld088ewk6cyg",
+  "model": "Run any LLM (llm:openrouter_router, anthropic/claude-haiku-4.5, spoken rewrite) -> Minimax Speech 02 HD (audio:minimax_speech_02_hd) x3: Lively_Girl, Casual_Guy, Calm_Woman",
+  "inputs": {
+    "script": "text, the ad script to voice (15 to 75 words)",
+    "tone": "text, how it should sound",
+    "language": "text, language and region of the voiceover"
+  },
+  "creditsPerRun": 51,
+  "creditsNote": "Measured 26 Oct 2026 with GET /credits/history: Run any LLM 3 + Minimax Speech 02 HD 16 per take x 3, for takes of about 8.5 s (19-word script). GET /models lists Minimax Speech 02 HD at 3 credits per second, so longer scripts are quoted up to about 3 + 9 per second of speech.",
+  "priceCheckedAt": "2026-10-26",
+  "testedAt": "2026-10-26"
+}

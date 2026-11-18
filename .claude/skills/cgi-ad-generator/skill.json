@@ -1,0 +1,20 @@
+{
+  "appSlug": "skill-cgi-ad-generator",
+  "workflowId": "cmwiw3pwr0014l5083yk4i97w",
+  "model": "GPT Image 2.5 Sunburst Edit (edit:openai_gpt_image_2_5_sunburst_edit, high, 1152x2048) opening still -> same model final still edited from it -> Seedance 2.5 (video:seedance_2_5, 9:16, 5s, 720p, sound on) from the opening still (first_frame_url) to the final still (end_image_url)",
+  "inputs": {
+    "product_photo": "https image URL of the product (always send it)",
+    "opening_frame": "text, the first frame: real place, where the giant product stands, its size in metres beside a person, light, camera height, what stands in front of it",
+    "final_frame": "text, only what has changed by the last frame",
+    "what_happens": "text, the action from first frame to last in seconds, then the sounds"
+  },
+  "outputs": {
+    "opening-still": "PNG, 1152x2048",
+    "final-still": "PNG, same size as the opening still",
+    "ad-video": "MP4, 9:16, 720p, 5 s, with sound"
+  },
+  "creditsPerRun": 175,
+  "creditsNote": "Wireflow price list on 16 Nov 2026: GPT Image 2.5 Sunburst Edit 20 per image x 2, Seedance 2.5 27 per second x 5. The test run (execution cb834c44-43fe-443c-97ba-4684a7bab601) was charged that in /credits/history (20 + 20 + 135, matched to its node start times) with 1 credit adjusted back when the video finished: 174.",
+  "priceCheckedAt": "2026-11-16",
+  "testedAt": "2026-11-16"
+}

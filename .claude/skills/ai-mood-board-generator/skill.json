@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ai-mood-board-generator",
+  "workflowId": "cmvyohqn0001vi207otm0ic3x",
+  "model": "Run any LLM (anthropic/claude-haiku-4.5) for the direction note and four prompts, then Seedream 5 Lite (generate:bytedance_seedream_v5_lite) x4 at landscape_4_3: image 1 from its prompt, images 2 to 4 with image 1 as the look reference",
+  "inputs": {
+    "campaign_brief": "text, up to 2000 characters, the client, the campaign and who it speaks to",
+    "mood_words": "text, three to six words for the feeling",
+    "reference_notes": "text, up to 2000 characters, eras, places, materials and what to avoid, in words"
+  },
+  "creditsPerRun": 43,
+  "outputsPerRun": 5,
+  "priceCheckedAt": "2026-11-02",
+  "testedAt": "2026-11-02"
+}

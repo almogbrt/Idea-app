@@ -1,0 +1,16 @@
+{
+  "appSlug": "skill-ai-thumbnail-maker",
+  "workflowId": "cmv93aouu000ojt06q6ss01bo",
+  "model": "Ideogram 4.5 (generate:ideogram_v4_5) x3, medium quality, 2560x1440 (16:9), MagicPrompt off",
+  "inputs": {
+    "video_title": "text, the video title (context, not drawn)",
+    "headline": "text, the exact words on the thumbnail, 2 to 5 words",
+    "concept_1": "text, up to 2000 characters, visual concept 1",
+    "concept_2": "text, up to 2000 characters, visual concept 2",
+    "concept_3": "text, up to 2000 characters, visual concept 3"
+  },
+  "creditsPerRun": 57,
+  "outputsPerRun": 3,
+  "priceCheckedAt": "2026-10-15",
+  "testedAt": "2026-10-15"
+}

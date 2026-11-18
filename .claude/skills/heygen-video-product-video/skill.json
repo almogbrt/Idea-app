@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-heygen-video-product-video",
+  "workflowId": "cmva7ak9l001ol906x7c42oco",
+  "model": "HeyGen Video (video:heygen_video_1), product photo on Reference Images as Picture 1, 8 seconds, 9:16, 768p, prompt enhancement disabled",
+  "inputs": {
+    "product_photo": "https image URL of the product (always send it)",
+    "presenter": "text, who talks, how they look and where, up to 2000 characters",
+    "script": "text, the exact spoken words, about 15 to 20 for 8 seconds"
+  },
+  "creditsPerRun": 72,
+  "creditsNote": "Charged 72 on both test runs (GET /api/v1/credits/history, EXECUTION_CHARGE -72 'Heygen Video 1'). Wireflow's price list says 5 credits a second (about 40 for 8 s); the real charge is 72.",
+  "priceCheckedAt": "2026-10-16",
+  "testedAt": "2026-10-16"
+}

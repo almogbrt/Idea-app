@@ -1,0 +1,13 @@
+{
+  "appSlug": "skill-ad-creative-variations",
+  "workflowId": "cmuz2ijfk000djr06ftosg7f5",
+  "model": "Nano Banana 2 (generate:nano_banana_2) x3 at 1K: aspect 1:1, 4:5, 9:16; product photo on image1",
+  "inputs": {
+    "product_photo": "https image URL of the product or logo (always send it)",
+    "ad_brief": "text, up to 2000 characters; headline and CTA in quotes"
+  },
+  "creditsPerRun": 60,
+  "outputsPerRun": 3,
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

@@ -1,0 +1,15 @@
+{
+  "appSlug": "skill-brand-consistent-images",
+  "workflowId": "cmv8xyt520006jr06o7pcfwqu",
+  "model": "Nano Banana Lite (generate:nano_banana_lite), aspect ratio 1:1, up to 3 reference images",
+  "inputs": {
+    "brand_image_1": "https image URL of the logo or main brand image (always send it)",
+    "brand_image_2": "optional https image URL: product photo or second brand image",
+    "brand_image_3": "optional https image URL: palette card or style reference",
+    "brand_brief": "text, up to 2000 characters, the same on every run of a set",
+    "image_request": "text, up to 2000 characters (always send it)"
+  },
+  "creditsPerRun": 16,
+  "priceCheckedAt": "2026-10-15",
+  "testedAt": "2026-10-15"
+}

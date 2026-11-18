@@ -1,0 +1,8 @@
+{
+  "appSlug": null,
+  "workflowId": null,
+  "mode": "user-workflows",
+  "tools": ["whoami", "list_workflows", "get_workflow", "list_models", "get_credit_balance", "run_workflow", "get_execution"],
+  "testWorkflowId": "cmuz2n9ss0006os06m6nrkw77",
+  "testedAt": "2026-10-08"
+}

@@ -1,0 +1,16 @@
+{
+  "appSlug": "skill-ai-sound-effects-for-video-ads",
+  "workflowId": "cmvudzbzn0010l007v2j1qalq",
+  "model": "Run any LLM (llm:openrouter_router, anthropic/claude-haiku-4.5, shared sound world line) -> Sound Effects (audio:elevenlabs_sound_effects, ElevenLabs Sound Effects v2) x4: whoosh 1.5 s, pop 1 s, click 1 s, ambience 6 s looping",
+  "inputs": {
+    "scene": "text, what the clip shows, its setting and style",
+    "whoosh_moment": "text, the cut, swipe or camera move the whoosh covers",
+    "pop_moment": "text, what appears on screen with a pop",
+    "click_moment": "text, the button, lid, switch or tap that clicks",
+    "ambience_moment": "text, the place and its quiet background"
+  },
+  "creditsPerRun": 19,
+  "creditsNote": "Measured 30 Oct 2026 with GET /credits/history: Openrouter Router 3 + Elevenlabs Sound Effects 4 per effect x 4. GET /models lists Sound Effects at 1 credit a second (rate for a 5 second clip; shorter clips cost more per second).",
+  "priceCheckedAt": "2026-10-30",
+  "testedAt": "2026-10-30"
+}

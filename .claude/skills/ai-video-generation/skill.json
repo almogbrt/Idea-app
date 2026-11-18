@@ -1,0 +1,12 @@
+{
+  "appSlug": "skill-ai-video-generation",
+  "workflowId": "cmuyryl0w000gnz06lizb92us",
+  "model": "MiniMax Hailuo 03 Max Turbo (video:minimax_h3_max_turbo_t2v), 768P, 16:9, 5 s",
+  "inputs": {
+    "prompt": "text, up to 2000 characters",
+    "start_image": "optional https image URL (first frame)"
+  },
+  "creditsPerRun": 40,
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

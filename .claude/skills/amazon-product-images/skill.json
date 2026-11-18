@@ -1,0 +1,13 @@
+{
+  "appSlug": "skill-amazon-product-images",
+  "workflowId": "cmuz2fc46000kl506irtbvyu2",
+  "model": "Seedream 5 Lite (generate:bytedance_seedream_v5_lite), image_size auto_2K, product photo on image1",
+  "inputs": {
+    "product_photo": "https image URL of the product (always send it)",
+    "slot_brief": "text, up to 2000 characters"
+  },
+  "creditsPerRun": 10,
+  "measuredCredits": [10, 13],
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}
