@@ -1,0 +1,16 @@
+{
+  "appSlug": "skill-ai-infographic-generator",
+  "workflowId": "cmveoasn70006la07q1gwpfgj",
+  "model": "Ideogram 4.5 (generate:ideogram_v4_5) x2, medium quality, 1728x2304 (3:4 portrait), MagicPrompt off",
+  "inputs": {
+    "topic": "text, what the infographic is about (context, not drawn)",
+    "infographic_text": "text, every word on the infographic in double quotes, in reading order",
+    "style": "text, palette, fonts and icon style shared by both layouts",
+    "layout_1": "text, arrangement of the sections for image 1",
+    "layout_2": "text, a different arrangement for image 2"
+  },
+  "creditsPerRun": 38,
+  "outputsPerRun": 2,
+  "priceCheckedAt": "2026-10-19",
+  "testedAt": "2026-10-19"
+}

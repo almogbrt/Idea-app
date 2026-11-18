@@ -1,0 +1,12 @@
+{
+  "appSlug": "skill-ecommerce-product-video",
+  "workflowId": "cmuz2i3fu0003jr06adbp2ohv",
+  "model": "MiniMax Hailuo 03 Max Turbo (video:minimax_h3_max_turbo_t2v), product photo on image_url, 768P, duration 6; output shape follows the photo",
+  "inputs": {
+    "product_photo": "https image URL used as the first frame (always send it)",
+    "motion": "text, up to 2000 characters"
+  },
+  "creditsPerRun": 48,
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

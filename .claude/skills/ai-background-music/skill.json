@@ -1,0 +1,15 @@
+{
+  "appSlug": "skill-ai-background-music",
+  "workflowId": "cmvq3nljk0009l2071my9thr2",
+  "model": "Run any LLM (llm:openrouter_router, anthropic/claude-haiku-4.5, instrumental music prompt) -> Lyria 3 Pro (audio:lyria3_pro) x2: track 1, track 2 with a different lead and melody",
+  "inputs": {
+    "mood": "text, how the music should feel",
+    "genre": "text, style and instruments",
+    "length": "text, target length such as 30 seconds (a hint: Lyria has no duration setting)",
+    "video_context": "text, what the footage shows and where it runs"
+  },
+  "creditsPerRun": 43,
+  "creditsNote": "Measured 27 Oct 2026 with GET /credits/history: Openrouter Router 3 + Lyria3 Pro 20 per track x 2. GET /models lists Lyria 3 Pro at 20 credits a track.",
+  "priceCheckedAt": "2026-10-27",
+  "testedAt": "2026-10-27"
+}

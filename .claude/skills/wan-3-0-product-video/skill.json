@@ -1,0 +1,13 @@
+{
+  "appSlug": "skill-wan-3-0-product-video",
+  "workflowId": "cmva7a6qz000jl90697edudo9",
+  "model": "Wan 3.0 (video:wan_v3_0_t2v, fal alibaba/wan-3.0/image-to-video), product photo as the start frame, 720p, 5 seconds, aspect ratio adaptive (follows the photo), audio on, prompt expansion on",
+  "inputs": {
+    "product_photo": "https image URL used as the start frame (always send it)",
+    "shot_and_sound": "text, one camera move plus what you hear, up to 2000 characters"
+  },
+  "creditsPerRun": 58,
+  "creditsNote": "Charged 58 for the test run (GET /api/v1/credits/history, EXECUTION_CHARGE -58 'Wan V3.0 I2v', 2026-10-15T23:59:54Z); node estimate 58; list 12 credits a second. The balance drop across the run was 170 because another job's seven Nano Banana Lite runs (16 each) landed in the same window.",
+  "priceCheckedAt": "2026-10-16",
+  "testedAt": "2026-10-16"
+}

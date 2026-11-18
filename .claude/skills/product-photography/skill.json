@@ -1,0 +1,12 @@
+{
+  "appSlug": "skill-product-photography",
+  "workflowId": "cmuyrxf720005nz069nu7y39w",
+  "model": "Nano Banana Lite (generate:nano_banana_lite), aspect ratio auto",
+  "inputs": {
+    "product_photo": "https image URL of the product (always send it)",
+    "scene": "text, up to 2000 characters"
+  },
+  "creditsPerRun": 16,
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

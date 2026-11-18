@@ -1,0 +1,16 @@
+{
+  "appSlug": "skill-ai-poster-generator",
+  "workflowId": "cmw03q40r001ljh0782wdcjrh",
+  "model": "Ideogram 4.5 (generate:ideogram_v4_5) x2, medium quality, 1728x2304 (3:4 portrait), MagicPrompt off",
+  "inputs": {
+    "poster_text": "text, every word on the poster in double quotes: headline, date, venue, call to action, optional small print",
+    "brand_colors": "text, background, headline and body text colors",
+    "style": "text, the look shared by both layouts",
+    "layout_1": "text, arrangement of option 1",
+    "layout_2": "text, a different arrangement for option 2"
+  },
+  "creditsPerRun": 38,
+  "outputsPerRun": 2,
+  "priceCheckedAt": "2026-11-03",
+  "testedAt": "2026-11-03"
+}

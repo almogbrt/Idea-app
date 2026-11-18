@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ai-blog-featured-images",
+  "workflowId": "cmvrj2yak0007l408zq5bfgfv",
+  "model": "Run any LLM (anthropic/claude-haiku-4.5) for the visual concept, then Seedream 5 Lite (generate:bytedance_seedream_v5_lite) x2 at landscape_16_9: hero (no text) and share card (edit of the hero, title added)",
+  "inputs": {
+    "post_title": "text, the post title exactly as published (written on the share card)",
+    "post_summary": "text, up to 2000 characters, what the post says and what the reader gets",
+    "style_note": "text, up to 2000 characters, the blog's shared look: medium, palette, mood"
+  },
+  "creditsPerRun": 23,
+  "outputsPerRun": 2,
+  "priceCheckedAt": "2026-10-28",
+  "testedAt": "2026-10-28"
+}

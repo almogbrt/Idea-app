@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ugc-ad-generator",
+  "workflowId": "cmuz2il6j000kjr06ti05j8c6",
+  "model": "Seedream 5 Lite (generate:bytedance_seedream_v5_lite, portrait_16_9) -> Veo 3.1 Lite image-to-video (video:veo3_1_lite_t2v, 9:16, 6s, 720p, audio on)",
+  "inputs": {
+    "product_photo": "https image URL of the product (always send it)",
+    "creator": "text, who talks and where",
+    "line": "spoken words in double quotes, 12 to 18 words"
+  },
+  "creditsPerRun": 106,
+  "creditsNote": "List price (Seedream 5 Lite 10 + Veo 3.1 Lite 16/s x 6). Test run balance drop was 224 with other account activity overlapping; treat 224 as an upper bound until a clean run.",
+  "priceCheckedAt": "2026-10-08",
+  "testedAt": "2026-10-08"
+}

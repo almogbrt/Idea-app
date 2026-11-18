@@ -1,0 +1,14 @@
+{
+  "appSlug": "skill-ai-social-media-graphics",
+  "workflowId": "cmvyoaify000tjp08r0ij691c",
+  "model": "Ideogram 4.5 (generate:ideogram_v4_5) x3, medium quality, 2048x2048 (1:1), 1728x2304 (3:4) and 1440x2560 (9:16), MagicPrompt off",
+  "inputs": {
+    "post_text": "text, every word on the graphic in double quotes",
+    "post_type": "text, quote, stat or announcement and how the pieces are arranged",
+    "brand_colors": "text, background, text and accent colors and the font feel"
+  },
+  "creditsPerRun": 57,
+  "outputsPerRun": 3,
+  "priceCheckedAt": "2026-11-02",
+  "testedAt": "2026-11-02"
+}
